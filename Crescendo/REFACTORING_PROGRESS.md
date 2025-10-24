@@ -1,7 +1,7 @@
 # MVPConnect Refactoring Progress
 
-**Date:** October 22, 2025  
-**Status:** JWT Security Infrastructure Complete - Ready for Neo4j Node Creation
+**Date:** October 23, 2025  
+**Status:** Authentication Flow Complete - Ready for Testing with Neo4j
 
 ---
 
@@ -29,28 +29,167 @@
 ### 4. **Package Structure Created**
 ```
 com.mint/
-├── config/          (Neo4jConfig, GlobalExceptionHandler)
-├── controllers/     (existing - needs refactoring)
-├── services/        (existing - needs refactoring)
-├── repositories/    (existing - needs refactoring)
-├── dto/             ✨ NEW
+├── config/          ✅ COMPLETE
+│   ├── Neo4jConfig.java
+│   └── GlobalExceptionHandler.java
+├── controllers/     ✅ COMPLETE & CLEANED
+│   └── AuthController.java
+├── services/        ✅ COMPLETE & CLEANED
+│   └── AuthService.java
+├── repositories/    ✅ COMPLETE & CLEANED
+│   ├── MusicianRepository.java
+│   ├── VenueRepository.java
+│   └── PromoterRepository.java
+├── dto/             ✅ COMPLETE
 │   ├── request/     (LoginRequest, MusicianSignupRequest, PromoterSignupRequest, VenueSignupRequest)
 │   └── response/    (JwtAuthenticationResponse, ApiResponse, ErrorResponse)
-├── security/        ✨ NEW (6 files - COMPLETE)
+├── security/        ✅ COMPLETE (6 files)
 │   ├── JwtTokenProvider.java
 │   ├── JwtAuthenticationFilter.java
 │   ├── JwtAuthenticationEntryPoint.java
 │   ├── CustomUserDetails.java
-│   ├── CustomUserDetailsService.java (placeholder - needs Neo4j entities)
+│   ├── CustomUserDetailsService.java
 │   └── SecurityConfig.java
-├── nodes/           ✨ NEW (empty - ready for entities)
-└── relationships/   ✨ NEW (empty - ready for relationships)
+├── nodes/           ✅ COMPLETE (3 lean POC entities)
+│   ├── Musician.java (13 fields)
+│   ├── Venue.java (14 fields)
+│   └── Promoter.java (13 fields)
+└── relationships/   (documented, ready for Phase 8)
 ```
 
 ### 5. **JWT Security System - FULLY BUILT**
 - ✅ Token generation and validation
 - ✅ BCrypt password encoding
 - ✅ Authentication filter and entry point
+### 7. **Phase 1: Neo4j Nodes - COMPLETE**
+- ✅ **Musician.java** - 13 fields (auth + profile + matching tags)
+- ✅ **Venue.java** - 14 fields (auth + profile + matching tags)
+- ✅ **Promoter.java** - 13 fields (auth + profile + matching tags)
+### **IMMEDIATE: Test Authentication Flow (Ready Now)**
+
+**Prerequisites:**
+1. Start Neo4j database on `bolt://localhost:7687`
+   - Username: `neo4j`
+   - Password: `changeme` (or update in application.properties)
+2. Start Spring Boot application
+
+**Testing with Postman:**
+
+**Test 1: Signup Musician**
+```
+POST http://localhost:8081/auth/signup/musician
+Content-Type: application/json
+
+{
+  "name": "Jazz Trio",
+  "email": "jazztrio@test.com",
+  "password": "password123",
+  "bio": "Professional jazz ensemble",
+  "location": "New York, NY",
+  "genres": ["Jazz", "Blues"],
+  "vibes": ["Sophisticated", "Energetic"],
+  "minimumFee": "$500",
+  "willingToTravel": true,
+  "websiteUrl": "https://jazztrio.com",
+  "instagramHandle": "@jazztrio"
+}
+
+Expected: 201 Created with JWT token
+```
+
+**Test 2: Signup Venue**
+```
+POST http://localhost:8081/auth/signup/venue
+Content-Type: application/json
+
+{
+  "venueName": "Blue Note Jazz Club",
+  "email": "bluenote@test.com",
+  "password": "password123",
+  "description": "Legendary jazz venue",
+  "location": "131 W 3rd St, New York, NY",
+  "capacity": 200,
+  "genrePreferences": ["Jazz", "Blues", "Soul"],
+  "ambience": ["Intimate", "Upscale"],
+  "typicalBudget": "$800-$1500",
+  "liveMusic": true,
+  "websiteUrl": "https://bluenotejazz.com"
+}
+- ✅ **MusicianRepository** - extends Neo4jRepository with findByEmail() and existsByEmail()
+Expected: 201 Created with JWT token
+```
+
+**Test 3: Signup Promoter**
+```
+POST http://localhost:8081/auth/signup/promoter
+Content-Type: application/json
+  - signupVenue() - creates venue, hashes password with BCrypt, generates JWT
+{
+  "businessName": "NYC Events",
+  "email": "nycevents@test.com",
+  "password": "password123",
+  "bio": "Premier event promotion",
+  "location": "New York, NY",
+  "genreSpecialties": ["Jazz", "Rock", "Electronic"],
+  "eventTypes": ["Concerts", "Festivals"],
+  "acceptingNewArtists": true,
+  "currentRosterSize": 5,
+  "websiteUrl": "https://nycevents.com",
+  "phone": "555-1234"
+}
+  - emailExists() - validates email uniqueness across all user types
+Expected: 201 Created with JWT token
+```
+
+**Test 4: Login (any user type)**
+```
+POST http://localhost:8081/auth/login
+Content-Type: application/json
+  - POST /auth/signup/promoter
+{
+  "email": "jazztrio@test.com",
+  "password": "password123"
+}
+
+Expected: 200 OK with JWT token containing userType="MUSICIAN"
+```
+
+**Test 5: Duplicate Email (should fail)**
+```
+POST http://localhost:8081/auth/signup/musician
+Content-Type: application/json
+
+{
+  "name": "Another Band",
+  "email": "jazztrio@test.com",
+  "password": "password123"
+}
+
+Expected: 400 Bad Request - "Email already registered"
+```
+
+**Test 6: Invalid Credentials (should fail)**
+```
+POST http://localhost:8081/auth/login
+Content-Type: application/json
+
+{
+  "email": "jazztrio@test.com",
+  "password": "wrongpassword"
+}
+
+Expected: 401 Unauthorized
+```
+
+**Success Criteria:**
+- ✅ All three user types can signup successfully
+- ✅ JWT tokens are generated with correct claims (userId, email, userType)
+- ✅ Passwords are BCrypt hashed in Neo4j (verify in Neo4j browser)
+- ✅ Duplicate emails are rejected across all user types
+- ✅ Login works for all user types with correct credentials
+- ✅ Invalid credentials return 401 errors
+- ✅ Nodes are created in Neo4j with proper labels (Musician, Venue, Promoter)
+
 - ✅ Security configuration with proper CORS
 - ✅ Public endpoints configured (signup/login)
 - ✅ Request/Response DTOs created
@@ -65,48 +204,108 @@ com.mint/
 
 ## 📋 Next Steps (When We Resume)
 
-### **Phase 1: Create Neo4j Node Entities**
-Need to create these in the `nodes/` package:
-
-1. **Musician.java**
-   - @Node annotation
-   - @Id with @GeneratedValue (UUID)
-   - Properties: name, email, password, genre, bio, location, imageUrl
-   - Unique constraint on email
-   - Timestamps (createdAt, updatedAt)
-
-2. **Promoter.java**
-   - Similar structure to Musician
-   - Properties: businessName, email, password, website, bio, location
-
-3. **Venue.java**
-   - Properties: venueName, email, password, location, description, capacity, website, imageUrl
+### **Phase 1: Create Neo4j Node Entities** ✅ COMPLETE
+- ✅ Musician.java (13 fields)
+- ✅ Venue.java (14 fields)
+- ✅ Promoter.java (13 fields)
 
 ### **Phase 2: Create Neo4j Repositories**
 Simple interfaces in `repositories/` package:
 
 1. **MusicianRepository** extends Neo4jRepository
-   - `Optional<Musician> findByEmail(String email)`
-   - `boolean existsByEmail(String email)`
+    - `Optional<Musician> findByEmail(String email)`
+    - `boolean existsByEmail(String email)`
 
 2. **PromoterRepository** extends Neo4jRepository
-   - Same methods as above
+    - Same methods as above
 
 3. **VenueRepository** extends Neo4jRepository
-   - Same methods as above
+    - Same methods as above
 
 ### **Phase 3: Wire Up Authentication**
 1. Implement `CustomUserDetailsService.loadUserByUsername()` - query all 3 repositories
 2. Create `AuthService` with signup/login logic
-3. Create `AuthController` (or separate controllers per entity)
+3. Create `AuthController` with signup/login endpoints
 
 ### **Phase 4: Test Authentication Flow**
-1. Test signup endpoints
-2. Test login endpoints
+1. Test signup endpoints with Postman
+2. Test login endpoints with Postman
 3. Test protected endpoints with JWT
 
-### **Phase 5: Create Relationship Entities**
-Based on our documented relationship model in `relationships/README.md`
+### **Phase 5: AI Agent - Sourcing Agent (POC Priority)** 🤖
+**Goal:** Auto-populate database with 50-100 NYC venues to enable testing and demonstrate AI capability
+
+1. **Create VenueSourcingService**
+   - Integrate Google Maps API (venue discovery)
+   - Integrate Yelp API (ratings, reviews, categories, photos)
+   - NLP analysis of reviews to extract genre/ambience tags
+   - Parse and map data to Venue node fields
+
+2. **Data to Extract:**
+   - venueName, location, capacity estimates
+   - genrePreferences (from event listings, reviews)
+   - ambience tags (from review sentiment: "intimate", "energetic", "upscale")
+   - logoUrl, websiteUrl, bookingEmail
+   - typicalBudget (from price range indicators)
+
+3. **Implementation:**
+   - Background script/service (can run independently)
+   - Mark sourced venues with flag for human verification
+   - Store raw data for refinement
+
+**Why in POC:** 
+- Provides real data for musician matching
+- Demonstrates AI differentiation immediately
+- Non-blocking: Can develop in parallel with auth
+- "Wow factor" for demos
+
+### **Phase 6: AI Agent - Basic Recommendation Engine (POC Priority)** 🤖
+**Goal:** Implement tag-based matching to recommend musicians to venues and vice versa
+
+1. **Create RecommendationService**
+   - Simple Jaccard similarity scoring on genre/vibe tags
+   - Weighted algorithm:
+     - 40% genre overlap
+     - 30% vibe/ambience overlap
+     - 20% location proximity
+     - 10% other factors (capacity, budget alignment)
+
+2. **API Endpoints:**
+   - `GET /recommendations/venues?musicianId={id}` - Recommend venues for a musician
+   - `GET /recommendations/musicians?venueId={id}` - Recommend musicians for a venue
+   - Returns ranked list with match scores
+
+3. **Example Logic:**
+   ```
+   Musician tags: [Jazz, Blues], [Sophisticated, Intimate]
+   Venue tags: [Jazz, Soul], [Upscale, Intimate]
+   Genre match: 1/3 overlap (Jazz) = 33%
+   Vibe match: 1/2 overlap (Intimate) = 50%
+   Score: (0.4 × 33%) + (0.3 × 50%) = 28.2%
+   ```
+
+**Why in POC:**
+- Core product differentiator - "smart matching"
+- Simple to implement (no ML required initially)
+- Validates tag architecture works
+- Essential for proving value over competitors
+
+### **Phase 7: Profile Management & Search**
+1. Complete MusicianController, VenueController, PromoterController
+2. Profile viewing/editing with ownership checks
+3. Search with filters (genre, location, etc.)
+
+### **Phase 8: Basic Booking Interaction Flow**
+1. Create BookingController
+2. Musician → Venue inquiry
+3. Status management (pending, accepted, declined)
+4. Neo4j relationship creation (HIRES, BOOKS)
+
+### **Phase 9: Simple Messaging (if time permits)**
+1. MessageController with send/view endpoints
+2. Thread-based conversations
+
+**Note on Musician Auto-Tagging Agent:** Deferred to post-POC. Musicians will manually enter genres/vibes for POC. This feature will be added after POC validation.
 
 ---
 
@@ -126,12 +325,6 @@ Based on our documented relationship model in `relationships/README.md`
 - CORS allows localhost:3000 and localhost:4200
 - All endpoints except signup/login require JWT authentication
 
-### **Old Code Still Present**
-These will be deleted/refactored after new code is working:
-- `entities/` package (Band.java, Gig.java, etc.)
-- Old `controllers/` (BandController, GigController, PromoterController)
-- Old `services/` and `repositories/`
-- `hasher/` package (replaced by BCrypt)
 
 ---
 
@@ -157,6 +350,99 @@ These will be deleted/refactored after new code is working:
 - AI recommendation engine
 - Social features (follows, favorites, reviews)
 - Booking pipeline (interested, invited, booked)
+
+### **🤖 AI Agent Strategy (Post-POC Implementation)**
+
+**Overview:**
+We will implement three AI agents to automate data population, enhance matching, and reduce manual effort. These agents leverage the tag-based architecture we're building in the POC.
+
+**Agent 1: Sourcing Agent (NYC POC)**
+- **Purpose:** Auto-populate database with venues and promoters from NYC
+- **Data Sources:**
+  - Google Maps API (venue names, addresses, basic info)
+  - Yelp API (ratings, reviews, photos, price ranges, categories)
+  - Instagram/Facebook scraping (social presence, aesthetic analysis)
+  - Eventbrite/Bandsintown (event history, genres hosted)
+  - Website scraping (contact info, booking details, artist rosters)
+- **What It Extracts:**
+  - Venue/Promoter name, location (city, state, neighborhood)
+  - Capacity estimates (from reviews: "small intimate space", "holds 200+")
+  - Genre preferences (from event listings and past bookings)
+  - Ambience/vibe tags (NLP analysis: "intimate", "loud", "classy", "dive bar", "upscale")
+  - Price range/budget (from menu prices or ticket prices)
+  - Photos for galleries (interior, stage, crowd shots)
+  - Social media handles and website URLs
+  - Ratings and reputation metrics (Google rating, Yelp rating)
+- **Output:** Pre-populated Venue/Promoter nodes with as many fields filled as possible
+- **Human Verification:** Sourced profiles marked for venue/promoter to claim and verify
+
+**Agent 2: Recommendation Engine**
+- **Purpose:** Match musicians to venues/promoters and vice versa based on multi-dimensional similarity
+- **Matching Algorithm:**
+  ```
+  Match Score = 
+    (0.30 × Genre Overlap %) +          // 30% weight: Primary compatibility factor
+    (0.20 × Vibe Overlap %) +           // 20% weight: Ambience/energy alignment
+    (0.15 × Location Proximity) +       // 15% weight: Geographic feasibility
+    (0.10 × Capacity Fit) +             // 10% weight: Venue size vs. artist draw
+    (0.10 × Budget Alignment) +         // 10% weight: Fee expectations match
+    (0.10 × Reputation Score) +         // 10% weight: Ratings and social proof
+    (0.05 × Availability Overlap)       // 5% weight: Schedule compatibility
+  ```
+- **Use Cases:**
+  - Venue searches for musicians: "Show me jazz musicians with sophisticated vibe in NYC"
+  - Musician searches for venues: "Find intimate venues that book indie rock in Brooklyn"
+  - Promoter searches for talent: "Recommend emerging electronic artists for 200-capacity venue"
+  - Cross-recommendations: "Venues like Blue Note also hired these musicians..."
+- **Tag-Based Matching Examples:**
+  - Venue tags `[Jazz, Intimate, Upscale, Manhattan]` → Matches musicians with `[Jazz, Sophisticated, Professional, NYC]`
+  - Musician tags `[Indie Rock, Energetic, Brooklyn]` → Matches venues with `[Rock, Dive bar, Underground, Williamsburg]`
+  - Promoter tags `[Electronic, Festivals, Large-scale]` → Matches venues with `[Electronic, 500+ capacity, Outdoor]`
+- **Output:** Ranked list of recommendations with match scores and reasoning
+
+**Agent 3: Musician Onboarding/Auto-Tagging Agent**
+- **Purpose:** Automatically populate musician profiles with data from their existing online presence
+- **Trigger:** Runs when new musician signs up and provides social media links
+- **Data Sources & Extraction:**
+  - **Spotify API:**
+    - Primary genre, secondary genres → auto-populate `genres` field
+    - Monthly listeners → `followerCount` / validation metric
+    - Similar artists → `influences` field
+    - Top tracks → analyze for `vibes` (tempo, energy, mood)
+  - **YouTube Analysis:**
+    - Video titles/descriptions → determine `performanceType` (covers vs originals)
+    - View counts → validation metric
+    - Comments sentiment analysis → extract `vibes` tags ("energetic", "chill", "emotional")
+  - **Instagram Scraping:**
+    - Bio keywords → genre/vibe extraction ("jazz trio", "high-energy rock")
+    - Hashtags → `targetAudience` ("#jazzlovers", "#nycmusic")
+    - Photo aesthetics → visual branding analysis
+  - **SoundCloud/Bandcamp:**
+    - User-selected genre tags
+    - Track descriptions → style extraction
+    - Play counts → validation metric
+- **What It Auto-Populates:**
+  - `genres`, `subgenres` (from streaming platforms)
+  - `vibes` (from sentiment analysis and audio features)
+  - `influences` (from Spotify similar artists)
+  - `monthlyListeners`, `followerCount` (social proof metrics)
+  - `targetAudience` (from follower demographics and hashtags)
+  - `notableVenues` (if mentioned in bio/posts)
+- **Output:** Auto-tagged musician profile with 60-70% fields populated
+- **Human Review:** Musician can edit/approve auto-generated tags
+
+**Implementation Timeline:**
+- **Phase 1 (POC):** Manual data entry, tag-based matching foundation established
+- **Phase 2:** Agent 2 (Recommendation Engine) - implement scoring algorithm with existing manual data
+- **Phase 3:** Agent 3 (Musician Onboarding) - auto-tag new signups from social media
+- **Phase 4:** Agent 1 (Sourcing Agent) - scale database with NYC venues/promoters
+
+**Why This Tag-Based Approach Works:**
+- ✅ POC nodes include `genres` and `vibes` Lists - foundation for AI matching
+- ✅ Manual tagging in POC validates taxonomy before AI automation
+- ✅ Simple string matching enables Phase 2 recommendations without ML
+- ✅ Future AI agents slot into existing architecture without refactoring
+- ✅ Incremental: Human-curated → Algorithm-assisted → Fully automated
 
 ---
 
@@ -954,38 +1240,38 @@ Backend Request Pipeline:
 ### **✅ Why This Architecture Works**
 
 1. **Unified Authentication**
-   - Single login endpoint for all user types
-   - JWT token carries user identity and type
-   - No confusion about "which login to use"
+    - Single login endpoint for all user types
+    - JWT token carries user identity and type
+    - No confusion about "which login to use"
 
 2. **Clear Separation of Concerns**
-   - Auth logic isolated in AuthController
-   - Profile management isolated in Entity Controllers
-   - Business interactions isolated in Interaction Controllers
+    - Auth logic isolated in AuthController
+    - Profile management isolated in Entity Controllers
+    - Business interactions isolated in Interaction Controllers
 
 3. **Type-Safe Polymorphism**
-   - JWT userType claim enables runtime type checking
-   - Service layer creates appropriate Neo4j relationships
-   - Frontend doesn't need to know graph structure
+    - JWT userType claim enables runtime type checking
+    - Service layer creates appropriate Neo4j relationships
+    - Frontend doesn't need to know graph structure
 
 4. **Scalable & Maintainable**
-   - Add new features → Add new Interaction Controller
-   - Add new user type → Add new Entity Controller + signup endpoint
-   - Business logic stays clean and testable
+    - Add new features → Add new Interaction Controller
+    - Add new user type → Add new Entity Controller + signup endpoint
+    - Business logic stays clean and testable
 
 5. **Neo4j Graph Model Perfect Fit**
-   - Nodes: Musician, Promoter, Venue (entity types)
-   - Relationships: HIRES, BOOKS, COLLABORATES_WITH, MESSAGES, etc.
-   - Interaction Controllers create edges between nodes
-   - Graph naturally models real-world relationships
+    - Nodes: Musician, Promoter, Venue (entity types)
+    - Relationships: HIRES, BOOKS, COLLABORATES_WITH, MESSAGES, etc.
+    - Interaction Controllers create edges between nodes
+    - Graph naturally models real-world relationships
 
 6. **Tiered Security Model**
-   - **Tier 1 (Public)**: Discovery and onboarding without barriers
-   - **Tier 2 (Authenticated)**: All interactions require knowing WHO
-   - **Tier 3 (Authorized)**: Profile mutations require ownership
-   - JwtAuthenticationFilter validates ALL protected requests
-   - @PreAuthorize checks ownership at method level
-   - SecurityService provides reusable authorization logic
+    - **Tier 1 (Public)**: Discovery and onboarding without barriers
+    - **Tier 2 (Authenticated)**: All interactions require knowing WHO
+    - **Tier 3 (Authorized)**: Profile mutations require ownership
+    - JwtAuthenticationFilter validates ALL protected requests
+    - @PreAuthorize checks ownership at method level
+    - SecurityService provides reusable authorization logic
 
 ---
 
@@ -1003,59 +1289,107 @@ We will build incrementally, testing each phase thoroughly before moving to the 
 
 **Goal:** Create the data model and data access layer
 
-#### **Step 1.1: Create Neo4j Node Entities**
-Build all three user type nodes first (they're similar, so we can do them together):
+#### **Step 1.1: Create Neo4j Node Entities** ✅ COMPLETE
 
-1. **Musician.java** (`com.mint.nodes`)
+**Decision: Lean POC Approach**
+For the POC, we implemented minimal viable nodes with only core fields (13-14 fields each) to prove the concept works. The extensive 60-70 field designs are documented as a roadmap for future phases.
+
+**✅ Implemented Lean POC Nodes:**
+
+1. **Musician.java** (`com.mint.nodes`) - **13 Fields**
    ```java
    @Node("Musician")
    @Data
    @NoArgsConstructor
    @AllArgsConstructor
    public class Musician {
+       // Core Identity (for auth)
        @Id @GeneratedValue(UUIDStringGenerator.class)
        private String id;
-       
-       @Property("name")
        private String name;
+       private String email;                   // Unique, for login
+       private String password;                // BCrypt hash
        
-       @Property("email")
-       @Indexed(unique = true)
-       private String email;
-       
-       @Property("password")
-       private String password;  // Will store BCrypt hash
-       
-       @Property("genre")
-       private String genre;
-       
-       @Property("bio")
+       // Basic Profile
        private String bio;
-       
-       @Property("location")
        private String location;
+       private String profileImageUrl;
        
-       @Property("imageUrl")
-       private String imageUrl;
+       // Music Identity (Tags for AI Matching)
+       private List<String> genres;            // e.g., ["Jazz", "Blues", "Soul"]
+       private List<String> vibes;             // e.g., ["Energetic", "Chill"]
        
+       // Booking Basics
+       private String minimumFee;              // e.g., "$500"
+       private Boolean willingToTravel;
+       
+       // Social Proof
+       private String websiteUrl;
+       private String instagramHandle;
+       
+       // Metadata
        @CreatedDate
        private LocalDateTime createdAt;
-       
        @LastModifiedDate
        private LocalDateTime updatedAt;
    }
    ```
 
-2. **Promoter.java** (similar structure)
-   - Properties: businessName, email, password, website, bio, location
+2. **Venue.java** - **14 Fields**
+   - Core Identity: id, venueName, email, password
+   - Basic Profile: description, location, logoUrl
+   - Venue Characteristics (AI Tags): capacity, genrePreferences (List), ambience (List)
+   - Booking Basics: typicalBudget, liveMusic
+   - Contact: websiteUrl, bookingEmail
+   - Metadata: createdAt, updatedAt
 
-3. **Venue.java** (similar structure)
-   - Properties: venueName, email, password, location, description, capacity, website, imageUrl
+3. **Promoter.java** - **13 Fields**
+   - Core Identity: id, businessName, email, password
+   - Basic Profile: bio, location, logoUrl
+   - Expertise (AI Tags): genreSpecialties (List), eventTypes (List)
+   - Business Basics: acceptingNewArtists, currentRosterSize
+   - Contact: websiteUrl, phone
+   - Metadata: createdAt, updatedAt
 
 **Key Points:**
-- All use `@Indexed(unique = true)` on email
-- Password field stores BCrypt hash (not plaintext)
-- Include timestamps for auditing
+- All use unique email constraint (no @Indexed annotation needed in Spring Data Neo4j)
+- Password field stores BCrypt hash (never plaintext)
+- Lists (genres, vibes, ambience) enable multi-value tags for AI matching
+- Timestamps track creation and updates
+- Lean design is perfect for POC - proves auth, matching, and interactions work
+
+**📋 Future Field Expansion (Post-POC):**
+
+When the POC is validated, we'll expand nodes incrementally:
+
+**Phase 1B: Extended Profile Fields**
+- Additional social media links (YouTube, Spotify, SoundCloud, TikTok, Bandcamp, Apple Music)
+- Performance details (setLengthMinutes, hasOwnEquipment, soundRequirements, stageSizeRequirement)
+- Extended booking info (advanceBookingRequired, availableDays, contractRequired)
+- Audience/demographic info (targetAudience, targetDemographic, typicalCrowdSize)
+
+**Phase 1C: Media & Validation**
+- Photo galleries (photoGalleryUrls, interiorPhotos, stagePhotos, crowdPhotos)
+- Video content (videoUrls, promotionalVideos)
+- Audio samples (audioSampleUrls)
+- Validation metrics (monthlyListeners, followerCount, averageRating, totalReviews)
+- Notable achievements (notableVenues, notablePerformers, notableClients, awards, pressFeatures)
+
+**Phase 2: AI-Populated Fields**
+- Auto-tagged genres and subgenres (from Spotify/streaming APIs)
+- Auto-detected vibes (from sentiment analysis of reviews/social media)
+- Scraped ratings (googleRating, yelpRating from AI sourcing agent)
+- Social proof metrics (automatically updated from external APIs)
+- Profile completeness score (calculated based on filled fields)
+- Match scores (recommendation engine weights)
+
+**Tag Taxonomy for Future Implementation:**
+- 150+ genre tags with sub-genres (Jazz: Bebop, Smooth, Fusion, Latin, Swing, Free Jazz, Modal)
+- 50+ vibe/ambience tags (Energetic, Chill, Romantic, Dark, Uplifting, Melancholic, Intimate, Party, Sophisticated, Raw)
+- Location granularity (city, state, neighborhood for hyper-local matching)
+- Business tiers (Economy, Mid-range, Premium, Luxury)
+- Experience levels (Emerging, Developing, Professional, Established, Elite)
+- Event scales (Small <50, Medium 50-200, Large 200-500, Festival 500+)
 
 #### **Step 1.2: Create Neo4j Repositories**
 Simple interfaces extending `Neo4jRepository`:
@@ -1687,33 +2021,260 @@ Expected Response (401 Unauthorized):
 
 ---
 
-### **📍 PHASE 5: Build Interaction Controllers (POC Features)**
+### **📍 PHASE 5: AI Agent - Venue Sourcing (POC Priority)** 🤖
 
-**Goal:** Now that auth is fully working, build out the business logic
+**Goal:** Auto-populate database with 50-100 NYC venues to provide real data for testing and demonstrate AI capability
+
+**Why in POC:** 
+- Provides real venues for musicians to discover and match with
+- Demonstrates immediate AI differentiation ("We bootstrapped 100 venues in days, not months")
+- Can be developed in parallel with other features (non-blocking)
+- Essential "wow factor" for demos and investor presentations
 
 Only proceed to this phase after Phases 1-4 are fully tested and working!
 
-#### **Features to Build for POC:**
+#### **Step 5.1: Create VenueSourcingService**
 
-1. **Profile Viewing & Editing**
-   - Complete MusicianController, PromoterController, VenueController
-   - Search functionality
-   - Update/delete with ownership checks
+**Data Sources:**
+- Google Maps API (venue discovery, location, basic info)
+- Yelp API (ratings, reviews, photos, categories, price range)
+- Basic web scraping (contact info if needed)
 
-2. **Basic Booking Flow**
-   - BookingController with create/view/update endpoints
-   - Neo4j relationship creation (HIRES, BOOKS)
-   - Status management (pending, accepted, declined)
+**What to Extract:**
+- venueName, location (address, city, neighborhood)
+- Capacity estimates (from reviews: "small intimate space", "holds 200+")
+- genrePreferences (from event listings, Yelp categories)
+- ambience tags (NLP analysis of reviews: "intimate", "energetic", "upscale", "dive bar")
+- typicalBudget (from Yelp price indicators: $, $$, $$$)
+- logoUrl, websiteUrl
+- Contact info (bookingEmail if available)
 
-3. **Simple Messaging (if time permits)**
-   - MessageController with send/view endpoints
-   - Thread-based conversations
+**Implementation Approach:**
+```java
+@Service
+public class VenueSourcingService {
+    
+    // Query Google Maps for NYC venues
+    public List<VenueData> discoverVenues(String city, String category);
+    
+    // Enrich with Yelp data
+    public VenueData enrichWithYelp(VenueData venue);
+    
+    // NLP: Extract tags from reviews
+    public List<String> extractGenreTags(List<String> reviews);
+    public List<String> extractAmbienceTags(List<String> reviews);
+    
+    // Map to Venue node and save
+    public Venue saveSourcedVenue(VenueData data);
+}
+```
 
-**Note:** We'll design these in detail once authentication is solid.
+**Testing Strategy:**
+- Start with 10-20 venues manually to validate mapping
+- Run full scrape for 50-100 venues once logic is proven
+- Mark sourced venues with flag for human verification
+- Venues can later "claim" their profile to edit/verify
 
 ---
 
-### **🎯 Success Criteria Before Moving to Phase 5**
+### **📍 PHASE 6: AI Agent - Basic Recommendation Engine (POC Priority)** 🤖
+
+**Goal:** Implement tag-based matching to recommend musicians to venues and vice versa
+
+**Why in POC:**
+- Core product differentiator - proves "smart matching" works
+- Simple to implement (Jaccard similarity, no ML required)
+- Validates that our tag architecture (genres, vibes) is effective
+- Essential for demonstrating value over competitors
+
+#### **Step 6.1: Create RecommendationService**
+
+**Matching Algorithm (Simple Tag-Based):**
+```java
+@Service
+public class RecommendationService {
+    
+    public List<RecommendationDTO> recommendVenuesForMusician(String musicianId) {
+        Musician musician = musicianRepository.findById(musicianId);
+        List<Venue> allVenues = venueRepository.findAll();
+        
+        return allVenues.stream()
+            .map(venue -> {
+                double score = calculateMatchScore(musician, venue);
+                return new RecommendationDTO(venue, score);
+            })
+            .filter(rec -> rec.getScore() > 0.2) // 20% threshold
+            .sorted(Comparator.comparing(RecommendationDTO::getScore).reversed())
+            .limit(10)
+            .collect(Collectors.toList());
+    }
+    
+    private double calculateMatchScore(Musician musician, Venue venue) {
+        // Genre overlap (40% weight)
+        double genreScore = calculateJaccardSimilarity(
+            musician.getGenres(), 
+            venue.getGenrePreferences()
+        );
+        
+        // Vibe/Ambience overlap (30% weight)
+        double vibeScore = calculateJaccardSimilarity(
+            musician.getVibes(), 
+            venue.getAmbience()
+        );
+        
+        // Location proximity (20% weight) - simplified for POC
+        double locationScore = sameCity(musician.getLocation(), venue.getLocation()) ? 1.0 : 0.5;
+        
+        // Budget alignment (10% weight) - simplified for POC
+        double budgetScore = 0.5; // Placeholder
+        
+        return (0.4 * genreScore) + (0.3 * vibeScore) + (0.2 * locationScore) + (0.1 * budgetScore);
+    }
+    
+    private double calculateJaccardSimilarity(List<String> set1, List<String> set2) {
+        if (set1 == null || set2 == null || set1.isEmpty() || set2.isEmpty()) {
+            return 0.0;
+        }
+        Set<String> intersection = new HashSet<>(set1);
+        intersection.retainAll(set2);
+        Set<String> union = new HashSet<>(set1);
+        union.addAll(set2);
+        return (double) intersection.size() / union.size();
+    }
+}
+```
+
+#### **Step 6.2: Create RecommendationController**
+
+**API Endpoints:**
+```java
+@RestController
+@RequestMapping("/recommendations")
+public class RecommendationController {
+    
+    @GetMapping("/venues")
+    public List<RecommendationDTO> getVenueRecommendations(
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        // Recommend venues for the logged-in musician
+        return recommendationService.recommendVenuesForMusician(currentUser.getId());
+    }
+    
+    @GetMapping("/musicians")
+    public List<RecommendationDTO> getMusicianRecommendations(
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        // Recommend musicians for the logged-in venue
+        return recommendationService.recommendMusiciansForVenue(currentUser.getId());
+    }
+}
+```
+
+#### **Step 6.3: TEST WITH POSTMAN** ✅
+
+**Test Case: Get Venue Recommendations for Musician**
+```
+GET http://localhost:8081/recommendations/venues
+Authorization: Bearer <MUSICIAN_JWT>
+
+Expected Response (200 OK):
+[
+  {
+    "venue": {
+      "id": "venue-123",
+      "venueName": "Blue Note Jazz Club",
+      "genrePreferences": ["Jazz", "Blues"],
+      "ambience": ["Intimate", "Upscale"]
+    },
+    "matchScore": 0.75,
+    "matchReasons": [
+      "Genre match: Jazz (100%)",
+      "Vibe match: Intimate (50%)",
+      "Same city: New York"
+    ]
+  },
+  {
+    "venue": {
+      "id": "venue-456",
+      "venueName": "Village Vanguard",
+      "genrePreferences": ["Jazz", "Classical"],
+      "ambience": ["Sophisticated", "Historic"]
+    },
+    "matchScore": 0.58,
+    "matchReasons": [
+      "Genre match: Jazz (50%)",
+      "Same city: New York"
+    ]
+  }
+]
+```
+
+**Validation:**
+- ✅ Recommendations are ranked by match score
+- ✅ Score calculation makes sense (genre overlap weighted highest)
+- ✅ Only logged-in users can get recommendations
+- ✅ Results are filtered by minimum threshold (20%)
+
+---
+
+### **📍 PHASE 7: Profile Management & Search**
+
+**Goal:** Complete CRUD operations and search functionality
+
+#### **Features to Build:**
+
+1. **Profile Viewing & Editing**
+   - Complete MusicianController, PromoterController, VenueController
+   - GET endpoints for public profile viewing
+   - PUT endpoints with ownership checks (@PreAuthorize)
+   - DELETE endpoints with ownership checks
+
+2. **Search Functionality**
+   - Search musicians by genre, location, vibes
+   - Search venues by genre, location, capacity
+   - Search promoters by genre specialties, location
+   - Filter results by tags
+
+**Note:** We'll design these in detail once authentication and AI features are solid.
+
+---
+
+### **📍 PHASE 8: Basic Booking Interaction Flow**
+
+**Goal:** Enable musicians and venues to connect and book performances
+
+#### **Features to Build:**
+
+1. **BookingController**
+   - Create booking request (musician → venue or venue → musician)
+   - View incoming/outgoing booking requests
+   - Update booking status (accept, decline)
+   - Neo4j relationship creation (HIRES, BOOKS relationships)
+
+2. **Status Management**
+   - PENDING: Initial request sent
+   - ACCEPTED: Recipient agreed
+   - DECLINED: Recipient rejected
+   - CANCELLED: Sender withdrew
+
+**Note:** We'll design these in detail once profiles and recommendations are working.
+
+---
+
+### **📍 PHASE 9: Simple Messaging (Optional - If Time Permits)**
+
+**Goal:** Basic messaging between users
+
+1. **MessageController**
+   - Send message endpoint
+   - View conversation thread
+   - List all conversations
+
+**Note:** This is optional for POC. Booking flow is higher priority.
+
+---
+
+### **🎯 Success Criteria Before Moving to Later Phases**
 
 ✅ **Phase 2 Complete:**
 - All three signup endpoints work
@@ -1739,21 +2300,57 @@ Only proceed to this phase after Phases 1-4 are fully tested and working!
 
 ---
 
-## 🚀 When We Resume Tomorrow
+## 🚀 When We Resume
 
-**START HERE:**
+**CURRENT STATUS: Authentication Complete - Ready for Testing**
 
-1. **Create Neo4j Node Entities** (Musician, Promoter, Venue)
-2. **Create Neo4j Repositories** (3 simple interfaces)
-3. **Create AuthService** (signup methods only)
-4. **Create AuthController** (signup endpoints only)
-5. **Test signup with Postman** (all test cases)
-6. **Implement CustomUserDetailsService** (search all repos)
-7. **Add login to AuthService**
-8. **Add login to AuthController**
-9. **Test login with Postman** (all test cases)
-10. **Test JWT protection** (protected endpoints)
-11. **Once auth is solid → Build interaction controllers**
+**✅ COMPLETED TODAY (Oct 23, 2025):**
+1. ✅ Created Neo4j Node Entities (Musician, Promoter, Venue) - 13-14 lean POC fields
+2. ✅ Created Neo4j Repositories (3 interfaces with findByEmail/existsByEmail)
+3. ✅ Created AuthService (signup/login logic for all user types)
+4. ✅ Created AuthController (REST endpoints: /auth/signup/*, /auth/login)
+5. ✅ Implemented CustomUserDetailsService (searches all 3 repos)
+6. ✅ Configured SecurityConfig (public auth endpoints, JWT filter)
 
-**No blockers** - all JWT infrastructure is ready. We just need to create the domain objects and wire everything together incrementally.
+**📋 NEXT SESSION - START HERE:**
+
+1. **Test Authentication Flow** (Immediate Priority)
+   - Start Neo4j database
+   - Start Spring Boot application
+   - Run all Postman tests (see detailed test cases in "Next Steps" section above)
+   - Verify signup, login, JWT generation, duplicate email handling
+
+2. **Build VenueSourcingService** (Phase 5 - AI Agent) 🤖
+   - Integrate Google Maps API + Yelp API
+   - Scrape 50-100 NYC venues
+   - Extract tags via NLP analysis
+
+3. **Build RecommendationService** (Phase 6 - AI Agent) 🤖
+   - Implement Jaccard similarity scoring
+   - Create recommendation endpoints
+   - Test tag-based matching
+
+4. **Profile Management** (Phase 7)
+   - CRUD endpoints for all user types
+   - Search/filter functionality
+
+5. **Booking Flow** (Phase 8)
+   - BookingController with Neo4j relationships
+
+**POC Timeline (3-4 weeks):**
+- **Week 1:** ✅ Auth complete + Test + Start venue sourcing
+- **Week 2:** Venue sourcing agent + Recommendation engine
+- **Week 3:** Profile management + Booking flow
+- **Week 4:** Testing, refinement, demo prep
+
+**AI Agents in POC:**
+- ✅ **Sourcing Agent** - Auto-populate 50-100 NYC venues
+- ✅ **Recommendation Engine** - Tag-based smart matching
+- ❌ **Musician Auto-Tagging** - Deferred to post-POC
+
+**No blockers** - Authentication infrastructure is complete and ready to test!
+
+---
+
+*Last Updated: October 23, 2025*
 
