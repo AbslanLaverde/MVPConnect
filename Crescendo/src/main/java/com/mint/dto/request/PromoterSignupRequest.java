@@ -3,10 +3,15 @@ package com.mint.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+import java.util.List;
 
 /**
  * Signup Request DTO for Promoters
+ * Matches the lean POC Promoter node structure
  */
+@Data
 public class PromoterSignupRequest {
 
     @NotBlank(message = "Business name is required")
@@ -20,60 +25,20 @@ public class PromoterSignupRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    private String website;
     private String bio;
     private String location;
+    private String logoUrl;
 
-    public PromoterSignupRequest() {
-    }
+    // Expertise (tags for AI matching)
+    private List<String> genreSpecialties;
+    private List<String> eventTypes;
 
-    // Getters and Setters
-    public String getBusinessName() {
-        return businessName;
-    }
+    // Business basics
+    private Boolean acceptingNewArtists;
+    private Integer currentRosterSize;
 
-    public void setBusinessName(String businessName) {
-        this.businessName = businessName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getWebsite() {
-        return website;
-    }
-
-    public void setWebsite(String website) {
-        this.website = website;
-    }
-
-    public String getBio() {
-        return bio;
-    }
-
-    public void setBio(String bio) {
-        this.bio = bio;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    // Contact info
+    private String websiteUrl;
+    private String phone;
 }
 
