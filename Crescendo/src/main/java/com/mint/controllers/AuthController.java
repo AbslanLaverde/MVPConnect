@@ -18,11 +18,15 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:4200"})
 public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        return ResponseEntity.ok().build();
+    }
 
     /**
      * Signup endpoint for musicians

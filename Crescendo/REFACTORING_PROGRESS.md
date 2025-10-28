@@ -65,13 +65,71 @@ com.mint/
 - ✅ **Musician.java** - 13 fields (auth + profile + matching tags)
 - ✅ **Venue.java** - 14 fields (auth + profile + matching tags)
 - ✅ **Promoter.java** - 13 fields (auth + profile + matching tags)
-### **IMMEDIATE: Test Authentication Flow (Ready Now)**
+### IMMEDIATE: How to boot Neo4j and the Spring Boot app, verify auth
 
-**Prerequisites:**
-1. Start Neo4j database on `bolt://localhost:7687`
-   - Username: `neo4j`
-   - Password: `changeme` (or update in application.properties)
-2. Start Spring Boot application
+Prereqs quick checklist
+- Neo4j running at bolt://localhost:7687 (user: neo4j, pass: changeme)
+- application.properties configured (check server.port, spring.neo4j.uri, jwt.secret)
+- Java 21 installed (matches POM)
+
+1) Start Neo4j
+- Recommended (Docker):
+    - docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/changeme neo4j:5
+- Or use Neo4j Desktop: start DB and confirm bolt URL and credentials.
+
+2) Start the Spring Boot app
+- From project root (/Users/mark/Crescendo/Crescendo/Crescendo):
+    - With Maven wrapper:
+        - ./mvnw spring-boot:run
+    - Or build + run:
+        - ./mvnw -DskipTests package
+        - java -jar target/*.jar
+    - Or Gradle: ./gradlew bootRun (if applicable)
+- Confirm server.port (defaults used in docs: 8081) or override with --server.port=8081
+
+3) Smoke checks after boot
+- In Spring logs: look for "Started" message and the port. Look for any Neo4j connection errors/exceptions.
+- Neo4j browser: open http://localhost:7474 (or http://localhost:7474/browser) and login with neo4j/changeme. Run:
+    - MATCH (n) RETURN count(n);
+    - SHOW CONSTRAINTS; or CALL db.indexes();
+- Confirm nodes appear after signup tests.
+
+4) Run the basic Postman / curl tests
+- Signup musician (example):
+    curl -s -X POST http://localhost:8081/auth/signup/musician \
+        -H "Content-Type: application/json" \
+        -d '{"name":"Jazz Trio","email":"jazztrio@test.com","password":"password123","bio":"band","location":"NYC","genres":["Jazz"],"vibes":["Sophisticated"]}'
+- Login:
+    curl -s -X POST http://localhost:8081/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"email":"jazztrio@test.com","password":"password123"}'
+- Use returned accessToken as:
+    - Authorization: Bearer <token>
+- Test public vs protected:
+    - GET /musicians/{id} (no auth) should return node
+    - GET /musicians/me (with Bearer) should return current user
+
+5) Quick diagnostics & fixes
+- If app fails to connect to Neo4j:
+    - Verify NEO4J_AUTH / application.properties credentials match.
+    - Confirm bolt URL: bolt://localhost:7687 reachable from host (telnet 7687).
+- If port conflict: change server.port or stop conflicting process.
+- If JWT errors: check jwt.secret in application.properties or env override.
+- If signup returns duplicate-email: ensure previous test nodes removed or use new email.
+- Check logs for stacktraces and first error — that typically indicates missing config or incompatible driver/server versions.
+
+6) Useful commands
+- View logs (Linux/mac):
+    - tail -f logs/spring.log or the console where ./mvnw was run
+- Stop Neo4j Docker:
+    - docker stop neo4j && docker rm neo4j
+
+7) Next verification steps
+- Confirm saved nodes in Neo4j browser with labels: MATCH (n:Musician) RETURN n LIMIT 25
+- Decode JWT at jwt.io to check claims: userId, email, userType
+- Run the full Postman test list from the doc (signup for all three types, login, duplicate email, invalid credentials)
+
+If you want, I can produce exact curl commands for each Postman test and a checklist to mark pass/fail.  
 
 **Testing with Postman:**
 
