@@ -3,13 +3,15 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
+import { MusicianHomeScreen } from '../screens/MusicianHomeScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 import { theme } from '../theme/theme';
 
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
-  // Add more routes as needed
-  // Home: { userType: 'MUSICIAN' | 'VENUE' | 'PROMOTER' };
+  MusicianHome: { userId: string; userName: string; userType: string };
+  Profile: { userId: string; userName?: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -37,15 +39,26 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen
           name="Login"
           component={LoginScreen}
-          options={{
-            headerShown: false,
-          }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Signup"
           component={SignupScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MusicianHome"
+          component={MusicianHomeScreen}
+          options={({ route }) => ({
+            title: route.params?.userName || 'Dashboard',
+            headerRight: () => null,
+          })}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
           options={{
-            headerShown: false,
+            title: 'Edit Profile',
           }}
         />
       </Stack.Navigator>

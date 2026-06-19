@@ -58,21 +58,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       // Save auth data
       await storageHelpers.saveAuthData(response.token, response.userType);
 
-      // Navigate based on user type
-      // For now, just show success
-      Alert.alert(
-        'Success',
-        `Logged in as ${response.userType}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // TODO: Navigate to appropriate home screen
-              console.log('Navigate to home:', response.userType);
-            },
-          },
-        ]
-      );
+      // Navigate to appropriate home screen
+      if (response.userType === 'MUSICIAN') {
+        navigation.replace('MusicianHome', {
+          userId: response.userId,
+          userName: response.displayName,
+          userType: response.userType,
+        });
+      } else {
+        // For now, all types go to MusicianHome (venue/promoter screens TBD)
+        navigation.replace('MusicianHome', {
+          userId: response.userId,
+          userName: response.displayName,
+          userType: response.userType,
+        });
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       

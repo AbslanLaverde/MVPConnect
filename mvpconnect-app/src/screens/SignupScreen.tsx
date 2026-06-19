@@ -129,20 +129,12 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
       // Save auth data
       await storageHelpers.saveAuthData(response.token, response.userType);
 
-      // Show success and navigate
-      Alert.alert(
-        'Success',
-        `Account created successfully as ${response.userType}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // TODO: Navigate to onboarding or home screen
-              console.log('Navigate to onboarding:', response.userType);
-            },
-          },
-        ]
-      );
+      // Navigate to home screen
+      navigation.replace('MusicianHome', {
+        userId: response.userId,
+        userName: response.displayName,
+        userType: response.userType,
+      });
     } catch (error: any) {
       console.error('Signup error:', error);
 

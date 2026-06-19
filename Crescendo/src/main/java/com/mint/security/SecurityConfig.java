@@ -84,6 +84,11 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/signup/**",          // All signup endpoints
                     "/auth/login",               // Login endpoint
+                    "/musicians/search",         // Public musician search
+                    "/musicians/**",              // Public musician endpoints (GET)
+                    "/venues/search",            // Public venue search
+                    "/venues/*",                 // Public venue profile (GET)
+                    "/promoters/*",              // Public promoter profile (GET)
                     "/actuator/health",          // Health check
                     "/error"                     // Error handling
                 ).permitAll()

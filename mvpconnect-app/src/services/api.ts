@@ -137,3 +137,81 @@ export const storageHelpers = {
 };
 
 export default api;
+
+// ── Musician API ─────────────────────────────────────────────────
+
+export interface MusicianProfile {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string;
+  location?: string;
+  profileImageUrl?: string;
+  genres?: string[];
+  vibes?: string[];
+  minimumFee?: string;
+  willingToTravel?: boolean;
+  websiteUrl?: string;
+  instagramHandle?: string;
+}
+
+export interface VenueMatch {
+  id: string;
+  venueName: string;
+  location?: string;
+  capacity?: number;
+  genrePreferences?: string[];
+  ambience?: string[];
+  typicalBudget?: string;
+  websiteUrl?: string;
+  matchScore?: string;
+}
+
+export interface VenueSummary {
+  id: string;
+  venueName: string;
+  location?: string;
+  capacity?: number;
+  genrePreferences?: string[];
+  ambience?: string[];
+  typicalBudget?: string;
+  liveMusic?: boolean;
+}
+
+export const musicianAPI = {
+  getProfile: async (id: string): Promise<MusicianProfile> => {
+    const response = await api.get(`/musicians/${id}`);
+    return response.data;
+  },
+
+  updateProfile: async (id: string, data: Partial<MusicianProfile>): Promise<void> => {
+    await api.put(`/musicians/${id}`, data);
+  },
+
+  getVenueMatches: async (id: string): Promise<VenueMatch[]> => {
+    const response = await api.get(`/musicians/${id}/matches`);
+    return response.data;
+  },
+
+  search: async (params?: { genre?: string; location?: string }): Promise<MusicianProfile[]> => {
+    const response = await api.get('/musicians/search', { params });
+    return response.data;
+  },
+};
+
+export const venueAPI = {
+  search: async (params?: {
+    genre?: string;
+    location?: string;
+    minCapacity?: number;
+    liveMusic?: boolean;
+  }): Promise<VenueSummary[]> => {
+    const response = await api.get('/venues/search', { params });
+    return response.data;
+  },
+
+  getVenue: async (id: string): Promise<any> => {
+    const response = await api.get(`/venues/${id}`);
+    return response.data;
+  },
+};
