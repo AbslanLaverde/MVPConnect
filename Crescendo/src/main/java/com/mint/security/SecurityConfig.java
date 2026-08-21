@@ -84,6 +84,11 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/signup/**",          // All signup endpoints
                     "/auth/login",               // Login endpoint
+                    "/musicians/search",         // Public musician search
+                    "/musicians/**",              // Public musician endpoints (GET)
+                    "/venues/search",            // Public venue search
+                    "/venues/*",                 // Public venue profile (GET)
+                    "/promoters/*",              // Public promoter profile (GET)
                     "/actuator/health",          // Health check
                     "/error"                     // Error handling
                 ).permitAll()
@@ -105,7 +110,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:4200"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:4200", "http://localhost:8082",
+            "http://localhost:19006",    // Expo web port
+            "http://localhost:19000",    // Expo dev server
+            "http://localhost:8097"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

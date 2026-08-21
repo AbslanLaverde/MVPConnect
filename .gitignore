@@ -9,6 +9,10 @@
 
 # dependencies
 Crescendo/Crescendo-Client-side/node_modules
+mvpconnect-app/node_modules
+
+# Maven build output
+Crescendo/target/
 
 # profiling files
 chrome-profiler-events.json

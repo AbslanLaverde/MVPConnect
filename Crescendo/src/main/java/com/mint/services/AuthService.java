@@ -67,6 +67,9 @@ public class AuthService {
         musician.setWebsiteUrl(request.getWebsiteUrl());
         musician.setInstagramHandle(request.getInstagramHandle());
 
+        musician.setCreatedAt(java.time.LocalDateTime.now());
+        musician.setUpdatedAt(java.time.LocalDateTime.now());
+
         musician = musicianRepository.save(musician);
 
         String token = jwtTokenProvider.generateTokenFromEmail(
@@ -108,6 +111,9 @@ public class AuthService {
         venue.setWebsiteUrl(request.getWebsiteUrl());
         venue.setBookingEmail(request.getBookingEmail());
 
+        venue.setCreatedAt(java.time.LocalDateTime.now());
+        venue.setUpdatedAt(java.time.LocalDateTime.now());
+
         venue = venueRepository.save(venue);
 
         String token = jwtTokenProvider.generateTokenFromEmail(
@@ -148,6 +154,9 @@ public class AuthService {
         promoter.setWebsiteUrl(request.getWebsiteUrl());
         promoter.setPhone(request.getPhone());
 
+        promoter.setCreatedAt(java.time.LocalDateTime.now());
+        promoter.setUpdatedAt(java.time.LocalDateTime.now());
+        
         promoter = promoterRepository.save(promoter);
 
         String token = jwtTokenProvider.generateTokenFromEmail(
