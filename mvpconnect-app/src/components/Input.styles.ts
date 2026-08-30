@@ -20,11 +20,16 @@ export const styles = StyleSheet.create({
     backgroundColor: theme.colors.elevatedSurface,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: theme.colors.subtleBorder,
+    borderColor: theme.colors.inputBorder,
     minHeight: 52,
   },
   inputContainerFocused: {
-    borderColor: theme.colors.primaryAccent,
+    borderColor: theme.colors.brandBlue,
+    shadowColor: theme.colors.brandBlue,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 1,
   },
   inputContainerError: {
     borderColor: theme.colors.error,
@@ -52,8 +57,10 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   passwordToggle: {
-    fontSize: 16,
-    opacity: 0.72,
+    color: theme.colors.brandViolet,
+    fontSize: 18,
+    fontWeight: '700',
+    opacity: 0.86,
   },
   errorText: {
     fontSize: theme.fontSizes.bodySmall,

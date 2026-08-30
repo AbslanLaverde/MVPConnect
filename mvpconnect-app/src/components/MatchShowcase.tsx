@@ -53,7 +53,7 @@ export const MatchShowcase: React.FC<MatchShowcaseProps> = ({ compact = false })
 const ConnectBadge = () => (
   <View style={styles.connectBadge}>
     <Text style={styles.spark}>✦</Text>
-    <Text style={styles.connectLabel}>MVP CONNECT</Text>
+    <Text style={styles.connectLabel}>GREAT CONNECT</Text>
       <Text style={styles.spark2}>✦</Text>
 
       <Text style={styles.connectReasons}>Sound · Location · Draw</Text>

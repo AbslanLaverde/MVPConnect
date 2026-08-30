@@ -28,10 +28,18 @@ export const MatchProfileCard: React.FC<MatchProfileCardProps> = ({
   compact = false,
 }) => {
   const accentColor =
-    accent === 'blue' ? theme.colors.connectionBlue : theme.colors.connectionViolet;
+    accent === 'blue' ? theme.colors.brandBlue : theme.colors.brandViolet;
+  const accentBorder =
+    accent === 'blue' ? theme.colors.artistBorder : theme.colors.venueBorder;
 
   return (
-    <View style={[styles.card, compact && styles.cardCompact]}>
+    <View
+      style={[
+        styles.card,
+        compact && styles.cardCompact,
+        { borderColor: accentBorder, shadowColor: accentColor },
+      ]}
+    >
       <View style={[styles.imageFrame, compact && styles.imageFrameCompact]}>
         {imageSource ? (
           <Image source={imageSource} resizeMode="cover" style={styles.image} />
@@ -49,7 +57,7 @@ export const MatchProfileCard: React.FC<MatchProfileCardProps> = ({
             { borderColor: accentColor },
           ]}
         >
-          <Text style={styles.roleText}>{role}</Text>
+          <Text style={[styles.roleText, { color: accentColor }]}>{role}</Text>
         </View>
       </View>
 
