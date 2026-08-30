@@ -72,7 +72,7 @@ export const Input: React.FC<InputProps> = ({
             accessibilityRole="button"
           >
             <Text style={styles.passwordToggle}>
-              {showPassword ? '👁️' : '👁️‍🗨️'}
+              {showPassword ? '◉' : '◎'}
             </Text>
           </TouchableOpacity>
         )}

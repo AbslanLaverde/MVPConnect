@@ -94,8 +94,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const brand = (
-    <View style={styles.brand}>
-      <BrandLogo />
+    <View style={[styles.brand, isDesktop && styles.brandDesktop]}>
+      <BrandLogo
+        width={isDesktop ? 184 : isCompact ? 152 : 168}
+        height={isDesktop ? 39 : isCompact ? 32 : 35}
+      />
     </View>
   );
 
@@ -142,6 +145,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         isCompact && styles.authPanelCompact,
       ]}
     >
+      <View pointerEvents="none" style={styles.authAmbient} />
       <View style={styles.form}>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to continue building your network.</Text>

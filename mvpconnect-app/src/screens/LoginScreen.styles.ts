@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
     padding: theme.spacing.xl,
   },
   storyPanelStacked: {
-    borderTopColor: theme.colors.subtleBorder,
+    borderTopColor: theme.colors.panelDivider,
     borderTopWidth: 1,
   },
   storyPanelCompact: {
@@ -67,6 +67,9 @@ export const styles = StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  brandDesktop: {
+    paddingHorizontal: theme.spacing.xl,
   },
   storyContent: {
     width: '100%',
@@ -125,10 +128,12 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   authPanel: {
+    position: 'relative',
+    overflow: 'hidden',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xxl,
     backgroundColor: theme.colors.elevatedSurface,
-    borderTopColor: theme.colors.subtleBorder,
+    borderTopColor: theme.colors.panelDivider,
     borderTopWidth: 1,
   },
   authPanelStacked: {
@@ -144,8 +149,18 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.xxl,
     borderTopWidth: 0,
-    borderLeftColor: theme.colors.subtleBorder,
+    borderLeftColor: theme.colors.panelDivider,
     borderLeftWidth: 1,
+  },
+  authAmbient: {
+    position: 'absolute',
+    width: 360,
+    height: 360,
+    right: -190,
+    top: -190,
+    borderRadius: 180,
+    backgroundColor: theme.colors.brandViolet,
+    opacity: 0.045,
   },
   title: {
     fontSize: theme.fontSizes.h1,
@@ -173,7 +188,7 @@ export const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.subtleBorder,
+    backgroundColor: theme.colors.panelDivider,
     marginBottom: theme.spacing.xl,
   },
   signupPrompt: {

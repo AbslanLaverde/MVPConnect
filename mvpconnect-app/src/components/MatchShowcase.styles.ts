@@ -21,8 +21,8 @@ export const styles = StyleSheet.create({
     left: 90,
     bottom: 12,
     borderRadius: 125,
-    backgroundColor: theme.colors.connectionBlue,
-    opacity: 0.08,
+    backgroundColor: theme.colors.brandBlue,
+    opacity: 0.055,
   },
   glowViolet: {
     position: 'absolute',
@@ -31,8 +31,8 @@ export const styles = StyleSheet.create({
     right: 94,
     top: 8,
     borderRadius: 135,
-    backgroundColor: theme.colors.connectionViolet,
-    opacity: 0.09,
+    backgroundColor: theme.colors.brandViolet,
+    opacity: 0.055,
   },
   venueCard: {
     position: 'absolute',

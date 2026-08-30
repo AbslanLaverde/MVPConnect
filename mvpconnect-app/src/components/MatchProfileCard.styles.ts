@@ -6,10 +6,10 @@ export const styles = StyleSheet.create({
     width: 300,
     overflow: 'hidden',
     backgroundColor: theme.colors.elevatedSurface,
-    borderColor: theme.colors.subtleBorder,
     borderWidth: 1,
     borderRadius: theme.borderRadius.lg,
     ...theme.shadows.lg,
+    shadowOpacity: 0.22,
   },
   cardCompact: {
     width: 300,
@@ -78,7 +78,6 @@ export const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   roleText: {
-    color: theme.colors.warmWhite,
     fontSize: theme.fontSizes.caption,
     fontWeight: '700',
     letterSpacing: 1.5,
