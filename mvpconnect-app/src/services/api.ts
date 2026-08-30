@@ -91,6 +91,7 @@ export interface AuthResponse {
   token: string;
   userType: 'MUSICIAN' | 'VENUE' | 'PROMOTER';
   userId: string;
+  displayName?: string;
 }
 
 export const authAPI = {
