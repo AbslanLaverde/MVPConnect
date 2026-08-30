@@ -5,11 +5,17 @@ export const theme = {
     primaryBg: '#1a1a1a',
     secondaryBg: '#262626',
     tertiaryBg: '#333333',
+    pageBg: '#0c0e13',
+    elevatedSurface: '#181b22',
+    overlaySurface: 'rgba(18, 20, 27, 0.96)',
+    tagSurface: '#242833',
     
     // Text Colors
     primaryText: '#e5e5e5',
     secondaryText: '#a3a3a3',
     disabledText: '#666666',
+    warmWhite: '#f4f1e9',
+    mutedText: '#c2c4cb',
     
     // Accent Colors
     primaryAccent: '#0ea5e9', // Electric Blue
@@ -18,10 +24,15 @@ export const theme = {
     warning: '#f59e0b', // Amber
     error: '#ef4444', // Red
     info: '#3b82f6', // Blue
+    connectionBlue: '#38bdf8',
+    connectionViolet: '#8b5cf6',
+    mvpGold: '#f5c76b',
     
     // Borders & Dividers
     border: '#404040',
     strongBorder: '#525252',
+    subtleBorder: '#303541',
+    mvpGoldBorder: 'rgba(245, 199, 107, 0.45)',
     
     // Additional
     white: '#ffffff',
@@ -35,6 +46,7 @@ export const theme = {
   
   fontSizes: {
     h1: 32,
+    display: 48,
     h2: 24,
     h3: 20,
     bodyLarge: 16,

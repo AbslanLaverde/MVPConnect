@@ -1,0 +1,108 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../theme/theme';
+
+export const styles = StyleSheet.create({
+  showcase: {
+    width: '100%',
+    maxWidth: 850,
+    minHeight: 420,
+    alignSelf: 'center',
+    justifyContent: 'center',
+  },
+  showcaseCompact: {
+    minHeight: 480,
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  glowBlue: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    left: 90,
+    bottom: 12,
+    borderRadius: 125,
+    backgroundColor: theme.colors.connectionBlue,
+    opacity: 0.08,
+  },
+  glowViolet: {
+    position: 'absolute',
+    width: 270,
+    height: 270,
+    right: 94,
+    top: 8,
+    borderRadius: 135,
+    backgroundColor: theme.colors.connectionViolet,
+    opacity: 0.09,
+  },
+  venueCard: {
+    position: 'absolute',
+    right: 18,
+    top: 4,
+  },
+  venueCardCompact: {
+    position: 'relative',
+    right: 0,
+    top: 0,
+    alignSelf: 'flex-end',
+  },
+  artistCard: {
+    position: 'absolute',
+    left: 12,
+    bottom: 2,
+  },
+  artistCardCompact: {
+    position: 'relative',
+    left: 0,
+    bottom: 0,
+    alignSelf: 'flex-start',
+  },
+  connectBadgeCompact: {
+    width: 190,
+    marginVertical: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  connectBadgeDesktop: {
+    position: 'absolute',
+    left: 230,
+    top: 184,
+    zIndex: 2,
+  },
+  connectBadge: {
+    width: 190,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: theme.colors.overlaySurface,
+    borderColor: theme.colors.mvpGoldBorder,
+    borderWidth: 1,
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.md,
+  },
+  spark: {
+    position: 'absolute',
+    left: 11,
+    top: 12,
+    color: theme.colors.mvpGold,
+    fontSize: theme.fontSizes.bodyRegular,
+  },
+    spark2: {
+        position: 'absolute',
+        right: 11,
+        top: 12,
+        color: theme.colors.mvpGold,
+        fontSize: theme.fontSizes.bodyRegular,
+},
+  connectLabel: {
+    color: theme.colors.mvpGold,
+    fontSize: theme.fontSizes.bodySmall,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+  },
+  connectReasons: {
+    color: theme.colors.secondaryText,
+    fontSize: theme.fontSizes.caption,
+    marginTop: 3,
+  },
+});

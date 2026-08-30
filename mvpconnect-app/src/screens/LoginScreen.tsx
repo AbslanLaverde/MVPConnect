@@ -2,23 +2,28 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
-import { theme } from '../theme/theme';
+import { MatchShowcase } from '../components/MatchShowcase';
+import { BrandLogo } from '../components/BrandLogo';
 import { authAPI, storageHelpers } from '../services/api';
+import { styles } from './LoginScreen.styles';
 
 interface LoginScreenProps {
   navigation: any;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+  const { width, height } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isCompact = width < 720;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,14 +67,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       if (response.userType === 'MUSICIAN') {
         navigation.replace('MusicianHome', {
           userId: response.userId,
-          userName: response.displayName,
+          userName: response.displayName || email.trim(),
           userType: response.userType,
         });
       } else {
         // For now, all types go to MusicianHome (venue/promoter screens TBD)
         navigation.replace('MusicianHome', {
           userId: response.userId,
-          userName: response.displayName,
+          userName: response.displayName || email.trim(),
           userType: response.userType,
         });
       }
@@ -88,176 +93,186 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  const brand = (
+    <View style={styles.brand}>
+      <BrandLogo />
+    </View>
+  );
+
+  const story = (
+    <View
+      style={[
+        styles.storyContent,
+        isDesktop && styles.storyContentDesktop,
+        isCompact && styles.storyContentCompact,
+      ]}
+    >
+      <Text style={[styles.eyebrow, !isDesktop && styles.centeredText]}>
+        BUILT FOR LIVE MUSIC
+      </Text>
+      <Text
+        style={[
+          styles.headline,
+          !isDesktop && styles.centeredText,
+          isCompact && styles.headlineCompact,
+        ]}
+      >
+        Your next show starts with the right connection.
+      </Text>
+      <Text
+        style={[
+          styles.storyCopy,
+          !isDesktop && styles.centeredText,
+          isCompact && styles.storyCopyCompact,
+        ]}
+      >
+        Discover musicians, venues, and promoters who fit your sound, goals, and scene.
+      </Text>
+
+      <MatchShowcase compact={isCompact} />
+    </View>
+  );
+
+  const auth = (
+    <View
+      style={[
+        styles.authPanel,
+        isDesktop && styles.authPanelDesktop,
+        !isDesktop && styles.authPanelStacked,
+        isCompact && styles.authPanelCompact,
+      ]}
+    >
+      <View style={styles.form}>
+        <Text style={styles.title}>Welcome back</Text>
+        <Text style={styles.subtitle}>Sign in to continue building your network.</Text>
+
+        <Input
+          label="Email"
+          placeholder="you@example.com"
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            if (errors.email) setErrors({ ...errors, email: undefined });
+          }}
+          error={errors.email}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          returnKeyType="next"
+          required
+        />
+
+        <Input
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={(text) => {
+            setPassword(text);
+            if (errors.password) setErrors({ ...errors, password: undefined });
+          }}
+          error={errors.password}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="password"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+          required
+        />
+
+        <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={() => Alert.alert('Info', 'Password reset coming soon!')}
+          accessibilityRole="button"
+          accessibilityLabel="Forgot password"
+        >
+          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+        </TouchableOpacity>
+
+        <Button
+          title="Sign In"
+          onPress={handleLogin}
+          loading={loading}
+          fullWidth
+          size="large"
+          style={styles.loginButton}
+          accessibilityLabel="Sign in to your account"
+        />
+
+        <View style={styles.divider} />
+
+        <View style={styles.signupPrompt}>
+          <Text style={styles.signupPromptText}>New to MVPConnect?</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Signup')}
+            accessibilityRole="button"
+            accessibilityLabel="Create your MVPConnect profile"
+          >
+            <Text style={styles.signupLink}>Create your profile →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[
+        styles.container,
+        Platform.OS === 'web' && {
+          height,
+          maxHeight: height,
+          flexGrow: 0,
+          flexShrink: 0,
+          flexBasis: 'auto',
+        },
+      ]}
+      behavior={
+        Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined
+      }
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isDesktop && styles.scrollContentDesktop,
+          isCompact && styles.scrollContentCompact,
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>MVPConnect</Text>
-          <Text style={styles.tagline}>Connect. Collaborate. Create Moments.</Text>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
-
-          <Input
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (errors.email) setErrors({ ...errors, email: undefined });
-            }}
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            required
-            leftIcon={<Text style={styles.icon}>📧</Text>}
-          />
-
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errors.password) setErrors({ ...errors, password: undefined });
-            }}
-            error={errors.password}
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="password"
-            required
-            leftIcon={<Text style={styles.icon}>🔒</Text>}
-          />
-
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => Alert.alert('Info', 'Password reset coming soon!')}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <Button
-            title="Sign In"
-            onPress={handleLogin}
-            loading={loading}
-            fullWidth
-            size="large"
-            style={styles.loginButton}
-            accessibilityLabel="Sign in to your account"
-          />
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Sign up prompt */}
-          <View style={styles.signupPrompt}>
-            <Text style={styles.signupPromptText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.signupLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+        <View
+          style={[
+            styles.shell,
+            isDesktop && styles.shellDesktop,
+            isCompact && styles.shellCompact,
+          ]}
+        >
+          {isDesktop ? (
+            <>
+              <View style={[styles.storyPanel, styles.storyPanelDesktop]}>
+                {brand}
+                {story}
+              </View>
+              {auth}
+            </>
+          ) : (
+            <>
+              <View style={[styles.stackedBrand, isCompact && styles.stackedBrandCompact]}>
+                {brand}
+              </View>
+              {auth}
+              <View
+                style={[
+                  styles.storyPanel,
+                  styles.storyPanelStacked,
+                  isCompact && styles.storyPanelCompact,
+                ]}
+              >
+                {story}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.primaryBg,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xxl,
-    paddingBottom: theme.spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  logo: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: theme.colors.white,
-    marginBottom: theme.spacing.sm,
-  },
-  tagline: {
-    fontSize: theme.fontSizes.bodyRegular,
-    color: theme.colors.secondaryText,
-    textAlign: 'center',
-  },
-  form: {
-    flex: 1,
-  },
-  title: {
-    fontSize: theme.fontSizes.h1,
-    fontWeight: 'bold',
-    color: theme.colors.primaryText,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.fontSizes.bodyLarge,
-    color: theme.colors.secondaryText,
-    marginBottom: theme.spacing.xl,
-  },
-  icon: {
-    fontSize: 20,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.lg,
-  },
-  forgotPasswordText: {
-    fontSize: theme.fontSizes.bodySmall,
-    color: theme.colors.primaryAccent,
-  },
-  loginButton: {
-    marginBottom: theme.spacing.lg,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    fontSize: theme.fontSizes.bodySmall,
-    color: theme.colors.secondaryText,
-    marginHorizontal: theme.spacing.md,
-  },
-  signupPrompt: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signupPromptText: {
-    fontSize: theme.fontSizes.bodyRegular,
-    color: theme.colors.secondaryText,
-  },
-  signupLink: {
-    fontSize: theme.fontSizes.bodyRegular,
-    color: theme.colors.primaryAccent,
-    fontWeight: '600',
-  },
-});

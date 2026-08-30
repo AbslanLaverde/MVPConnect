@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a1a"
+      "backgroundColor": "#0C0E13"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,11 +18,11 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1a1a"
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#0C0E13"
       },
       "package": "com.mvpconnect.app"
-    }
-    ,
+    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
