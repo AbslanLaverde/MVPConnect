@@ -2,6 +2,7 @@ package com.mint.repositories;
 
 import com.mint.nodes.Promoter;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
+import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -30,4 +31,7 @@ public interface PromoterRepository extends Neo4jRepository<Promoter, String> {
      * @return true if a promoter with this email exists
      */
     boolean existsByEmail(String email);
+
+    @Query("MATCH (p:Promoter) WHERE toLower(p.email) = toLower($email) RETURN count(p) > 0")
+    boolean existsByEmailIgnoreCase(String email);
 }

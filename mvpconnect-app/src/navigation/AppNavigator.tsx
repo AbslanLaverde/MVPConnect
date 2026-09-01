@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
@@ -10,15 +10,31 @@ import { theme } from '../theme/theme';
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
+  SignupArtist: undefined;
+  SignupVenue: undefined;
+  SignupPromoter: undefined;
   MusicianHome: { userId: string; userName: string; userType: string };
   Profile: { userId: string; userName?: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [],
+  config: {
+    screens: {
+      Login: 'login',
+      Signup: 'signup',
+      SignupArtist: 'signup/artist',
+      SignupVenue: 'signup/venue',
+      SignupPromoter: 'signup/promoter',
+    },
+  },
+};
+
 export const AppNavigator: React.FC = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
@@ -43,6 +59,21 @@ export const AppNavigator: React.FC = () => {
         />
         <Stack.Screen
           name="Signup"
+          component={SignupScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SignupArtist"
+          component={SignupScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SignupVenue"
+          component={SignupScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SignupPromoter"
           component={SignupScreen}
           options={{ headerShown: false }}
         />

@@ -94,7 +94,7 @@ export const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     fontWeight: 'normal',
     letterSpacing: 2.6,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
   },
   headline: {
     maxWidth: 600,
@@ -165,7 +165,7 @@ export const styles = StyleSheet.create({
   authPanelCompact: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl + 50,
   },
   authPanelDesktop: {
     width: '42%',

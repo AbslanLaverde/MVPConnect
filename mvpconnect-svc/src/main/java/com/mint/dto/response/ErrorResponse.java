@@ -11,6 +11,7 @@ public class ErrorResponse {
     private LocalDateTime timestamp;
     private int status;
     private String error;
+    private String code;
     private String message;
     private String path;
     private List<String> details;
@@ -30,6 +31,15 @@ public class ErrorResponse {
         this.message = message;
         this.path = path;
         this.details = details;
+    }
+
+    public ErrorResponse(int status, String error, String code, String message, String path) {
+        this.timestamp = LocalDateTime.now();
+        this.status = status;
+        this.error = error;
+        this.code = code;
+        this.message = message;
+        this.path = path;
     }
 
     // Getters and Setters
@@ -55,6 +65,14 @@ public class ErrorResponse {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 
     public String getMessage() {
