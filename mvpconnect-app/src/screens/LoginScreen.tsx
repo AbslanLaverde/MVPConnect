@@ -129,7 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           style={styles.headlineNativeCompact}
           accessible
           accessibilityRole="header"
-          accessibilityLabel="Your next show starts with the right connection."
+          accessibilityLabel="Your next show starts with the right connect."
         >
           <Text style={[styles.headline, styles.headlineCompact, styles.headlineNativeLead]}>
             YOUR NEXT SHOW STARTS WITH THE RIGHT
@@ -157,7 +157,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               fontSize="32"
               letterSpacing="-0.8"
             >
-              CONNECTION.
+              CONNECT.
             </SvgText>
           </Svg>
         </View>
@@ -177,7 +177,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               Platform.OS === 'web' && connectionGradientWebStyle,
             ]}
           >
-            CONNECTION.
+            CONNECT.
           </Text>
         </Text>
       )}
