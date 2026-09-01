@@ -21,6 +21,7 @@ interface ButtonProps {
   textStyle?: TextStyle;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  brandTypography?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -35,6 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   accessibilityLabel,
   accessibilityHint,
+  brandTypography = false,
 }) => {
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
@@ -78,7 +80,15 @@ export const Button: React.FC<ButtonProps> = ({
           color={variant === 'primary' ? theme.colors.white : theme.colors.primaryAccent}
         />
       ) : (
-        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        <Text
+          style={[
+            getTextStyle(),
+            brandTypography && styles.textBrand,
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );

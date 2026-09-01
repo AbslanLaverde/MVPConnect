@@ -14,7 +14,17 @@ import { Button } from '../components/Button';
 import { MatchShowcase } from '../components/MatchShowcase';
 import { BrandLogo } from '../components/BrandLogo';
 import { authAPI, storageHelpers } from '../services/api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { styles } from './LoginScreen.styles';
+import { theme } from '../theme/theme';
+
+const connectionGradientWebStyle = {
+  backgroundImage: `linear-gradient(90deg, ${theme.colors.brandBlue}, ${theme.colors.brandViolet})`,
+  backgroundClip: 'text',
+  WebkitBackgroundClip: 'text',
+  color: 'transparent',
+} as any;
 
 interface LoginScreenProps {
   navigation: any;
@@ -22,6 +32,7 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = width >= 1024;
   const isCompact = width < 720;
   const [email, setEmail] = useState('');
@@ -113,15 +124,63 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <Text style={[styles.eyebrow, !isDesktop && styles.centeredText]}>
         BUILT FOR LIVE MUSIC
       </Text>
-      <Text
-        style={[
+      {Platform.OS !== 'web' && isCompact ? (
+        <View
+          style={styles.headlineNativeCompact}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel="Your next show starts with the right connect."
+        >
+          <Text style={[styles.headline, styles.headlineCompact, styles.headlineNativeLead]}>
+            YOUR NEXT SHOW STARTS WITH THE RIGHT
+          </Text>
+          <Svg width={240} height={40} accessibilityElementsHidden>
+            <Defs>
+              <LinearGradient
+                id="connectionGradient"
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1="0"
+                x2="240"
+                y2="0"
+              >
+                <Stop offset="0%" stopColor={theme.colors.brandBlue} />
+                <Stop offset="100%" stopColor={theme.colors.brandViolet} />
+              </LinearGradient>
+            </Defs>
+            <SvgText
+              x="120"
+              y="32"
+              textAnchor="middle"
+              fill="url(#connectionGradient)"
+              fontFamily={theme.typography.fontFamily.bodyBold}
+              fontSize="32"
+              letterSpacing="-0.8"
+            >
+              CONNECT.
+            </SvgText>
+          </Svg>
+        </View>
+      ) : (
+        <Text
+          style={[
           styles.headline,
+          isDesktop && styles.headlineDesktop,
           !isDesktop && styles.centeredText,
-          isCompact && styles.headlineCompact,
-        ]}
-      >
-        Your next show starts with the right connection.
-      </Text>
+            isCompact && styles.headlineCompact,
+          ]}
+        >
+          YOUR NEXT SHOW STARTS WITH THE RIGHT{' '}
+          <Text
+            style={[
+              styles.connectionText,
+              Platform.OS === 'web' && connectionGradientWebStyle,
+            ]}
+          >
+            CONNECT.
+          </Text>
+        </Text>
+      )}
       <Text
         style={[
           styles.storyCopy,
@@ -145,13 +204,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         isCompact && styles.authPanelCompact,
       ]}
     >
-      <View pointerEvents="none" style={styles.authAmbient} />
       <View style={styles.form}>
-        <Text style={styles.title}>Welcome back</Text>
+        <View style={styles.sectionMarker}>
+          <Text style={[styles.sectionLabel, styles.sectionLabelActive]}>SIGN IN</Text>
+        </View>
+        <Text style={styles.title}>WELCOME BACK.</Text>
         <Text style={styles.subtitle}>Sign in to continue building your network.</Text>
+        <View style={styles.formHeaderRule} />
 
         <Input
-          label="Email"
+          label="EMAIL"
           placeholder="you@example.com"
           value={email}
           onChangeText={(text) => {
@@ -164,10 +226,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           autoComplete="email"
           returnKeyType="next"
           required
+          brandTypography
         />
 
         <Input
-          label="Password"
+          label="PASSWORD"
           placeholder="Enter your password"
           value={password}
           onChangeText={(text) => {
@@ -181,6 +244,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           returnKeyType="done"
           onSubmitEditing={handleLogin}
           required
+          brandTypography
         />
 
         <TouchableOpacity
@@ -189,29 +253,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           accessibilityRole="button"
           accessibilityLabel="Forgot password"
         >
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+          <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
         </TouchableOpacity>
 
         <Button
-          title="Sign In"
+          title="SIGN IN →"
           onPress={handleLogin}
           loading={loading}
           fullWidth
           size="large"
           style={styles.loginButton}
           accessibilityLabel="Sign in to your account"
+          brandTypography
         />
 
         <View style={styles.divider} />
 
         <View style={styles.signupPrompt}>
-          <Text style={styles.signupPromptText}>New to MVPConnect?</Text>
+          <View style={styles.sectionMarkerSecondary}>
+            <Text style={styles.sectionLabel}>NEW HERE?</Text>
+          </View>
           <TouchableOpacity
             onPress={() => navigation.navigate('Signup')}
             accessibilityRole="button"
             accessibilityLabel="Create your MVPConnect profile"
           >
-            <Text style={styles.signupLink}>Create your profile →</Text>
+            <Text style={styles.signupLink}>CREATE YOUR PROFILE →</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -228,6 +295,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           flexGrow: 0,
           flexShrink: 0,
           flexBasis: 'auto',
+        },
+        Platform.OS !== 'web' && {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
         },
       ]}
       behavior={
