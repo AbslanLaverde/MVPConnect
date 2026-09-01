@@ -7,9 +7,12 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: theme.colors.elevatedSurface,
     borderWidth: 1,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.lg,
-    shadowOpacity: 0.22,
+    borderRadius: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    elevation: 3,
   },
   cardCompact: {
     width: 300,
@@ -69,7 +72,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 5,
     backgroundColor: 'rgba(12, 14, 19, 0.82)',
     borderWidth: 1,
-    borderRadius: theme.borderRadius.round,
+    borderRadius: 2,
   },
   rolePillCompact: {
     left: 12,
@@ -78,8 +81,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   roleText: {
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
     fontSize: theme.fontSizes.caption,
-    fontWeight: '700',
+    fontWeight: 'normal',
     letterSpacing: 1.5,
   },
   content: {
@@ -89,15 +93,18 @@ export const styles = StyleSheet.create({
     padding: 12,
   },
   name: {
+    fontFamily: theme.typography.fontFamily.displaySemiBold,
     color: theme.colors.primaryText,
     fontSize: theme.fontSizes.h3,
-    fontWeight: '700',
+    fontWeight: 'normal',
+    letterSpacing: -0.35,
     marginBottom: theme.spacing.xs,
   },
   nameCompact: {
     fontSize: 18,
   },
   details: {
+    fontFamily: theme.typography.fontFamily.bodyRegular,
     color: theme.colors.secondaryText,
     fontSize: theme.fontSizes.bodySmall,
     marginBottom: 12,
@@ -114,15 +121,16 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
     backgroundColor: theme.colors.tagSurface,
-    borderRadius: theme.borderRadius.round,
+    borderRadius: 2,
   },
   tagCompact: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
   },
   tagText: {
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
     color: theme.colors.mutedText,
     fontSize: theme.fontSizes.caption,
-    fontWeight: '600',
+    fontWeight: 'normal',
   },
 });

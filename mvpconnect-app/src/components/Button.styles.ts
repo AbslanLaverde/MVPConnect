@@ -3,12 +3,11 @@ import { theme } from '../theme/theme';
 
 export const styles = StyleSheet.create({
   button: {
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 3,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
-
   // Variants
   button_primary: {
     backgroundColor: theme.colors.primaryAccent,
@@ -44,7 +43,12 @@ export const styles = StyleSheet.create({
 
   // Text styles
   text: {
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+  textBrand: {
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontWeight: 'normal',
   },
   text_primary: {
     color: theme.colors.white,

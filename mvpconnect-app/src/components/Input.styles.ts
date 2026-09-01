@@ -6,10 +6,15 @@ export const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: theme.fontSizes.bodyRegular,
+    fontSize: theme.fontSizes.caption,
     color: theme.colors.primaryText,
     marginBottom: theme.spacing.sm,
-    fontWeight: '500',
+    fontWeight: '700',
+    letterSpacing: 1.15,
+  },
+  labelBrand: {
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    fontWeight: 'normal',
   },
   required: {
     color: theme.colors.error,
@@ -17,8 +22,8 @@ export const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.elevatedSurface,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: '#14171d',
+    borderRadius: 3,
     borderWidth: 1,
     borderColor: theme.colors.inputBorder,
     minHeight: 52,
@@ -40,6 +45,10 @@ export const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fontSizes.bodyRegular,
     color: theme.colors.primaryText,
+  },
+  inputBrand: {
+    fontFamily: theme.typography.fontFamily.bodyRegular,
+    fontWeight: 'normal',
   },
   inputWithLeftIcon: {
     paddingLeft: 0,
@@ -73,5 +82,9 @@ export const styles = StyleSheet.create({
     color: theme.colors.secondaryText,
     marginTop: theme.spacing.xs,
     marginLeft: theme.spacing.xs,
+  },
+  feedbackTextBrand: {
+    fontFamily: theme.typography.fontFamily.bodyRegular,
+    fontWeight: 'normal',
   },
 });

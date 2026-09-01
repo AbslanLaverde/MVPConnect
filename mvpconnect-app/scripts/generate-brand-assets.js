@@ -73,6 +73,10 @@ async function squareAsset(outputPath, canvasSize, markSize, options = {}) {
 
 async function main() {
   const dark = { r: 12, g: 14, b: 19, alpha: 1 };
+  await sharp(Buffer.from(master))
+    .resize(608, 128)
+    .png()
+    .toFile(path.join(branding, 'mvpconnect-logo-native.png'));
   await squareAsset(path.join(assets, 'icon.png'), 1024, 650, { background: dark });
   await squareAsset(path.join(assets, 'adaptive-icon.png'), 1024, 600);
   await squareAsset(path.join(assets, 'adaptive-icon-monochrome.png'), 1024, 600, { monochrome: true });

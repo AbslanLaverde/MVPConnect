@@ -53,6 +53,18 @@ export const theme = {
     medium: 'System',
     bold: 'System',
   },
+
+  typography: {
+    fontFamily: {
+      displaySemiBold: 'BarlowCondensed_600SemiBold',
+      displayBold: 'BarlowCondensed_700Bold',
+      displayExtraBold: 'BarlowCondensed_800ExtraBold',
+      bodyRegular: 'SpaceGrotesk_400Regular',
+      bodyMedium: 'SpaceGrotesk_500Medium',
+      bodySemiBold: 'SpaceGrotesk_600SemiBold',
+      bodyBold: 'SpaceGrotesk_700Bold',
+    },
+  },
   
   fontSizes: {
     h1: 32,

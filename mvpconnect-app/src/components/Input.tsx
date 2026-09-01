@@ -17,6 +17,7 @@ interface InputProps extends TextInputProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   containerStyle?: any;
+  brandTypography?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -27,6 +28,7 @@ export const Input: React.FC<InputProps> = ({
   leftIcon,
   rightIcon,
   containerStyle,
+  brandTypography = false,
   secureTextEntry,
   ...textInputProps
 }) => {
@@ -39,7 +41,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label && (
-        <Text style={styles.label}>
+        <Text style={[styles.label, brandTypography && styles.labelBrand]}>
           {label}
           {required && <Text style={styles.required}> *</Text>}
         </Text>
@@ -55,7 +57,11 @@ export const Input: React.FC<InputProps> = ({
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         
         <TextInput
-          style={[styles.input, Boolean(leftIcon) && styles.inputWithLeftIcon]}
+          style={[
+            styles.input,
+            brandTypography && styles.inputBrand,
+            Boolean(leftIcon) && styles.inputWithLeftIcon,
+          ]}
           accessibilityLabel={textInputProps.accessibilityLabel || label}
           placeholderTextColor={theme.colors.disabledText}
           onFocus={() => setIsFocused(true)}
@@ -83,12 +89,17 @@ export const Input: React.FC<InputProps> = ({
       </View>
       
       {error && (
-        <Text style={styles.errorText} accessibilityLiveRegion="polite">
+        <Text
+          style={[styles.errorText, brandTypography && styles.feedbackTextBrand]}
+          accessibilityLiveRegion="polite"
+        >
           {error}
         </Text>
       )}
       {helperText && !error && (
-        <Text style={styles.helperText}>{helperText}</Text>
+        <Text style={[styles.helperText, brandTypography && styles.feedbackTextBrand]}>
+          {helperText}
+        </Text>
       )}
     </View>
   );
