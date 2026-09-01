@@ -72,20 +72,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       });
 
       // Save auth data
-      await storageHelpers.saveAuthData(response.token, response.userType);
+      await storageHelpers.saveAuthData(response.accessToken, response.userType);
 
       // Navigate to appropriate home screen
       if (response.userType === 'MUSICIAN') {
         navigation.replace('MusicianHome', {
           userId: response.userId,
-          userName: response.displayName || email.trim(),
+          userName: response.name || email.trim(),
           userType: response.userType,
         });
       } else {
         // For now, all types go to MusicianHome (venue/promoter screens TBD)
         navigation.replace('MusicianHome', {
           userId: response.userId,
-          userName: response.displayName || email.trim(),
+          userName: response.name || email.trim(),
           userType: response.userType,
         });
       }

@@ -1,4 +1,7 @@
 // Theme configuration based on MVPConnect UI Design Document
+const ELECTRIC_BLUE = '#0ea5e9';
+const BRAND_VIOLET = '#8b5cf6';
+
 export const theme = {
   colors: {
     // Background Colors
@@ -18,20 +21,20 @@ export const theme = {
     mutedText: '#c2c4cb',
 
     // MVPConnect brand semantics
-    brandBlue: '#0ea5e9',
-    brandViolet: '#8b5cf6',
+    brandBlue: ELECTRIC_BLUE,
+    brandViolet: BRAND_VIOLET,
     brandWarmWhite: '#f4f1e9',
     brandBackground: '#0c0e13',
     
     // Accent Colors
-    primaryAccent: '#0ea5e9', // Electric Blue
-    secondaryAccent: '#8b5cf6', // Purple
+    primaryAccent: ELECTRIC_BLUE, // Electric Blue
+    secondaryAccent: BRAND_VIOLET, // Purple
     success: '#10b981', // Green
     warning: '#f59e0b', // Amber
     error: '#ef4444', // Red
     info: '#3b82f6', // Blue
     connectionBlue: '#38bdf8',
-    connectionViolet: '#8b5cf6',
+    connectionViolet: BRAND_VIOLET,
     mvpGold: '#f5c76b',
     
     // Borders & Dividers
@@ -46,6 +49,20 @@ export const theme = {
     
     // Additional
     white: '#ffffff',
+  },
+
+  // Canonical persona accents. Use these references anywhere a role is styled.
+  personas: {
+    artist: {
+      accentStart: ELECTRIC_BLUE,
+      accentEnd: BRAND_VIOLET,
+    },
+    promoter: {
+      accent: ELECTRIC_BLUE,
+    },
+    venue: {
+      accent: BRAND_VIOLET,
+    },
   },
   
   fonts: {

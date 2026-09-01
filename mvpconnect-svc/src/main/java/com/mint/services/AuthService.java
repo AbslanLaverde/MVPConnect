@@ -5,6 +5,7 @@ import com.mint.dto.request.PromoterSignupRequest;
 import com.mint.dto.request.VenueSignupRequest;
 import com.mint.dto.request.LoginRequest;
 import com.mint.dto.response.JwtAuthenticationResponse;
+import com.mint.exceptions.DuplicateEmailException;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
@@ -19,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
 
 /**
  * Service handling authentication logic for all user types
@@ -49,13 +52,14 @@ public class AuthService {
      * Register a new musician
      */
     public JwtAuthenticationResponse signupMusician(MusicianSignupRequest request) {
-        if (emailExists(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered");
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        if (emailExists(normalizedEmail)) {
+            throw new DuplicateEmailException();
         }
 
         Musician musician = new Musician();
-        musician.setName(request.getName());
-        musician.setEmail(request.getEmail());
+        musician.setName(request.getName().trim());
+        musician.setEmail(normalizedEmail);
         musician.setPassword(passwordEncoder.encode(request.getPassword()));
         musician.setBio(request.getBio());
         musician.setLocation(request.getLocation());
@@ -92,13 +96,14 @@ public class AuthService {
      * Register a new venue
      */
     public JwtAuthenticationResponse signupVenue(VenueSignupRequest request) {
-        if (emailExists(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered");
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        if (emailExists(normalizedEmail)) {
+            throw new DuplicateEmailException();
         }
 
         Venue venue = new Venue();
-        venue.setVenueName(request.getVenueName());
-        venue.setEmail(request.getEmail());
+        venue.setVenueName(request.getVenueName().trim());
+        venue.setEmail(normalizedEmail);
         venue.setPassword(passwordEncoder.encode(request.getPassword()));
         venue.setDescription(request.getDescription());
         venue.setLocation(request.getLocation());
@@ -136,13 +141,14 @@ public class AuthService {
      * Register a new promoter
      */
     public JwtAuthenticationResponse signupPromoter(PromoterSignupRequest request) {
-        if (emailExists(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered");
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        if (emailExists(normalizedEmail)) {
+            throw new DuplicateEmailException();
         }
 
         Promoter promoter = new Promoter();
-        promoter.setBusinessName(request.getBusinessName());
-        promoter.setEmail(request.getEmail());
+        promoter.setBusinessName(request.getBusinessName().trim());
+        promoter.setEmail(normalizedEmail);
         promoter.setPassword(passwordEncoder.encode(request.getPassword()));
         promoter.setBio(request.getBio());
         promoter.setLocation(request.getLocation());
@@ -180,9 +186,10 @@ public class AuthService {
      * Works for all user types - searches all repositories automatically
      */
     public JwtAuthenticationResponse login(LoginRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                request.getEmail(),
+                normalizedEmail,
                 request.getPassword()
             )
         );
@@ -192,7 +199,7 @@ public class AuthService {
         String token = jwtTokenProvider.generateToken(authentication);
 
         // Determine user type and get display name
-        String email = request.getEmail();
+        String email = normalizedEmail;
         String userId = null;
         String userType = null;
         String displayName = null;
@@ -232,9 +239,13 @@ public class AuthService {
      * Check if email exists across all user types
      */
     private boolean emailExists(String email) {
-        return musicianRepository.existsByEmail(email) ||
-               promoterRepository.existsByEmail(email) ||
-               venueRepository.existsByEmail(email);
+        return musicianRepository.existsByEmailIgnoreCase(email) ||
+               promoterRepository.existsByEmailIgnoreCase(email) ||
+               venueRepository.existsByEmailIgnoreCase(email);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 }
 

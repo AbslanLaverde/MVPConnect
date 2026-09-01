@@ -15,6 +15,9 @@ public interface VenueRepository extends Neo4jRepository<Venue, String> {
 
     boolean existsByEmail(String email);
 
+    @Query("MATCH (v:Venue) WHERE toLower(v.email) = toLower($email) RETURN count(v) > 0")
+    boolean existsByEmailIgnoreCase(String email);
+
     @Query("MATCH (v:Venue) WHERE ANY(g IN v.genrePreferences WHERE toLower(g) CONTAINS toLower($genre)) RETURN v")
     List<Venue> findByGenrePreferenceContaining(String genre);
 

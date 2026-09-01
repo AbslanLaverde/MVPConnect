@@ -15,6 +15,9 @@ public interface MusicianRepository extends Neo4jRepository<Musician, String> {
 
     boolean existsByEmail(String email);
 
+    @Query("MATCH (m:Musician) WHERE toLower(m.email) = toLower($email) RETURN count(m) > 0")
+    boolean existsByEmailIgnoreCase(String email);
+
     @Query("MATCH (m:Musician) WHERE ANY(g IN m.genres WHERE toLower(g) CONTAINS toLower($genre)) RETURN m")
     List<Musician> findByGenreContaining(String genre);
 

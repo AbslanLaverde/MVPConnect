@@ -30,11 +30,6 @@ export const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     borderColor: theme.colors.brandBlue,
-    shadowColor: theme.colors.brandBlue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
   },
   inputContainerError: {
     borderColor: theme.colors.error,
@@ -45,6 +40,11 @@ export const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fontSizes.bodyRegular,
     color: theme.colors.primaryText,
+  },
+  focusGradientBorder: {
+    position: 'absolute',
+    top: -1,
+    left: -1,
   },
   inputBrand: {
     fontFamily: theme.typography.fontFamily.bodyRegular,

@@ -2,7 +2,7 @@ import axios from 'axios';
 // @ts-ignore: ignore missing type declarations for async-storage in this environment
 const AsyncStorage: any = require('@react-native-async-storage/async-storage').default;
 
-const API_BASE_URL = 'http://localhost:8081';
+const API_BASE_URL = 'http://localhost:8080';
 
 // Create axios instance
 const api = axios.create({
@@ -88,10 +88,12 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  tokenType: string;
   userType: 'MUSICIAN' | 'VENUE' | 'PROMOTER';
   userId: string;
-  displayName?: string;
+  email: string;
+  name?: string;
 }
 
 export const authAPI = {
