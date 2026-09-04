@@ -7,6 +7,24 @@ import type {
   OnboardingStep,
   SaveOnboardingStepRequest,
 } from './onboardingTypes';
+import type { OwnedMediaResponse } from './onboardingMedia';
+
+export interface SelfProfileMedia {
+  mediaId: string;
+  url: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SelfAccountResponse {
+  id: string;
+  persona: 'MUSICIAN' | 'VENUE' | 'PROMOTER';
+  displayName: string;
+  email: string;
+  profileImage?: SelfProfileMedia | null;
+  [key: string]: unknown;
+}
 
 const toApiError = (error: unknown): OnboardingApiError => {
   if (axios.isAxiosError(error)) {
@@ -39,6 +57,27 @@ export const onboardingApi = createApi({
         }
       },
       providesTags: ['Onboarding'],
+    }),
+    getSelfAccount: builder.query<SelfAccountResponse, void>({
+      queryFn: async () => {
+        try {
+          const response = await api.get<SelfAccountResponse>('/me');
+          return { data: response.data };
+        } catch (error) {
+          return { error: toApiError(error) };
+        }
+      },
+    }),
+    getOwnedMedia: builder.query<OwnedMediaResponse, string>({
+      queryFn: async (mediaId) => {
+        try {
+          const response = await api.get<OwnedMediaResponse>(`/media/${mediaId}`);
+          return { data: response.data };
+        } catch (error) {
+          return { error: toApiError(error) };
+        }
+      },
+      keepUnusedDataFor: 0,
     }),
     saveOnboardingStep: builder.mutation<OnboardingStep, SaveOnboardingStepRequest>({
       queryFn: async ({ stepKey, data }) => {
@@ -125,6 +164,8 @@ export const onboardingApi = createApi({
 
 export const {
   useGetOnboardingQuery,
+  useGetSelfAccountQuery,
+  useGetOwnedMediaQuery,
   useSaveOnboardingStepMutation,
   useCompleteOnboardingStepMutation,
   useSkipOnboardingStepMutation,

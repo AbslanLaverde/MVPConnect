@@ -4,10 +4,13 @@ import { theme } from '../theme/theme';
 export const styles = StyleSheet.create({
   page: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: theme.colors.pageBg,
   },
   keyboardView: {
     flex: 1,
+    minHeight: 0,
+    height: '100%',
   },
   scrollContent: {
     flexGrow: 1,
@@ -38,6 +41,40 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     textAlign: 'right',
+  },
+  headerIdentity: {
+    maxWidth: 330,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  headerIdentityImage: {
+    width: 54,
+    height: 54,
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder,
+  },
+  headerIdentityImageCompact: {
+    width: 48,
+    height: 48,
+  },
+  headerIdentityCopy: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
+  },
+  headerIdentityName: {
+    maxWidth: 240,
+    color: theme.colors.warmWhite,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+  headerIdentityPersona: {
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    marginTop: 3,
   },
   headerRule: {
     height: 1,

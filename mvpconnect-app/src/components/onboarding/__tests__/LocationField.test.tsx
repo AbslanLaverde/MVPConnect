@@ -69,4 +69,61 @@ describe('LocationField', () => {
 
     expect(onChange).toHaveBeenLastCalledWith(suggestion);
   });
+
+  it('preserves spaces while a structured city is being edited', () => {
+    const onChange = jest.fn();
+    const screen = render(<LocationField value={VALUE} onChange={onChange} mode="city" />);
+
+    fireEvent.changeText(screen.getByLabelText('City, required'), 'Mount Vernon ');
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ city: 'Mount Vernon ' }));
+  });
+
+  it('resolves a structured suggestion only after it is selected', async () => {
+    const suggestion: LocationValue = {
+      displayName: 'Mount Vernon, NY, USA',
+      city: '',
+      state: '',
+      country: '',
+      placeId: 'mount-vernon-place',
+    };
+    const resolved: LocationValue = {
+      ...suggestion,
+      city: 'Mount Vernon',
+      state: 'NY',
+      country: 'United States',
+      latitude: 40.9126,
+      longitude: -73.8371,
+    };
+    const provider: LocationSuggestionProvider = {
+      search: jest.fn().mockResolvedValue([suggestion]),
+      resolve: jest.fn().mockResolvedValue(resolved),
+    };
+    const onChange = jest.fn();
+    const ControlledLocationField = () => {
+      const [current, setCurrent] = React.useState<LocationValue>({ ...VALUE, city: '' });
+      return (
+        <LocationField
+          value={current}
+          onChange={(next) => {
+            onChange(next);
+            setCurrent(next);
+          }}
+          provider={provider}
+          suggestionDelayMs={0}
+          mode="city"
+        />
+      );
+    };
+    const screen = render(<ControlledLocationField />);
+
+    fireEvent.changeText(screen.getByLabelText('City, required'), 'Mount Ver');
+
+    await waitFor(() => expect(provider.search).toHaveBeenCalledWith('Mount Ver'));
+    expect(screen.getByLabelText('Google Maps')).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText('Use location Mount Vernon, NY, USA'));
+
+    await waitFor(() => expect(provider.resolve).toHaveBeenCalledWith(suggestion));
+    expect(onChange).toHaveBeenLastCalledWith(resolved);
+  });
 });

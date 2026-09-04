@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/space-grotesk';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { store } from './src/store/store';
+import { WebInputTheme } from './src/theme/WebInputTheme';
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
@@ -35,6 +36,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
+        <WebInputTheme />
         <StatusBar style="light" />
         <AppNavigator />
       </SafeAreaProvider>

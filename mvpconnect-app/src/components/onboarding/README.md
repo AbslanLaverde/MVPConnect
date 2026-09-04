@@ -4,7 +4,7 @@ These components are the shared vocabulary for future persona onboarding steps. 
 
 ## Integration boundaries
 
-- `LocationField` always reads and writes a structured `LocationValue`. Manual entry remains available without a provider. A future provider implements `LocationSuggestionProvider`; no location service is currently wired.
+- `LocationField` always reads and writes a structured `LocationValue`. Artist and Promoter city fields and Venue address fields use the authenticated Google Places backend proxy when it is configured; manual entry remains available when it is not.
 - `MediaUploader` supports profile, banner, and gallery image modes plus empty, local, uploading, uploaded, and error states. A local selection is labeled as not uploaded unless a `MediaUploadAdapter` is supplied. No production media transport, object storage, presigned upload, native picker, or camera integration is included.
 - `ImageGalleryUploader` composes `MediaUploader`, requires an explicit maximum, and exposes reorder/remove behavior without selecting a final product limit.
 - `SocialConnectionField` is a controlled display/action shell. It does not implement OAuth or assume that Spotify, YouTube, Instagram, and TikTok expose identical metadata.

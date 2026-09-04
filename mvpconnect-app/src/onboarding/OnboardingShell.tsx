@@ -12,7 +12,11 @@ import type { StackScreenProps } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme/theme';
-import { useGetOnboardingQuery } from './onboardingApi';
+import {
+  useGetOnboardingQuery,
+  useGetOwnedMediaQuery,
+  useGetSelfAccountQuery,
+} from './onboardingApi';
 import {
   ONBOARDING_CONFIG,
   ONBOARDING_PLACEHOLDER_SAVE_BYPASS,
@@ -22,6 +26,7 @@ import { OnboardingHeader } from './OnboardingHeader';
 import { OnboardingProgress } from './OnboardingProgress';
 import { OnboardingStepSession } from './OnboardingStepSession';
 import { styles } from './OnboardingShell.styles';
+import { stepOneMediaId } from './onboardingStepOne';
 
 type Props = StackScreenProps<RootStackParamList, 'Onboarding'>;
 
@@ -37,10 +42,16 @@ const LoadingState = () => (
 );
 
 export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const mobile = width < 768;
   const { data, isLoading, isFetching, isError, refetch } = useGetOnboardingQuery();
+  const selfQuery = useGetSelfAccountQuery();
+  const firstStep = data?.steps.find((candidate) => candidate.position === 1);
+  const firstStepResolved = firstStep?.status === 'COMPLETE' || firstStep?.status === 'SKIPPED';
+  const allowPlaceholderNavigation = ONBOARDING_PLACEHOLDER_SAVE_BYPASS && firstStepResolved;
+  const profileMediaId = firstStep ? stepOneMediaId(firstStep.data) : undefined;
+  const profileMediaQuery = useGetOwnedMediaQuery(profileMediaId ?? '', { skip: !profileMediaId });
 
   const resolvedRoute = useMemo(
     () => data
@@ -48,10 +59,10 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
         data,
         route.params.persona,
         route.params.step,
-        ONBOARDING_PLACEHOLDER_SAVE_BYPASS,
+        allowPlaceholderNavigation,
       )
       : undefined,
-    [data, route.params.persona, route.params.step],
+    [allowPlaceholderNavigation, data, route.params.persona, route.params.step],
   );
 
   useEffect(() => {
@@ -108,27 +119,44 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.keyboardView}
+      style={[
+        styles.keyboardView,
+        Platform.OS === 'web' && { height, maxHeight: height },
+      ]}
       behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
     >
       <ScrollView
-        style={styles.page}
+        testID="onboarding-scroll-view"
+        style={[
+          styles.page,
+          Platform.OS === 'web' && { height, maxHeight: height },
+        ]}
         contentContainerStyle={[
           styles.scrollContent,
           mobile && styles.scrollContentMobile,
           { paddingTop: Math.max(insets.top, theme.spacing.md) },
         ]}
+        scrollEnabled
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator
       >
         <View style={styles.pageFrame}>
-          <OnboardingHeader config={config} compact={mobile} />
+          <OnboardingHeader
+            config={config}
+            compact={mobile}
+            identity={step.position > 1 && (profileMediaQuery.data?.url || selfQuery.data?.profileImage?.url)
+              ? {
+                  displayName: selfQuery.data?.displayName ?? config.label,
+                  imageUrl: profileMediaQuery.data?.url ?? selfQuery.data?.profileImage?.url,
+                }
+              : undefined}
+          />
           <OnboardingProgress
             state={data}
             activeStep={step}
             config={config}
             mobile={mobile}
-            allowPlaceholderNavigation={ONBOARDING_PLACEHOLDER_SAVE_BYPASS}
+            allowPlaceholderNavigation={allowPlaceholderNavigation}
             onSelect={(stepKey) => navigation.push('Onboarding', {
               persona: config.persona,
               step: stepKey,
@@ -141,6 +169,7 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
             config={config}
             navigation={navigation}
             saveBypass={ONBOARDING_PLACEHOLDER_SAVE_BYPASS}
+            displayName={selfQuery.data?.displayName}
           />
         </View>
       </ScrollView>
