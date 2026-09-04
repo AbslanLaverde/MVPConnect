@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#14171d',
+    backgroundColor: theme.colors.inputSurface,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: theme.colors.inputBorder,

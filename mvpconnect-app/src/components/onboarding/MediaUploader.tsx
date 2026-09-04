@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { FieldFrame } from './FieldFrame';
 import { fieldStyles } from './OnboardingFields.styles';
 
@@ -12,6 +12,7 @@ export interface MediaFile {
   size: number;
   width?: number;
   height?: number;
+  blob?: Blob;
 }
 
 export interface UploadedMedia {
@@ -34,6 +35,7 @@ export type MediaUploaderState =
   | { status: 'SELECTED_LOCAL'; file: MediaFile }
   | { status: 'UPLOADING'; file: MediaFile; progress?: number }
   | { status: 'UPLOADED'; file?: MediaFile; media: UploadedMedia }
+  | { status: 'REMOVING'; file?: MediaFile; media: UploadedMedia }
   | { status: 'ERROR'; error: string; file?: MediaFile; media?: UploadedMedia };
 
 export interface MediaUploaderProps {
@@ -52,6 +54,13 @@ export interface MediaUploaderProps {
   maxFileSizeBytes?: number;
   aspectRatio?: number;
   cropHint?: string;
+  accentColor?: string;
+  borderless?: boolean;
+  compact?: boolean;
+  emptyTitle?: string;
+  emptyCopy?: string;
+  fieldContainerStyle?: StyleProp<ViewStyle>;
+  error?: string;
 }
 
 export const EMPTY_MEDIA_STATE: MediaUploaderState = { status: 'EMPTY' };
@@ -102,6 +111,13 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   maxFileSizeBytes = DEFAULT_MAX_IMAGE_BYTES,
   aspectRatio,
   cropHint,
+  accentColor,
+  borderless = false,
+  compact = false,
+  emptyTitle,
+  emptyCopy,
+  fieldContainerStyle,
+  error,
 }) => {
   const [internalState, setInternalState] = useState<MediaUploaderState>(defaultState);
   const currentState = state ?? internalState;
@@ -125,7 +141,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       commit({
         status: 'ERROR',
         file,
-        error: 'Image upload failed. Your local selection is still available.',
+        error: "We couldn't save this image.",
       });
     }
   };
@@ -155,6 +171,8 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         ? currentState.media
         : undefined;
     if (uploaded && adapter) {
+      const uploadedFile = 'file' in currentState ? currentState.file : undefined;
+      commit({ status: 'REMOVING', file: uploadedFile, media: uploaded });
       try {
         await adapter.remove(uploaded.id);
       } catch {
@@ -169,6 +187,11 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     commit(EMPTY_MEDIA_STATE);
   };
 
+  const retryUpload = async () => {
+    if (disabled || !adapter || currentState.status !== 'ERROR' || !currentState.file) return;
+    await upload(currentState.file);
+  };
+
   const statusCopy = (() => {
     switch (currentState.status) {
       case 'SELECTED_LOCAL':
@@ -177,6 +200,8 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         return `UPLOADING ${Math.round((currentState.progress ?? 0) * 100)}%`;
       case 'UPLOADED':
         return 'UPLOADED';
+      case 'REMOVING':
+        return 'REMOVING IMAGE…';
       case 'ERROR':
         return currentState.error;
       default:
@@ -185,6 +210,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   })();
 
   const uploading = currentState.status === 'UPLOADING';
+  const removing = currentState.status === 'REMOVING';
   const progress = currentState.status === 'UPLOADING' ? currentState.progress ?? 0 : 0;
 
   return (
@@ -193,30 +219,49 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       required={required}
       optional={optional}
       helperText={helperText}
-      error={currentState.status === 'ERROR' ? currentState.error : undefined}
+      error={currentState.status === 'ERROR' ? currentState.error : error}
+      containerStyle={fieldContainerStyle}
     >
       <View
-        style={[fieldStyles.uploader, currentState.status === 'ERROR' && fieldStyles.uploaderError]}
+        style={[
+          fieldStyles.uploader,
+          compact && fieldStyles.uploaderCompact,
+          accentColor ? { borderColor: accentColor } : undefined,
+          borderless && { borderColor: 'transparent' },
+          (currentState.status === 'ERROR' || Boolean(error)) && fieldStyles.uploaderError,
+        ]}
         accessibilityLabel={`${MODE_LABELS[mode]} uploader, ${statusCopy}`}
       >
         {previewUri ? (
           <Image
             source={{ uri: previewUri }}
-            style={[fieldStyles.preview, aspectRatio ? { aspectRatio } : undefined]}
+            style={[
+              fieldStyles.preview,
+              compact && fieldStyles.previewCompact,
+              aspectRatio ? { aspectRatio } : undefined,
+            ]}
             resizeMode="cover"
             accessibilityLabel={`Selected ${MODE_LABELS[mode].toLowerCase()} preview`}
           />
         ) : (
-          <View style={fieldStyles.uploaderEmpty}>
-            <Text style={fieldStyles.uploaderTitle}>{MODE_LABELS[mode]}</Text>
+          <View style={[fieldStyles.uploaderEmpty, compact && fieldStyles.uploaderEmptyCompact]}>
+            <Text style={[fieldStyles.uploaderTitle, compact && fieldStyles.uploaderTitleCompact]}>
+              {emptyTitle ?? MODE_LABELS[mode]}
+            </Text>
             <Text style={fieldStyles.uploaderCopy}>
-              {cropHint ?? 'Image crop guidance will appear here when configured.'}
+              {emptyCopy ?? cropHint ?? 'Image crop guidance will appear here when configured.'}
             </Text>
           </View>
         )}
         {uploading ? (
           <View style={fieldStyles.progressTrack}>
-            <View style={[fieldStyles.progressFill, { width: `${progress * 100}%` }]} />
+            <View
+              style={[
+                fieldStyles.progressFill,
+                accentColor ? { backgroundColor: accentColor } : undefined,
+                { width: `${progress * 100}%` },
+              ]}
+            />
           </View>
         ) : null}
         <Text
@@ -226,23 +271,45 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
           ]}
           accessibilityLiveRegion="polite"
         >
-          {currentState.status === 'ERROR' ? 'IMAGE NEEDS ATTENTION' : statusCopy}
+          {currentState.status === 'ERROR' ? 'UPLOAD FAILED' : statusCopy}
         </Text>
         <View style={fieldStyles.uploaderActions}>
+          {currentState.status === 'ERROR' && currentState.file && adapter ? (
+            <TouchableOpacity
+              style={[fieldStyles.textAction, disabled && fieldStyles.chipUnavailable]}
+              onPress={() => void retryUpload()}
+              disabled={disabled}
+              accessibilityRole="button"
+              accessibilityLabel="Try image upload again"
+              accessibilityState={{ disabled }}
+            >
+              <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
+                TRY AGAIN →
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
-            style={[fieldStyles.textAction, (!pickerAvailable || disabled || uploading) && fieldStyles.chipUnavailable]}
+            style={[
+              fieldStyles.textAction,
+              (!pickerAvailable || disabled || uploading || removing) && fieldStyles.chipUnavailable,
+            ]}
             onPress={() => void selectImage()}
-            disabled={!pickerAvailable || disabled || uploading}
+            disabled={!pickerAvailable || disabled || uploading || removing}
             accessibilityRole="button"
             accessibilityLabel={previewUri ? 'Replace image' : 'Select image'}
             accessibilityHint={!pickerAvailable
               ? 'A native image picker has not been connected.'
               : undefined}
-            accessibilityState={{ disabled: !pickerAvailable || disabled || uploading, busy: uploading }}
+            accessibilityState={{
+              disabled: !pickerAvailable || disabled || uploading || removing,
+              busy: uploading || removing,
+            }}
           >
-            <Text style={fieldStyles.textActionLabel}>{previewUri ? 'REPLACE' : 'SELECT IMAGE'}</Text>
+            <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
+              {previewUri ? 'CHANGE IMAGE →' : 'ADD YOUR IMAGE →'}
+            </Text>
           </TouchableOpacity>
-          {currentState.status !== 'EMPTY' ? (
+          {currentState.status !== 'EMPTY' && currentState.status !== 'REMOVING' ? (
             <TouchableOpacity
               style={[fieldStyles.textAction, (disabled || uploading) && fieldStyles.chipUnavailable]}
               onPress={() => void removeImage()}

@@ -32,6 +32,8 @@ import { OnboardingPlaceholderStep } from './OnboardingPlaceholderStep';
 import { OnboardingSaveStatus } from './OnboardingSaveStatus';
 import { isOnboardingStepValid } from './onboardingValidation';
 import { styles } from './OnboardingShell.styles';
+import { isRealStepOne } from './onboardingStepOne';
+import { OnboardingRealStepSession } from './OnboardingRealStepSession';
 
 type OperationKind = 'autosave' | 'complete' | 'skip' | 'reopen';
 
@@ -45,6 +47,7 @@ interface OnboardingStepSessionProps {
   config: OnboardingPersonaConfig;
   navigation: StackNavigationProp<RootStackParamList, 'Onboarding'>;
   saveBypass?: boolean;
+  displayName?: string;
 }
 
 const signatureFor = (data: OnboardingStepData) => JSON.stringify(data);
@@ -54,7 +57,7 @@ const dataForConfirmation = (
   confirmed: boolean,
 ): OnboardingStepData => ({ ...current, frameworkConfirmed: confirmed });
 
-export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
+const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = ({
   state,
   step,
   config,
@@ -356,4 +359,19 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
       />
     </View>
   );
+};
+
+export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = (props) => {
+  if (isRealStepOne(props.config.persona, props.step.key)) {
+    return (
+      <OnboardingRealStepSession
+        state={props.state}
+        step={props.step}
+        config={props.config}
+        displayName={props.displayName}
+        navigation={props.navigation}
+      />
+    );
+  }
+  return <OnboardingPlaceholderStepSession {...props} />;
 };

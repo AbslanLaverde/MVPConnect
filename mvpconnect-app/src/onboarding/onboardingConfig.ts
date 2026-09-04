@@ -26,7 +26,8 @@ export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfi
     persona: 'artist',
     backendPersona: 'MUSICIAN',
     label: 'ARTIST',
-    accentStart: theme.colors.brandBlue,
+    accentStart: theme.personas.artist.accentStart,
+    accentEnd: theme.personas.artist.accentEnd,
     entryStep: 'basics',
     stepPresentation: {
       basics: { label: 'THE BASICS', placeholderTitle: 'Artist Basics Placeholder' },
@@ -40,7 +41,7 @@ export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfi
     persona: 'venue',
     backendPersona: 'VENUE',
     label: 'VENUE',
-    accentStart: theme.colors.brandViolet,
+    accentStart: theme.personas.venue.accent,
     entryStep: 'room',
     stepPresentation: {
       room: { label: 'THE ROOM', placeholderTitle: 'Venue Room Placeholder' },
@@ -55,8 +56,7 @@ export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfi
     persona: 'promoter',
     backendPersona: 'PROMOTER',
     label: 'PROMOTER',
-    accentStart: theme.colors.brandBlue,
-    accentEnd: theme.colors.brandViolet,
+    accentStart: theme.personas.promoter.accent,
     entryStep: 'business',
     stepPresentation: {
       business: { label: 'THE BUSINESS', placeholderTitle: 'Promoter Business Placeholder' },

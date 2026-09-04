@@ -10,6 +10,7 @@ export const theme = {
     tertiaryBg: '#333333',
     pageBg: '#0c0e13',
     elevatedSurface: '#181b22',
+    inputSurface: '#14171d',
     overlaySurface: 'rgba(18, 20, 27, 0.96)',
     tagSurface: '#242833',
     

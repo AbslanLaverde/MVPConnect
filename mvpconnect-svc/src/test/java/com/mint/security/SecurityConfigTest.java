@@ -2,6 +2,7 @@ package com.mint.security;
 
 import com.mint.controllers.MusicianController;
 import com.mint.controllers.MediaController;
+import com.mint.controllers.LocationController;
 import com.mint.controllers.OnboardingMediaController;
 import com.mint.controllers.OnboardingController;
 import com.mint.controllers.PromoterController;
@@ -9,6 +10,7 @@ import com.mint.controllers.SelfAccountController;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.services.MediaService;
+import com.mint.services.GooglePlacesService;
 import com.mint.services.DiscoveryProfileMapper;
 import com.mint.services.OnboardingMediaService;
 import com.mint.services.OnboardingService;
@@ -35,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         OnboardingController.class,
         OnboardingMediaController.class,
         MediaController.class,
+        LocationController.class,
         MusicianController.class,
         PromoterController.class,
         SelfAccountController.class
@@ -46,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         OnboardingController.class,
         OnboardingMediaController.class,
         MediaController.class,
+        LocationController.class,
         MusicianController.class,
         PromoterController.class,
         SelfAccountController.class
@@ -63,6 +67,9 @@ class SecurityConfigTest {
 
     @MockBean
     private MediaService mediaService;
+
+    @MockBean
+    private GooglePlacesService googlePlacesService;
 
     @MockBean
     private PublicProfileService publicProfileService;
@@ -147,6 +154,16 @@ class SecurityConfigTest {
         mockMvc.perform(delete("/media/media-1"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/onboarding/steps/basics/media/media-1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedLocationLookupIsRejected() throws Exception {
+        mockMvc.perform(get("/locations/suggestions")
+                        .param("query", "Brooklyn")
+                        .param("mode", "CITY"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/locations/place").param("placeId", "place-1"))
                 .andExpect(status().isUnauthorized());
     }
 }

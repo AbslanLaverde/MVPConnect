@@ -161,12 +161,33 @@ export const fieldStyles = StyleSheet.create({
     fontSize: 11,
     marginTop: 6,
   },
+  locationAttribution: {
+    color: theme.colors.secondaryText,
+    fontSize: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
+    textAlign: 'right',
+  },
+  locationFieldRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  locationFieldGrow: {
+    flex: 1,
+    minWidth: 150,
+  },
+  locationFieldCompact: {
+    width: 116,
+  },
   uploader: {
     borderWidth: 1,
     borderColor: theme.colors.inputBorder,
     backgroundColor: theme.colors.elevatedSurface,
     minHeight: 176,
     overflow: 'hidden',
+  },
+  uploaderCompact: {
+    minHeight: 0,
   },
   uploaderError: {
     borderColor: theme.colors.error,
@@ -176,11 +197,18 @@ export const fieldStyles = StyleSheet.create({
     minHeight: 150,
     backgroundColor: theme.colors.secondaryBg,
   },
+  previewCompact: {
+    minHeight: 0,
+  },
   uploaderEmpty: {
     minHeight: 174,
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.lg,
+  },
+  uploaderEmptyCompact: {
+    minHeight: 138,
+    padding: theme.spacing.md,
   },
   uploaderTitle: {
     color: theme.colors.warmWhite,
@@ -189,6 +217,9 @@ export const fieldStyles = StyleSheet.create({
     letterSpacing: 0.4,
     textAlign: 'center',
     textTransform: 'uppercase',
+  },
+  uploaderTitleCompact: {
+    fontSize: 20,
   },
   uploaderCopy: {
     color: theme.colors.secondaryText,

@@ -6,6 +6,7 @@ import com.mint.dto.response.OnboardingCompletionValidationDetails;
 import com.mint.dto.response.OnboardingFieldError;
 import com.mint.exceptions.DuplicateEmailException;
 import com.mint.exceptions.MediaException;
+import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
 import com.mint.onboarding.PersonaType;
 import jakarta.servlet.http.HttpServletRequest;
@@ -102,5 +103,18 @@ class GlobalExceptionHandlerTest {
         assertEquals(MediaException.MEDIA_STORAGE_ERROR, response.getBody().getCode());
         assertEquals("Media storage is temporarily unavailable.", response.getBody().getMessage());
         assertEquals("/media/uploads", response.getBody().getPath());
+    }
+
+    @Test
+    void locationLookupResponseDoesNotExposeProviderDetails() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/locations/suggestions");
+
+        ResponseEntity<ErrorResponse> response = new GlobalExceptionHandler()
+                .handleLocationLookupException(LocationLookupException.unavailable(), request);
+
+        assertEquals(503, response.getStatusCode().value());
+        assertEquals(LocationLookupException.UNAVAILABLE, response.getBody().getCode());
+        assertEquals("Location suggestions are temporarily unavailable.", response.getBody().getMessage());
     }
 }

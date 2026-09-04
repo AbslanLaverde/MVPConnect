@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import {
   DEFAULT_MAX_IMAGE_BYTES,
   MediaFile,
@@ -78,8 +78,41 @@ describe('MediaUploader', () => {
 
     fireEvent.press(screen.getByLabelText('Select image'));
 
-    expect(await screen.findByText('Image upload failed. Your local selection is still available.'))
+    expect(await screen.findByText("We couldn't save this image."))
       .toBeTruthy();
     expect(adapter.upload).toHaveBeenCalledWith(IMAGE, expect.any(Function));
+  });
+
+  it('removes an uploaded preview immediately while deletion is in progress', async () => {
+    let finishRemoval: (() => void) | undefined;
+    const removal = new Promise<void>((resolve) => {
+      finishRemoval = resolve;
+    });
+    const adapter: MediaUploadAdapter = {
+      upload: jest.fn(),
+      remove: jest.fn(() => removal),
+    };
+    const screen = render(
+      <MediaUploader
+        mode="PROFILE_IMAGE"
+        defaultState={{
+          status: 'UPLOADED',
+          media: { id: 'media-1', url: 'https://example.com/profile.jpg' },
+        }}
+        adapter={adapter}
+        onSelectRequest={async () => IMAGE}
+      />,
+    );
+
+    expect(screen.getByLabelText('Selected profile image preview')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Remove image'));
+
+    expect(screen.queryByLabelText('Selected profile image preview')).toBeNull();
+    expect(screen.getByText('REMOVING IMAGE…')).toBeTruthy();
+    expect(screen.getByLabelText('Select image').props.accessibilityState.busy).toBe(true);
+
+    await act(async () => finishRemoval?.());
+    await screen.findByText('SELECT AN IMAGE');
+    expect(adapter.remove).toHaveBeenCalledWith('media-1');
   });
 });

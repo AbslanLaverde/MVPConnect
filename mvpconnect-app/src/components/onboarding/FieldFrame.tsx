@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { fieldStyles } from './OnboardingFields.styles';
 
 interface FieldFrameProps {
@@ -9,6 +9,7 @@ interface FieldFrameProps {
   helperText?: string;
   error?: string;
   children: React.ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const FieldFrame: React.FC<FieldFrameProps> = ({
@@ -18,13 +19,16 @@ export const FieldFrame: React.FC<FieldFrameProps> = ({
   helperText,
   error,
   children,
+  containerStyle,
 }) => (
-  <View style={fieldStyles.fieldGroup}>
-    <Text style={fieldStyles.label}>
-      {label}
-      {required ? <Text style={fieldStyles.required}> *</Text> : null}
-      {!required && optional ? <Text style={fieldStyles.optional}> OPTIONAL</Text> : null}
-    </Text>
+  <View style={[fieldStyles.fieldGroup, containerStyle]}>
+    {label ? (
+      <Text style={fieldStyles.label}>
+        {label}
+        {required ? <Text style={fieldStyles.required}> *</Text> : null}
+        {!required && optional ? <Text style={fieldStyles.optional}> OPTIONAL</Text> : null}
+      </Text>
+    ) : null}
     {children}
     {error ? (
       <Text style={fieldStyles.error} accessibilityRole="alert" accessibilityLiveRegion="polite">

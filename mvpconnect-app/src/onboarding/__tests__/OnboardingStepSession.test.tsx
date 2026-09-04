@@ -20,8 +20,8 @@ jest.mock('../../services/api', () => ({
 const mockedApi = api as jest.Mocked<typeof api>;
 
 const makeStep = (overrides: Partial<OnboardingStep> = {}): OnboardingStep => ({
-  key: 'basics',
-  position: 1,
+  key: 'sound',
+  position: 2,
   required: true,
   status: 'NOT_STARTED',
   data: {},
@@ -102,7 +102,7 @@ describe('OnboardingStepSession', () => {
     await act(async () => jest.advanceTimersByTime(1000));
 
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith(
-      '/onboarding/steps/basics',
+      '/onboarding/steps/sound',
       { data: { frameworkConfirmed: true } },
     ));
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -122,13 +122,13 @@ describe('OnboardingStepSession', () => {
     await act(async () => resolveRequest({
       data: makeState(
         makeStep({ status: 'COMPLETE', data: { frameworkConfirmed: true } }),
-        { currentStep: 'sound' },
+        { currentStep: 'live' },
       ),
     }));
 
     await waitFor(() => expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
       persona: 'artist',
-      step: 'sound',
+      step: 'live',
     }));
   });
 
@@ -140,7 +140,7 @@ describe('OnboardingStepSession', () => {
 
     expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
       persona: 'artist',
-      step: 'sound',
+      step: 'live',
     });
     expect(mockedApi.put).not.toHaveBeenCalled();
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe('OnboardingStepSession', () => {
     fireEvent.press(screen.getByLabelText('Framework placeholder is ready'));
 
     await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith(
-      '/onboarding/steps/basics/reopen',
+      '/onboarding/steps/sound/reopen',
     ));
     expect(mockedApi.put).not.toHaveBeenCalled();
   });
