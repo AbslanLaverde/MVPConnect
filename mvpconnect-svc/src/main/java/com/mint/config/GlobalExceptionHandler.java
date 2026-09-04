@@ -2,6 +2,7 @@ package com.mint.config;
 
 import com.mint.dto.response.ErrorResponse;
 import com.mint.exceptions.DuplicateEmailException;
+import com.mint.exceptions.OnboardingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,20 @@ import java.util.List;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OnboardingException.class)
+    public ResponseEntity<ErrorResponse> handleOnboardingException(
+            OnboardingException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
+    }
 
     /**
      * Handle a duplicate email across musician, venue, and promoter accounts.

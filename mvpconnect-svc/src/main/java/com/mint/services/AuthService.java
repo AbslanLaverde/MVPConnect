@@ -9,6 +9,8 @@ import com.mint.exceptions.DuplicateEmailException;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.OnboardingStepRegistry;
+import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
@@ -70,6 +72,8 @@ public class AuthService {
         musician.setWillingToTravel(request.getWillingToTravel());
         musician.setWebsiteUrl(request.getWebsiteUrl());
         musician.setInstagramHandle(request.getInstagramHandle());
+        musician.setOnboardingStatus(PersonaOnboardingStatus.NOT_STARTED);
+        musician.setOnboardingVersion(OnboardingStepRegistry.CURRENT_VERSION);
 
         musician.setCreatedAt(java.time.LocalDateTime.now());
         musician.setUpdatedAt(java.time.LocalDateTime.now());
@@ -115,6 +119,8 @@ public class AuthService {
         venue.setLiveMusic(request.getLiveMusic());
         venue.setWebsiteUrl(request.getWebsiteUrl());
         venue.setBookingEmail(request.getBookingEmail());
+        venue.setOnboardingStatus(PersonaOnboardingStatus.NOT_STARTED);
+        venue.setOnboardingVersion(OnboardingStepRegistry.CURRENT_VERSION);
 
         venue.setCreatedAt(java.time.LocalDateTime.now());
         venue.setUpdatedAt(java.time.LocalDateTime.now());
@@ -159,6 +165,8 @@ public class AuthService {
         promoter.setCurrentRosterSize(request.getCurrentRosterSize());
         promoter.setWebsiteUrl(request.getWebsiteUrl());
         promoter.setPhone(request.getPhone());
+        promoter.setOnboardingStatus(PersonaOnboardingStatus.NOT_STARTED);
+        promoter.setOnboardingVersion(OnboardingStepRegistry.CURRENT_VERSION);
 
         promoter.setCreatedAt(java.time.LocalDateTime.now());
         promoter.setUpdatedAt(java.time.LocalDateTime.now());

@@ -1,5 +1,7 @@
 package com.mint.nodes;
 
+import com.mint.onboarding.OnboardingOwner;
+import com.mint.onboarding.PersonaOnboardingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +10,11 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,7 +26,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Promoter {
+public class Promoter implements OnboardingOwner {
 
     // ========== CORE IDENTITY (Required for Auth) ==========
     @Id
@@ -56,6 +60,16 @@ public class Promoter {
     private String websiteUrl;             // Business website
 
     private String phone;                  // Contact number
+
+    // ========== ONBOARDING WORKFLOW ==========
+    private PersonaOnboardingStatus onboardingStatus;
+
+    private LocalDateTime onboardingCompletedAt;
+
+    private Integer onboardingVersion;
+
+    @Relationship(type = "HAS_ONBOARDING_DRAFT", direction = Relationship.Direction.OUTGOING)
+    private List<OnboardingDraft> onboardingDrafts = new ArrayList<>();
 
     // ========== METADATA ==========
     @CreatedDate

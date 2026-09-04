@@ -8,6 +8,7 @@ import com.mint.exceptions.DuplicateEmailException;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
@@ -125,17 +126,23 @@ class AuthServiceTest {
             case MUSICIAN -> verify(musicianRepository).save(
                     org.mockito.ArgumentMatchers.argThat(account ->
                             account.getEmail().equals("new@example.com") &&
-                            account.getName().equals("Test Name"))
+                            account.getName().equals("Test Name") &&
+                            account.getOnboardingStatus() == PersonaOnboardingStatus.NOT_STARTED &&
+                            account.getOnboardingVersion() == 1)
             );
             case VENUE -> verify(venueRepository).save(
                     org.mockito.ArgumentMatchers.argThat(account ->
                             account.getEmail().equals("new@example.com") &&
-                            account.getVenueName().equals("Test Name"))
+                            account.getVenueName().equals("Test Name") &&
+                            account.getOnboardingStatus() == PersonaOnboardingStatus.NOT_STARTED &&
+                            account.getOnboardingVersion() == 1)
             );
             case PROMOTER -> verify(promoterRepository).save(
                     org.mockito.ArgumentMatchers.argThat(account ->
                             account.getEmail().equals("new@example.com") &&
-                            account.getBusinessName().equals("Test Name"))
+                            account.getBusinessName().equals("Test Name") &&
+                            account.getOnboardingStatus() == PersonaOnboardingStatus.NOT_STARTED &&
+                            account.getOnboardingVersion() == 1)
             );
         }
     }
