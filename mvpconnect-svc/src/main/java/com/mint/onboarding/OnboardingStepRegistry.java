@@ -1,5 +1,21 @@
 package com.mint.onboarding;
 
+import com.mint.dto.onboarding.artist.ArtistBasicsStepRequest;
+import com.mint.dto.onboarding.artist.ArtistGoalsStepRequest;
+import com.mint.dto.onboarding.artist.ArtistLiveStepRequest;
+import com.mint.dto.onboarding.artist.ArtistMediaStepRequest;
+import com.mint.dto.onboarding.artist.ArtistSoundStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterBusinessStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterGoalsStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterMediaStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterSpecialtiesStepRequest;
+import com.mint.dto.onboarding.venue.VenueBookingStepRequest;
+import com.mint.dto.onboarding.venue.VenueGoalsStepRequest;
+import com.mint.dto.onboarding.venue.VenueMediaStepRequest;
+import com.mint.dto.onboarding.venue.VenueMusicStepRequest;
+import com.mint.dto.onboarding.venue.VenueRoomStepRequest;
+import com.mint.dto.onboarding.venue.VenueStageStepRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
@@ -16,7 +32,7 @@ import java.util.Set;
 @Component
 public class OnboardingStepRegistry {
 
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     private final Map<PersonaType, List<OnboardingStepDefinition>> stepsByPersona;
 
@@ -86,23 +102,36 @@ public class OnboardingStepRegistry {
                 new EnumMap<>(PersonaType.class);
         definitions.put(
                 PersonaType.MUSICIAN,
-                requiredSteps("basics", "sound", "live", "media", "goals")
+                List.of(
+                        new OnboardingStepDefinition("basics", 1, true, ArtistBasicsStepRequest.class),
+                        new OnboardingStepDefinition("sound", 2, true, ArtistSoundStepRequest.class),
+                        new OnboardingStepDefinition("live", 3, true, ArtistLiveStepRequest.class),
+                        new OnboardingStepDefinition("media", 4, false, ArtistMediaStepRequest.class),
+                        new OnboardingStepDefinition("goals", 5, true, ArtistGoalsStepRequest.class)
+                )
         );
         definitions.put(
                 PersonaType.VENUE,
-                requiredSteps("room", "music", "booking", "media", "goals")
+                List.of(
+                        new OnboardingStepDefinition("room", 1, true, VenueRoomStepRequest.class),
+                        new OnboardingStepDefinition("music", 2, true, VenueMusicStepRequest.class),
+                        new OnboardingStepDefinition("stage", 3, true, VenueStageStepRequest.class),
+                        new OnboardingStepDefinition("booking", 4, true, VenueBookingStepRequest.class),
+                        new OnboardingStepDefinition("media", 5, false, VenueMediaStepRequest.class),
+                        new OnboardingStepDefinition("goals", 6, true, VenueGoalsStepRequest.class)
+                )
         );
         definitions.put(
                 PersonaType.PROMOTER,
-                requiredSteps("business", "specialties", "network", "media", "goals")
+                List.of(
+                        new OnboardingStepDefinition("business", 1, true, PromoterBusinessStepRequest.class),
+                        new OnboardingStepDefinition("specialties", 2, true, PromoterSpecialtiesStepRequest.class),
+                        new OnboardingStepDefinition("network", 3, true, PromoterNetworkStepRequest.class),
+                        new OnboardingStepDefinition("media", 4, false, PromoterMediaStepRequest.class),
+                        new OnboardingStepDefinition("goals", 5, true, PromoterGoalsStepRequest.class)
+                )
         );
         return definitions;
-    }
-
-    private static List<OnboardingStepDefinition> requiredSteps(String... keys) {
-        return java.util.stream.IntStream.range(0, keys.length)
-                .mapToObj(index -> new OnboardingStepDefinition(keys[index], index + 1, true))
-                .toList();
     }
 
     private static void validate(

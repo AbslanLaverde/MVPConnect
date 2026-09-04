@@ -1,7 +1,13 @@
 package com.mint.exceptions;
 
+import com.mint.dto.response.OnboardingCompletionStepError;
+import com.mint.dto.response.OnboardingCompletionValidationDetails;
+import com.mint.dto.response.OnboardingFieldError;
+import com.mint.dto.response.OnboardingStepValidationDetails;
 import com.mint.onboarding.PersonaType;
 import org.springframework.http.HttpStatus;
+
+import java.util.List;
 
 public class OnboardingException extends RuntimeException {
 
@@ -12,14 +18,22 @@ public class OnboardingException extends RuntimeException {
     public static final String ALREADY_COMPLETE = "ONBOARDING_ALREADY_COMPLETE";
     public static final String INVALID_DATA = "INVALID_ONBOARDING_DATA";
     public static final String STEP_NOT_SKIPPABLE = "ONBOARDING_STEP_NOT_SKIPPABLE";
+    public static final String STEP_INVALID = "ONBOARDING_STEP_INVALID";
+    public static final String NOT_READY = "ONBOARDING_NOT_READY";
 
     private final String code;
     private final HttpStatus status;
+    private final Object details;
 
     private OnboardingException(String code, HttpStatus status, String message) {
+        this(code, status, message, null);
+    }
+
+    private OnboardingException(String code, HttpStatus status, String message, Object details) {
         super(message);
         this.code = code;
         this.status = status;
+        this.details = details;
     }
 
     public static OnboardingException invalidStep(String stepKey, PersonaType persona) {
@@ -78,7 +92,28 @@ public class OnboardingException extends RuntimeException {
         return new OnboardingException(
                 INVALID_DATA,
                 HttpStatus.BAD_REQUEST,
-                "Onboarding step data could not be serialized as JSON."
+                "Onboarding step data is invalid."
+        );
+    }
+
+    public static OnboardingException stepInvalid(
+            String stepKey,
+            List<OnboardingFieldError> fieldErrors) {
+        return new OnboardingException(
+                STEP_INVALID,
+                HttpStatus.BAD_REQUEST,
+                "Onboarding step contains invalid fields.",
+                new OnboardingStepValidationDetails(stepKey, List.copyOf(fieldErrors))
+        );
+    }
+
+    public static OnboardingException notReady(
+            List<OnboardingCompletionStepError> stepErrors) {
+        return new OnboardingException(
+                NOT_READY,
+                HttpStatus.CONFLICT,
+                "Onboarding is not ready to complete.",
+                new OnboardingCompletionValidationDetails(List.copyOf(stepErrors))
         );
     }
 
@@ -88,5 +123,9 @@ public class OnboardingException extends RuntimeException {
 
     public HttpStatus getStatus() {
         return status;
+    }
+
+    public Object getDetails() {
+        return details;
     }
 }

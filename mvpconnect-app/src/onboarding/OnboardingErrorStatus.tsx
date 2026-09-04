@@ -6,12 +6,16 @@ interface OnboardingErrorStatusProps {
   title: string;
   message?: string;
   onRetry: () => void;
+  retryLabel?: string;
+  retryAccessibilityLabel?: string;
 }
 
 export const OnboardingErrorStatus: React.FC<OnboardingErrorStatusProps> = ({
   title,
   message = 'Your information is still here.\nPlease try again.',
   onRetry,
+  retryLabel = 'TRY AGAIN',
+  retryAccessibilityLabel = 'Try again',
 }) => (
   <View style={styles.errorPanel} accessibilityRole="alert">
     <Text style={styles.errorTitle}>{title}</Text>
@@ -20,9 +24,9 @@ export const OnboardingErrorStatus: React.FC<OnboardingErrorStatusProps> = ({
       onPress={onRetry}
       style={styles.retryButton}
       accessibilityRole="button"
-      accessibilityLabel="Try saving again"
+      accessibilityLabel={retryAccessibilityLabel}
     >
-      <Text style={styles.retryButtonText}>TRY AGAIN</Text>
+      <Text style={styles.retryButtonText}>{retryLabel}</Text>
     </TouchableOpacity>
   </View>
 );

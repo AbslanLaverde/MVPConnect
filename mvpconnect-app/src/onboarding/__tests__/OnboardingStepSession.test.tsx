@@ -28,22 +28,30 @@ const makeStep = (overrides: Partial<OnboardingStep> = {}): OnboardingStep => ({
   ...overrides,
 });
 
-const makeState = (step: OnboardingStep, overrides: Partial<OnboardingState> = {}): OnboardingState => ({
-  persona: 'MUSICIAN',
-  status: 'IN_PROGRESS',
-  currentStep: step.key,
-  onboardingVersion: 1,
-  steps: [
-    step,
+const makeState = (step: OnboardingStep, overrides: Partial<OnboardingState> = {}): OnboardingState => {
+  const defaultSteps: OnboardingStep[] = [
+    { key: 'basics', position: 1, required: true, status: 'NOT_STARTED', data: {} },
     { key: 'sound', position: 2, required: true, status: 'NOT_STARTED', data: {} },
     { key: 'live', position: 3, required: true, status: 'NOT_STARTED', data: {} },
-    { key: 'media', position: 4, required: true, status: 'NOT_STARTED', data: {} },
+    { key: 'media', position: 4, required: false, status: 'NOT_STARTED', data: {} },
     { key: 'goals', position: 5, required: true, status: 'NOT_STARTED', data: {} },
-  ],
-  ...overrides,
-});
+  ];
 
-const renderSession = (step = makeStep(), state = makeState(step)) => {
+  return {
+    persona: 'MUSICIAN',
+    status: 'IN_PROGRESS',
+    currentStep: step.key,
+    onboardingVersion: 2,
+    steps: defaultSteps.map((candidate) => candidate.key === step.key ? step : candidate),
+    ...overrides,
+  };
+};
+
+const renderSession = (
+  step = makeStep(),
+  state = makeState(step),
+  saveBypass = false,
+) => {
   const testStore = configureStore({
     reducer: { [onboardingApi.reducerPath]: onboardingApi.reducer },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(onboardingApi.middleware),
@@ -56,6 +64,7 @@ const renderSession = (step = makeStep(), state = makeState(step)) => {
         step={step}
         config={ONBOARDING_CONFIG.artist}
         navigation={navigation}
+        saveBypass={saveBypass}
       />
     </Provider>,
   );
@@ -121,6 +130,33 @@ describe('OnboardingStepSession', () => {
       persona: 'artist',
       step: 'sound',
     }));
+  });
+
+  it('advances placeholder steps locally without calling a save endpoint when bypass is enabled', () => {
+    const screen = renderSession(makeStep(), undefined, true);
+
+    fireEvent.press(screen.getByLabelText('Framework placeholder is ready'));
+    fireEvent.press(screen.getByLabelText('Continue to the next onboarding step'));
+
+    expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
+      persona: 'artist',
+      step: 'sound',
+    });
+    expect(mockedApi.put).not.toHaveBeenCalled();
+    expect(mockedApi.post).not.toHaveBeenCalled();
+  });
+
+  it('offers Skip for backend-defined optional Media and advances locally during bypass', () => {
+    const media = makeStep({ key: 'media', position: 4, required: false });
+    const screen = renderSession(media, makeState(media, { currentStep: 'media' }), true);
+
+    fireEvent.press(screen.getByLabelText('Skip this optional step for now'));
+
+    expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
+      persona: 'artist',
+      step: 'goals',
+    });
+    expect(mockedApi.post).not.toHaveBeenCalled();
   });
 
   it('keeps local values and stays on the step when completion fails', async () => {

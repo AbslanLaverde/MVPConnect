@@ -1,6 +1,4 @@
 import {
-  configuredStepFor,
-  firstStepForPersona,
   isOnboardingPersona,
   routePersonaForBackend,
 } from './onboardingConfig';
@@ -12,23 +10,25 @@ export interface ResolvedOnboardingRoute {
   shouldRedirect: boolean;
 }
 
+const orderedSteps = (state: OnboardingState) =>
+  [...state.steps].sort((left, right) => left.position - right.position);
+
 export const resumeStepFromState = (state: OnboardingState): string => {
   const currentExists = state.steps.some((step) => step.key === state.currentStep);
   if (state.currentStep && currentExists) return state.currentStep;
 
-  const unresolved = [...state.steps]
-    .sort((left, right) => left.position - right.position)
+  const ordered = orderedSteps(state);
+  const unresolved = ordered
     .find((step) => step.status !== 'COMPLETE' && step.status !== 'SKIPPED');
 
-  return unresolved?.key ?? state.steps.at(-1)?.key ?? firstStepForPersona(
-    routePersonaForBackend(state.persona),
-  );
+  return unresolved?.key ?? ordered.at(-1)?.key ?? '';
 };
 
 export const resolveOnboardingRoute = (
   state: OnboardingState,
   requestedPersona: string,
   requestedStep: string,
+  allowPlaceholderNavigation = false,
 ): ResolvedOnboardingRoute => {
   const persona = routePersonaForBackend(state.persona);
   const resumeStep = resumeStepFromState(state);
@@ -37,11 +37,13 @@ export const resolveOnboardingRoute = (
   }
   const personaMatches = isOnboardingPersona(requestedPersona) && requestedPersona === persona;
   const target = state.steps.find((step) => step.key === requestedStep);
-  const configuredTarget = configuredStepFor(persona, requestedStep);
   const resolvedTarget = target?.status === 'COMPLETE' || target?.status === 'SKIPPED';
   const isCurrent = requestedStep === state.currentStep;
   const onboardingResolved = state.status === 'READY';
-  const stepAllowed = Boolean(target && configuredTarget && (resolvedTarget || isCurrent || onboardingResolved));
+  const stepAllowed = Boolean(
+    target &&
+    (allowPlaceholderNavigation || resolvedTarget || isCurrent || onboardingResolved),
+  );
 
   if (!personaMatches || !stepAllowed) {
     return { persona, step: resumeStep, shouldRedirect: true };
@@ -50,11 +52,11 @@ export const resolveOnboardingRoute = (
   return { persona, step: requestedStep, shouldRedirect: false };
 };
 
-export const previousConfiguredStep = (
+export const previousResolvedStep = (
   state: OnboardingState,
   stepKey: string,
 ): string | undefined => {
-  const ordered = [...state.steps].sort((left, right) => left.position - right.position);
+  const ordered = orderedSteps(state);
   const index = ordered.findIndex((step) => step.key === stepKey);
   if (index <= 0) return undefined;
 
@@ -62,4 +64,22 @@ export const previousConfiguredStep = (
   return previous.status === 'COMPLETE' || previous.status === 'SKIPPED'
     ? previous.key
     : undefined;
+};
+
+export const nextStepFromState = (
+  state: OnboardingState,
+  stepKey: string,
+): string | undefined => {
+  const ordered = orderedSteps(state);
+  const index = ordered.findIndex((step) => step.key === stepKey);
+  return index >= 0 ? ordered[index + 1]?.key : undefined;
+};
+
+export const previousStepFromState = (
+  state: OnboardingState,
+  stepKey: string,
+): string | undefined => {
+  const ordered = orderedSteps(state);
+  const index = ordered.findIndex((step) => step.key === stepKey);
+  return index > 0 ? ordered[index - 1]?.key : undefined;
 };

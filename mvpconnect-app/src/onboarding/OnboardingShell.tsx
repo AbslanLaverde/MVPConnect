@@ -13,7 +13,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { theme } from '../theme/theme';
 import { useGetOnboardingQuery } from './onboardingApi';
-import { configuredStepFor, ONBOARDING_CONFIG } from './onboardingConfig';
+import {
+  ONBOARDING_CONFIG,
+  ONBOARDING_PLACEHOLDER_SAVE_BYPASS,
+} from './onboardingConfig';
 import { resolveOnboardingRoute } from './onboardingRoutes';
 import { OnboardingHeader } from './OnboardingHeader';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -41,7 +44,12 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
 
   const resolvedRoute = useMemo(
     () => data
-      ? resolveOnboardingRoute(data, route.params.persona, route.params.step)
+      ? resolveOnboardingRoute(
+        data,
+        route.params.persona,
+        route.params.step,
+        ONBOARDING_PLACEHOLDER_SAVE_BYPASS,
+      )
       : undefined,
     [data, route.params.persona, route.params.step],
   );
@@ -96,7 +104,7 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
 
   const step = data.steps.find((candidate) => candidate.key === resolvedRoute.step);
   const config = ONBOARDING_CONFIG[resolvedRoute.persona];
-  if (!step || !configuredStepFor(resolvedRoute.persona, step.key)) return <LoadingState />;
+  if (!step) return <LoadingState />;
 
   return (
     <KeyboardAvoidingView
@@ -120,6 +128,7 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
             activeStep={step}
             config={config}
             mobile={mobile}
+            allowPlaceholderNavigation={ONBOARDING_PLACEHOLDER_SAVE_BYPASS}
             onSelect={(stepKey) => navigation.push('Onboarding', {
               persona: config.persona,
               step: stepKey,
@@ -131,6 +140,7 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
             step={step}
             config={config}
             navigation={navigation}
+            saveBypass={ONBOARDING_PLACEHOLDER_SAVE_BYPASS}
           />
         </View>
       </ScrollView>

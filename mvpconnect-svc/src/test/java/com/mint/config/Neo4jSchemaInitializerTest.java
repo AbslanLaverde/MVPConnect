@@ -9,7 +9,7 @@ class Neo4jSchemaInitializerTest {
 
     @Test
     void schemaStatementsAreIdempotentAndCoverOnboardingIdentity() {
-        assertEquals(6, Neo4jSchemaInitializer.CONSTRAINTS.size());
+        assertEquals(7, Neo4jSchemaInitializer.CONSTRAINTS.size());
         assertTrue(Neo4jSchemaInitializer.CONSTRAINTS.stream()
                 .allMatch(statement -> statement.contains("IF NOT EXISTS")));
         assertTrue(Neo4jSchemaInitializer.CONSTRAINTS.stream()
@@ -17,6 +17,9 @@ class Neo4jSchemaInitializerTest {
                         && statement.contains("node.id IS UNIQUE")));
         assertTrue(Neo4jSchemaInitializer.CONSTRAINTS.stream()
                 .anyMatch(statement -> statement.contains("OnboardingStep")
+                        && statement.contains("node.id IS UNIQUE")));
+        assertTrue(Neo4jSchemaInitializer.CONSTRAINTS.stream()
+                .anyMatch(statement -> statement.contains("MediaAsset")
                         && statement.contains("node.id IS UNIQUE")));
         assertTrue(Neo4jSchemaInitializer.CONSTRAINTS.stream()
                 .anyMatch(statement -> statement.contains("node.ownerVersionKey IS UNIQUE")));

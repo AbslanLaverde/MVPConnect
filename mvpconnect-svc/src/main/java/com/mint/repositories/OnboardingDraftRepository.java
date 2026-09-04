@@ -14,11 +14,16 @@ public interface OnboardingDraftRepository extends Neo4jRepository<OnboardingDra
     @Query("""
             MATCH (owner)-[:HAS_ONBOARDING_DRAFT]->(draft:OnboardingDraft)
             WHERE owner.id = $ownerId
-              AND $persona IN labels(owner)
-              AND draft.persona = $persona
+              AND any(label IN labels(owner) WHERE toUpper(label) = $persona)
+            AND draft.persona = $persona
               AND draft.onboardingVersion = $onboardingVersion
             OPTIONAL MATCH (draft)-[hasStep:HAS_STEP]->(step:OnboardingStep)
-            RETURN draft, collect(hasStep), collect(step)
+            OPTIONAL MATCH (step)-[hasMedia:HAS_MEDIA]->(media:MediaAsset)
+            RETURN draft,
+                   collect(DISTINCT hasStep),
+                   collect(DISTINCT step),
+                   collect(DISTINCT hasMedia),
+                   collect(DISTINCT media)
             ORDER BY draft.createdAt DESC
             LIMIT 1
             """)

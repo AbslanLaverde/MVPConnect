@@ -2,6 +2,8 @@ package com.mint.nodes;
 
 import com.mint.onboarding.OnboardingOwner;
 import com.mint.onboarding.PersonaOnboardingStatus;
+import com.mint.onboarding.taxonomy.PromoterAcceptingStatus;
+import com.mint.onboarding.taxonomy.RosterSizeRange;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -44,6 +46,18 @@ public class Promoter implements OnboardingOwner {
 
     private String location;                // City, State where they operate
 
+    private String locationDisplay;
+    private String locationAddressLine1;
+    private String locationAddressLine2;
+    private String locationCity;
+    private String locationState;
+    private String locationPostalCode;
+    private String locationCountry;
+    private Double locationLatitude;
+    private Double locationLongitude;
+    private String locationNeighborhood;
+    private String locationPlaceId;
+
     private String logoUrl;                 // Company logo or profile image
 
     // ========== EXPERTISE (Tags for Matching) ==========
@@ -51,10 +65,16 @@ public class Promoter implements OnboardingOwner {
 
     private List<String> eventTypes;       // e.g., ["Concerts", "Festivals", "Private Events"]
 
+    private List<String> vibePreferences;
+
     // ========== BUSINESS BASICS ==========
     private Boolean acceptingNewArtists;   // Currently looking for new talent?
 
     private Integer currentRosterSize;     // Number of artists they represent
+
+    private PromoterAcceptingStatus acceptingStatus;
+    private RosterSizeRange rosterSizeRange;
+    private List<String> connectionGoals;
 
     // ========== CONTACT INFO ==========
     private String websiteUrl;             // Business website

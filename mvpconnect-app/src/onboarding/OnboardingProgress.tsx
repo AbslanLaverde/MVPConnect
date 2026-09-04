@@ -11,6 +11,7 @@ interface OnboardingProgressProps {
   activeStep: OnboardingStep;
   config: OnboardingPersonaConfig;
   mobile: boolean;
+  allowPlaceholderNavigation?: boolean;
   onSelect: (stepKey: string) => void;
 }
 
@@ -35,6 +36,7 @@ export const OnboardingProgress: React.FC<OnboardingProgressProps> = ({
   activeStep,
   config,
   mobile,
+  allowPlaceholderNavigation = false,
   onSelect,
 }) => {
   const orderedSteps = [...state.steps].sort((left, right) => left.position - right.position);
@@ -59,7 +61,8 @@ export const OnboardingProgress: React.FC<OnboardingProgressProps> = ({
         <View style={styles.progressSegments}>
           {orderedSteps.map((step) => {
             const active = step.key === activeStep.key;
-            const unlocked = active || step.status === 'COMPLETE' || step.status === 'SKIPPED';
+            const locallyVisited = allowPlaceholderNavigation && step.position < activeStep.position;
+            const unlocked = active || locallyVisited || step.status === 'COMPLETE' || step.status === 'SKIPPED';
             const filled = unlocked || step.status === 'IN_PROGRESS';
             return (
               <TouchableOpacity
@@ -94,7 +97,8 @@ export const OnboardingProgress: React.FC<OnboardingProgressProps> = ({
       </Text>
       {orderedSteps.map((step, index) => {
         const active = step.key === activeStep.key;
-        const unlocked = active || step.status === 'COMPLETE' || step.status === 'SKIPPED';
+        const locallyVisited = allowPlaceholderNavigation && step.position < activeStep.position;
+        const unlocked = active || locallyVisited || step.status === 'COMPLETE' || step.status === 'SKIPPED';
         return (
           <React.Fragment key={step.key}>
             {index > 0 ? <View style={styles.progressConnector} /> : null}

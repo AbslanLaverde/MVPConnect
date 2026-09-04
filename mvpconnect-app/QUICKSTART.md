@@ -9,7 +9,7 @@ npm install
 ```
 
 ### Step 2: Start Backend Server
-Make sure your backend server is running on `http://localhost:8081`
+Make sure your backend server is running on `http://localhost:8080`
 
 ### Step 3: Start the App
 ```bash
@@ -53,12 +53,12 @@ npm start
 ## 🔄 API Endpoints Used
 
 ### Signup
-- `POST http://localhost:8081/auth/signup/musician`
-- `POST http://localhost:8081/auth/signup/venue`
-- `POST http://localhost:8081/auth/signup/promoter`
+- `POST http://localhost:8080/auth/signup/musician`
+- `POST http://localhost:8080/auth/signup/venue`
+- `POST http://localhost:8080/auth/signup/promoter`
 
 ### Login
-- `POST http://localhost:8081/auth/login`
+- `POST http://localhost:8080/auth/login`
 
 ## 📝 Sample Request Bodies
 
@@ -127,7 +127,7 @@ npm start
 ### Change API URL
 Edit `src/services/api.ts`:
 ```typescript
-const API_BASE_URL = 'http://YOUR_IP:8081';
+const API_BASE_URL = 'http://YOUR_IP:8080';
 ```
 
 ### Update Colors
@@ -145,7 +145,7 @@ Edit signup screens and API interfaces in `src/services/api.ts`
 ## 🐛 Common Issues
 
 ### Can't connect to backend
-- Check backend is running: `curl http://localhost:8081/auth/login`
+- Check backend is running: `curl http://localhost:8080/auth/login`
 - Update API_BASE_URL if testing on device
 
 ### Metro bundler issues
@@ -164,7 +164,7 @@ npm install --save-dev @types/react @types/react-native
 2. Connect to same WiFi as your computer
 3. Update API URL to your computer's IP:
    ```typescript
-   const API_BASE_URL = 'http://192.168.1.XXX:8081';
+   const API_BASE_URL = 'http://192.168.1.XXX:8080';
    ```
 4. Scan QR code from terminal
 

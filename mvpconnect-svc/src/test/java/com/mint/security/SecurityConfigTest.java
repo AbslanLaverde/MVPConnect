@@ -1,9 +1,13 @@
 package com.mint.security;
 
 import com.mint.controllers.MusicianController;
+import com.mint.controllers.MediaController;
+import com.mint.controllers.OnboardingMediaController;
 import com.mint.controllers.OnboardingController;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
+import com.mint.services.MediaService;
+import com.mint.services.OnboardingMediaService;
 import com.mint.services.OnboardingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,16 +21,24 @@ import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {OnboardingController.class, MusicianController.class})
+@WebMvcTest(controllers = {
+        OnboardingController.class,
+        OnboardingMediaController.class,
+        MediaController.class,
+        MusicianController.class
+})
 @ContextConfiguration(classes = {
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
         JwtAuthenticationEntryPoint.class,
         OnboardingController.class,
+        OnboardingMediaController.class,
+        MediaController.class,
         MusicianController.class
 })
 class SecurityConfigTest {
@@ -36,6 +48,12 @@ class SecurityConfigTest {
 
     @MockBean
     private OnboardingService onboardingService;
+
+    @MockBean
+    private OnboardingMediaService onboardingMediaService;
+
+    @MockBean
+    private MediaService mediaService;
 
     @MockBean
     private MusicianRepository musicianRepository;
@@ -52,6 +70,8 @@ class SecurityConfigTest {
     @Test
     void unauthenticatedOnboardingRequestIsRejected() throws Exception {
         mockMvc.perform(get("/onboarding"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/onboarding/complete"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -76,6 +96,22 @@ class SecurityConfigTest {
         mockMvc.perform(post("/onboarding/steps/media/skip"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/onboarding/steps/media/reopen"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedMediaRequestsAreRejected() throws Exception {
+        mockMvc.perform(post("/media/uploads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/media/media-1/complete"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/media/media-1"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/media/media-1"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/onboarding/steps/basics/media/media-1"))
                 .andExpect(status().isUnauthorized());
     }
 }

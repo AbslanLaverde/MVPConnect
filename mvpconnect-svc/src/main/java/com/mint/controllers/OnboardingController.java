@@ -1,6 +1,7 @@
 package com.mint.controllers;
 
 import com.mint.dto.request.SaveOnboardingStepRequest;
+import com.mint.dto.response.OnboardingCompletionResponse;
 import com.mint.dto.response.OnboardingStateResponse;
 import com.mint.dto.response.OnboardingStepResponse;
 import com.mint.services.OnboardingService;
@@ -51,5 +52,10 @@ public class OnboardingController {
     @PostMapping("/steps/{stepKey}/reopen")
     public ResponseEntity<OnboardingStateResponse> reopenStep(@PathVariable String stepKey) {
         return ResponseEntity.ok(onboardingService.reopenStep(stepKey));
+    }
+
+    @PostMapping("/complete")
+    public ResponseEntity<OnboardingCompletionResponse> completeOnboarding() {
+        return ResponseEntity.ok(onboardingService.completeOnboarding());
     }
 }

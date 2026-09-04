@@ -2,6 +2,11 @@ package com.mint.nodes;
 
 import com.mint.onboarding.OnboardingOwner;
 import com.mint.onboarding.PersonaOnboardingStatus;
+import com.mint.onboarding.taxonomy.BookingMethod;
+import com.mint.onboarding.taxonomy.DrawRangeCode;
+import com.mint.onboarding.taxonomy.PaAvailability;
+import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -44,6 +49,18 @@ public class Venue implements OnboardingOwner {
 
     private String location;                // Full address or "City, State"
 
+    private String locationDisplay;
+    private String locationAddressLine1;
+    private String locationAddressLine2;
+    private String locationCity;
+    private String locationState;
+    private String locationPostalCode;
+    private String locationCountry;
+    private Double locationLatitude;
+    private Double locationLongitude;
+    private String locationNeighborhood;
+    private String locationPlaceId;
+
     private String logoUrl;                 // Venue logo/main image
 
     // ========== VENUE CHARACTERISTICS (Tags for Matching) ==========
@@ -53,10 +70,23 @@ public class Venue implements OnboardingOwner {
 
     private List<String> ambience;          // e.g., ["Intimate", "Upscale", "Energetic"]
 
+    private List<String> eventTypes;
+    private Double stageWidthFeet;
+    private Double stageDepthFeet;
+    private SoundEngineerAvailability soundEngineerAvailability;
+    private PaAvailability paAvailability;
+    private List<String> equipmentAvailable;
+    private List<String> productionAmenities;
+
     // ========== BOOKING BASICS ==========
     private String typicalBudget;           // e.g., "$500-$1000" - simple string for POC
 
     private Boolean liveMusic;              // Does venue host live music?
+
+    private VenueBookingStatus bookingStatus;
+    private BookingMethod bookingMethod;
+    private DrawRangeCode desiredArtistDraw;
+    private List<String> connectionGoals;
 
     // ========== CONTACT INFO ==========
     private String websiteUrl;              // Venue website

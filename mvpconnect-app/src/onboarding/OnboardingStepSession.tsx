@@ -8,9 +8,17 @@ import {
   useSaveOnboardingStepMutation,
   useSkipOnboardingStepMutation,
 } from './onboardingApi';
-import { configuredStepFor, routePersonaForBackend } from './onboardingConfig';
+import {
+  configuredStepFor,
+  routePersonaForBackend,
+} from './onboardingConfig';
 import type { OnboardingPersonaConfig } from './onboardingConfig';
-import { resumeStepFromState, previousConfiguredStep } from './onboardingRoutes';
+import {
+  nextStepFromState,
+  previousResolvedStep,
+  previousStepFromState,
+  resumeStepFromState,
+} from './onboardingRoutes';
 import type {
   OnboardingSaveStatus as SaveStatus,
   OnboardingState,
@@ -36,6 +44,7 @@ interface OnboardingStepSessionProps {
   step: OnboardingStep;
   config: OnboardingPersonaConfig;
   navigation: StackNavigationProp<RootStackParamList, 'Onboarding'>;
+  saveBypass?: boolean;
 }
 
 const signatureFor = (data: OnboardingStepData) => JSON.stringify(data);
@@ -50,6 +59,7 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   step,
   config,
   navigation,
+  saveBypass = false,
 }) => {
   const { width } = useWindowDimensions();
   const mobile = width < 768;
@@ -81,7 +91,9 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   const blockingNavigation =
     completeMutation.isLoading || skipMutation.isLoading || reopenMutation.isLoading;
   const stepConfig = configuredStepFor(config.persona, step.key);
-  const previousStep = previousConfiguredStep(state, step.key);
+  const previousStep = saveBypass
+    ? previousStepFromState(state, step.key)
+    : previousResolvedStep(state, step.key);
 
   const showSavedBriefly = useCallback(() => {
     if (savedStatusTimer.current) clearTimeout(savedStatusTimer.current);
@@ -114,7 +126,7 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   }, [config.persona, navigation, step.key]);
 
   const persistDraft = useCallback(async () => {
-    if (!isValid || !isDirty || saveMutation.isLoading) return;
+    if (saveBypass || !isValid || !isDirty || saveMutation.isLoading) return;
 
     setFailedOperation(undefined);
     setSaveStatus('saving');
@@ -131,6 +143,7 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
     isDirty,
     isValid,
     saveMutation.isLoading,
+    saveBypass,
     saveStep,
     showSavedBriefly,
     step.key,
@@ -139,7 +152,7 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   ]);
 
   const requestReopen = useCallback(async () => {
-    if (reopenMutation.isLoading) return;
+    if (saveBypass || reopenMutation.isLoading) return;
 
     attemptedReopenSignature.current = workingSignature;
     setFailedOperation(undefined);
@@ -151,19 +164,21 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
       setFailedOperation('reopen');
       setSaveStatus('failed');
     }
-  }, [reopenMutation.isLoading, reopenStep, showSavedBriefly, step.key, workingSignature]);
+  }, [reopenMutation.isLoading, reopenStep, saveBypass, showSavedBriefly, step.key, workingSignature]);
 
   useEffect(() => {
     const needsReopen =
+      !saveBypass &&
       isDirty &&
       (step.status === 'SKIPPED' || (step.status === 'COMPLETE' && !isValid));
     if (needsReopen && attemptedReopenSignature.current !== workingSignature) {
       void requestReopen();
     }
-  }, [isDirty, isValid, requestReopen, step.status, workingSignature]);
+  }, [isDirty, isValid, requestReopen, saveBypass, step.status, workingSignature]);
 
   useEffect(() => {
     const canAutosave =
+      !saveBypass &&
       isValid &&
       isDirty &&
       !busy &&
@@ -173,7 +188,7 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
 
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, failedOperation, isDirty, isValid, persistDraft, step.status, workingSignature]);
+  }, [busy, failedOperation, isDirty, isValid, persistDraft, saveBypass, step.status, workingSignature]);
 
   const handleChange = (nextConfirmed: boolean) => {
     setValidationAttempted(true);
@@ -187,7 +202,15 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   const handleContinue = useCallback(async () => {
     setValidationAttempted(true);
     const isStillValid = isOnboardingStepValid(workingData, PLACEHOLDER_RULES);
-    if (!isStillValid || busy) return;
+    if (!isStillValid || (!saveBypass && busy)) return;
+
+    if (saveBypass) {
+      const nextStep = nextStepFromState(state, step.key);
+      if (nextStep) {
+        navigation.push('Onboarding', { persona: config.persona, step: nextStep });
+      }
+      return;
+    }
 
     setFailedOperation(undefined);
     setSaveStatus('saving');
@@ -203,15 +226,27 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
   }, [
     busy,
     completeStep,
+    config.persona,
     navigateFromState,
+    navigation,
+    saveBypass,
     showSavedBriefly,
     step.key,
+    state,
     workingData,
     workingSignature,
   ]);
 
   const handleSkip = useCallback(async () => {
-    if (step.required || busy) return;
+    if (step.required || (!saveBypass && busy)) return;
+
+    if (saveBypass) {
+      const nextStep = nextStepFromState(state, step.key);
+      if (nextStep) {
+        navigation.push('Onboarding', { persona: config.persona, step: nextStep });
+      }
+      return;
+    }
 
     setFailedOperation(undefined);
     setSaveStatus('saving');
@@ -223,11 +258,22 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
       setFailedOperation('skip');
       setSaveStatus('failed');
     }
-  }, [busy, navigateFromState, showSavedBriefly, skipStep, step.key, step.required]);
+  }, [
+    busy,
+    config.persona,
+    navigateFromState,
+    navigation,
+    saveBypass,
+    showSavedBriefly,
+    skipStep,
+    step.key,
+    step.required,
+    state,
+  ]);
 
   const handleBack = () => {
-    if (!previousStep || blockingNavigation) return;
-    if (isValid && isDirty && step.status !== 'SKIPPED' && !saveMutation.isLoading) {
+    if (!previousStep || (!saveBypass && blockingNavigation)) return;
+    if (!saveBypass && isValid && isDirty && step.status !== 'SKIPPED' && !saveMutation.isLoading) {
       void persistDraft();
     }
     navigation.push('Onboarding', { persona: config.persona, step: previousStep });
@@ -300,8 +346,8 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = ({
         config={config}
         mobile={mobile}
         canContinue={isValid}
-        busy={busy}
-        backDisabled={blockingNavigation}
+        busy={!saveBypass && busy}
+        backDisabled={!saveBypass && blockingNavigation}
         showBack={Boolean(previousStep)}
         showSkip={!step.required}
         onBack={handleBack}

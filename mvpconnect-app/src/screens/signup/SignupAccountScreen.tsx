@@ -23,7 +23,7 @@ import { storageHelpers } from '../../services/api';
 import { theme } from '../../theme/theme';
 import { SignupAccountConfig } from './signupAccountConfig';
 import { styles } from './SignupAccountScreen.styles';
-import { firstStepForPersona } from '../../onboarding/onboardingConfig';
+import { entryStepForPersona } from '../../onboarding/onboardingConfig';
 import { onboardingApi } from '../../onboarding/onboardingApi';
 import { store } from '../../store/store';
 
@@ -250,7 +250,7 @@ export const SignupAccountScreen: React.FC<SignupAccountScreenProps> = ({
       store.dispatch(onboardingApi.util.resetApiState());
       navigation.replace('Onboarding', {
         persona: config.persona,
-        step: firstStepForPersona(config.persona),
+        step: entryStepForPersona(config.persona),
       });
     } catch (error: any) {
       if (error.response?.data?.code === DUPLICATE_EMAIL_CODE) {

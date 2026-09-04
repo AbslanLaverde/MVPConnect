@@ -2,6 +2,7 @@ package com.mint.config;
 
 import com.mint.dto.response.ErrorResponse;
 import com.mint.exceptions.DuplicateEmailException;
+import com.mint.exceptions.MediaException;
 import com.mint.exceptions.OnboardingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -23,9 +24,9 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(OnboardingException.class)
-    public ResponseEntity<ErrorResponse> handleOnboardingException(
-            OnboardingException ex,
+    @ExceptionHandler(MediaException.class)
+    public ResponseEntity<ErrorResponse> handleMediaException(
+            MediaException ex,
             HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getStatus().value(),
@@ -34,6 +35,31 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 request.getRequestURI()
         );
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(OnboardingException.class)
+    public ResponseEntity<ErrorResponse> handleOnboardingException(
+            OnboardingException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = ex.getDetails() == null
+                ? new ErrorResponse(
+                        ex.getStatus().value(),
+                        ex.getStatus().getReasonPhrase(),
+                        ex.getCode(),
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+                : new ErrorResponse(
+                        ex.getStatus().value(),
+                        ex.getStatus().getReasonPhrase(),
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        ex.getDetails()
+                );
+        if (ex.getDetails() != null) {
+            errorResponse.setCode(ex.getCode());
+        }
         return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
 

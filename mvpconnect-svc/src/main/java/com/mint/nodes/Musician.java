@@ -2,6 +2,8 @@ package com.mint.nodes;
 
 import com.mint.onboarding.OnboardingOwner;
 import com.mint.onboarding.PersonaOnboardingStatus;
+import com.mint.onboarding.taxonomy.ArtistBookingStatus;
+import com.mint.onboarding.taxonomy.DrawRangeCode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -44,6 +46,18 @@ public class Musician implements OnboardingOwner {
 
     private String location;                // City, State (e.g., "New York, NY")
 
+    private String locationDisplay;
+    private String locationAddressLine1;
+    private String locationAddressLine2;
+    private String locationCity;
+    private String locationState;
+    private String locationPostalCode;
+    private String locationCountry;
+    private Double locationLatitude;
+    private Double locationLongitude;
+    private String locationNeighborhood;
+    private String locationPlaceId;
+
     private String profileImageUrl;         // Main profile photo
 
     // ========== MUSIC IDENTITY (Tags for Matching) ==========
@@ -51,10 +65,20 @@ public class Musician implements OnboardingOwner {
 
     private List<String> vibes;             // e.g., ["Energetic", "Sophisticated", "Chill"]
 
+    private List<String> eventTypes;
+
     // ========== BOOKING BASICS ==========
     private String minimumFee;              // e.g., "$500" - simple string for POC
 
     private Boolean willingToTravel;        // Can they travel for gigs?
+
+    private ArtistBookingStatus bookingStatus;
+    private DrawRangeCode typicalDraw;
+    private Integer travelRadiusMiles;
+    private Boolean touring;
+    private Integer setLengthMinutes;
+    private List<String> equipmentBrought;
+    private List<String> connectionGoals;
 
     // ========== SOCIAL PROOF (1-2 key links for POC) ==========
     private String websiteUrl;              // Personal website or EPK
