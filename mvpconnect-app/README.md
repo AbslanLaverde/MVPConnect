@@ -32,12 +32,12 @@ npm install
 Update the API base URL in `src/services/api.ts`:
 
 ```typescript
-const API_BASE_URL = 'http://localhost:8081'; // Change to your backend URL
+const API_BASE_URL = 'http://localhost:8080'; // Change to your backend URL
 ```
 
 For testing on a physical device, replace `localhost` with your computer's IP address:
 ```typescript
-const API_BASE_URL = 'http://192.168.1.XXX:8081';
+const API_BASE_URL = 'http://192.168.1.XXX:8080';
 ```
 
 ### 3. Start the Development Server
@@ -193,6 +193,7 @@ You can use these test accounts (after creating them via signup):
 ## 🚧 Next Steps
 
 ### Immediate TODOs
+- [ ] At the end of onboarding development, disable `ONBOARDING_PLACEHOLDER_SAVE_BYPASS` and restore backend-confirmed save/completion as the navigation gate
 - [ ] Implement home screens for each user type
 - [ ] Add profile completion/onboarding flow
 - [ ] Implement token refresh mechanism
@@ -213,7 +214,7 @@ You can use these test accounts (after creating them via signup):
 ### Common Issues
 
 **"Network Error" when trying to login/signup:**
-- Ensure your backend server is running on port 8081
+- Ensure your backend server is running on port 8080
 - If testing on a physical device, update the API_BASE_URL to your computer's IP
 - Check that your device/emulator can reach the backend server
 

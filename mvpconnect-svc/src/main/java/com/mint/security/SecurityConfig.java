@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -84,13 +85,18 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/signup/**",          // All signup endpoints
                     "/auth/login",               // Login endpoint
-                    "/musicians/search",         // Public musician search
-                    "/musicians/**",              // Public musician endpoints (GET)
-                    "/venues/search",            // Public venue search
-                    "/venues/*",                 // Public venue profile (GET)
-                    "/promoters/*",              // Public promoter profile (GET)
-                    "/actuator/health",          // Health check
+                    "/actuator/health/**",       // Health and standard probe groups
                     "/error"                     // Error handling
+                ).permitAll()
+
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // Public discovery/profile reads. Mutations to these paths remain authenticated.
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/musicians/**",
+                    "/venues/**",
+                    "/promoters/**"
                 ).permitAll()
 
                 // All other endpoints require authentication

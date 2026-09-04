@@ -74,7 +74,7 @@ export const MusicianHomeScreen: React.FC<MusicianHomeScreenProps> = ({ navigati
         <Text style={styles.welcomeEmoji}>🎵</Text>
         <Text style={styles.welcomeTitle}>Welcome back, {profile?.name || userName}!</Text>
         <Text style={styles.welcomeSubtitle}>
-          {profile?.location || 'Set your location'} • {profile?.genres?.join(', ') || 'Add genres'}
+          {profile?.location?.displayName || 'Set your location'} • {profile?.genres?.join(', ') || 'Add genres'}
         </Text>
       </View>
 
@@ -127,14 +127,11 @@ export const MusicianHomeScreen: React.FC<MusicianHomeScreenProps> = ({ navigati
                 </View>
               </View>
               <Text style={styles.venueMeta}>
-                {venue.location} • Capacity: {venue.capacity}
+                {venue.location?.displayName || 'Location not listed'} • Capacity: {venue.capacity}
               </Text>
               <Text style={styles.venueMeta}>
                 Genres: {venue.genrePreferences?.join(', ')}
               </Text>
-              {venue.typicalBudget && (
-                <Text style={styles.venueMeta}>Budget: {venue.typicalBudget}</Text>
-              )}
               <View style={styles.ambienceRow}>
                 {venue.ambience?.map((a, i) => (
                   <View key={i} style={styles.ambienceTag}>

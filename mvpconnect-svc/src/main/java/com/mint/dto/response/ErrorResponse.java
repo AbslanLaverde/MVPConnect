@@ -1,7 +1,6 @@
 package com.mint.dto.response;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * Error Response for validation and other errors
@@ -14,7 +13,7 @@ public class ErrorResponse {
     private String code;
     private String message;
     private String path;
-    private List<String> details;
+    private Object details;
 
     public ErrorResponse(int status, String error, String message, String path) {
         this.timestamp = LocalDateTime.now();
@@ -24,7 +23,7 @@ public class ErrorResponse {
         this.path = path;
     }
 
-    public ErrorResponse(int status, String error, String message, String path, List<String> details) {
+    public ErrorResponse(int status, String error, String message, String path, Object details) {
         this.timestamp = LocalDateTime.now();
         this.status = status;
         this.error = error;
@@ -91,11 +90,11 @@ public class ErrorResponse {
         this.path = path;
     }
 
-    public List<String> getDetails() {
+    public Object getDetails() {
         return details;
     }
 
-    public void setDetails(List<String> details) {
+    public void setDetails(Object details) {
         this.details = details;
     }
 }

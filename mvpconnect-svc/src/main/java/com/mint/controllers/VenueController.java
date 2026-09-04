@@ -1,8 +1,11 @@
 package com.mint.controllers;
 
+import com.mint.dto.response.discovery.VenueSearchResultResponse;
+import com.mint.dto.response.profile.PublicVenueProfileResponse;
 import com.mint.nodes.Venue;
 import com.mint.repositories.VenueRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mint.services.DiscoveryProfileMapper;
+import com.mint.services.PublicProfileService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,33 +16,28 @@ import java.util.stream.Collectors;
 @RequestMapping("/venues")
 public class VenueController {
 
-    @Autowired
-    private VenueRepository venueRepository;
+    private final VenueRepository venueRepository;
+    private final PublicProfileService publicProfileService;
+    private final DiscoveryProfileMapper discoveryProfileMapper;
+
+    public VenueController(
+            VenueRepository venueRepository,
+            PublicProfileService publicProfileService,
+            DiscoveryProfileMapper discoveryProfileMapper) {
+        this.venueRepository = venueRepository;
+        this.publicProfileService = publicProfileService;
+        this.discoveryProfileMapper = discoveryProfileMapper;
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getVenue(@PathVariable String id) {
-        return venueRepository.findById(id)
-                .map(v -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("id", v.getId());
-                    result.put("venueName", v.getVenueName());
-                    result.put("email", v.getEmail());
-                    result.put("description", v.getDescription());
-                    result.put("location", v.getLocation());
-                    result.put("capacity", v.getCapacity());
-                    result.put("genrePreferences", v.getGenrePreferences());
-                    result.put("ambience", v.getAmbience());
-                    result.put("typicalBudget", v.getTypicalBudget());
-                    result.put("liveMusic", v.getLiveMusic());
-                    result.put("websiteUrl", v.getWebsiteUrl());
-                    result.put("bookingEmail", v.getBookingEmail());
-                    return ResponseEntity.ok(result);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<PublicVenueProfileResponse> getVenue(@PathVariable String id) {
+        return publicProfileService.findVenue(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchVenues(
+    public ResponseEntity<List<VenueSearchResultResponse>> searchVenues(
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Integer minCapacity,
@@ -68,18 +66,9 @@ public class VenueController {
             results = results.stream().filter(v -> v.getCapacity() != null && v.getCapacity() >= minCapacity).collect(Collectors.toList());
         }
 
-        List<Map<String, Object>> output = results.stream().map(v -> {
-            Map<String, Object> o = new HashMap<>();
-            o.put("id", v.getId());
-            o.put("venueName", v.getVenueName());
-            o.put("location", v.getLocation());
-            o.put("capacity", v.getCapacity());
-            o.put("genrePreferences", v.getGenrePreferences());
-            o.put("ambience", v.getAmbience());
-            o.put("typicalBudget", v.getTypicalBudget());
-            o.put("liveMusic", v.getLiveMusic());
-            return o;
-        }).collect(Collectors.toList());
+        List<VenueSearchResultResponse> output = results.stream()
+                .map(discoveryProfileMapper::venueSearchResult)
+                .toList();
 
         return ResponseEntity.ok(output);
     }

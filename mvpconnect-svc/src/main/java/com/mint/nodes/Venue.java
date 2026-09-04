@@ -1,5 +1,12 @@
 package com.mint.nodes;
 
+import com.mint.onboarding.OnboardingOwner;
+import com.mint.onboarding.PersonaOnboardingStatus;
+import com.mint.onboarding.taxonomy.BookingMethod;
+import com.mint.onboarding.taxonomy.DrawRangeCode;
+import com.mint.onboarding.taxonomy.PaAvailability;
+import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +15,11 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,7 +31,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Venue {
+public class Venue implements OnboardingOwner {
 
     // ========== CORE IDENTITY (Required for Auth) ==========
     @Id
@@ -40,6 +49,18 @@ public class Venue {
 
     private String location;                // Full address or "City, State"
 
+    private String locationDisplay;
+    private String locationAddressLine1;
+    private String locationAddressLine2;
+    private String locationCity;
+    private String locationState;
+    private String locationPostalCode;
+    private String locationCountry;
+    private Double locationLatitude;
+    private Double locationLongitude;
+    private String locationNeighborhood;
+    private String locationPlaceId;
+
     private String logoUrl;                 // Venue logo/main image
 
     // ========== VENUE CHARACTERISTICS (Tags for Matching) ==========
@@ -49,15 +70,38 @@ public class Venue {
 
     private List<String> ambience;          // e.g., ["Intimate", "Upscale", "Energetic"]
 
+    private List<String> eventTypes;
+    private Double stageWidthFeet;
+    private Double stageDepthFeet;
+    private SoundEngineerAvailability soundEngineerAvailability;
+    private PaAvailability paAvailability;
+    private List<String> equipmentAvailable;
+    private List<String> productionAmenities;
+
     // ========== BOOKING BASICS ==========
     private String typicalBudget;           // e.g., "$500-$1000" - simple string for POC
 
     private Boolean liveMusic;              // Does venue host live music?
 
+    private VenueBookingStatus bookingStatus;
+    private BookingMethod bookingMethod;
+    private DrawRangeCode desiredArtistDraw;
+    private List<String> connectionGoals;
+
     // ========== CONTACT INFO ==========
     private String websiteUrl;              // Venue website
 
     private String bookingEmail;            // Separate booking contact (optional)
+
+    // ========== ONBOARDING WORKFLOW ==========
+    private PersonaOnboardingStatus onboardingStatus;
+
+    private LocalDateTime onboardingCompletedAt;
+
+    private Integer onboardingVersion;
+
+    @Relationship(type = "HAS_ONBOARDING_DRAFT", direction = Relationship.Direction.OUTGOING)
+    private List<OnboardingDraft> onboardingDrafts = new ArrayList<>();
 
     // ========== METADATA ==========
     @CreatedDate

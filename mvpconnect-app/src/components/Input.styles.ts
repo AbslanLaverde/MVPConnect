@@ -19,6 +19,11 @@ export const styles = StyleSheet.create({
   required: {
     color: theme.colors.error,
   },
+  optional: {
+    color: theme.colors.secondaryText,
+    fontSize: 9,
+    letterSpacing: 1.1,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -33,6 +38,9 @@ export const styles = StyleSheet.create({
   },
   inputContainerError: {
     borderColor: theme.colors.error,
+  },
+  inputContainerDisabled: {
+    opacity: 0.55,
   },
   input: {
     flex: 1,

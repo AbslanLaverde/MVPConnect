@@ -23,6 +23,9 @@ import { storageHelpers } from '../../services/api';
 import { theme } from '../../theme/theme';
 import { SignupAccountConfig } from './signupAccountConfig';
 import { styles } from './SignupAccountScreen.styles';
+import { entryStepForPersona } from '../../onboarding/onboardingConfig';
+import { onboardingApi } from '../../onboarding/onboardingApi';
+import { store } from '../../store/store';
 
 interface SignupAccountScreenProps {
   config: SignupAccountConfig;
@@ -244,10 +247,10 @@ export const SignupAccountScreen: React.FC<SignupAccountScreenProps> = ({
     try {
       const response = await config.submit(normalizedName, normalizedEmail, password);
       await storageHelpers.saveAuthData(response.accessToken, response.userType);
-      navigation.replace('MusicianHome', {
-        userId: response.userId,
-        userName: response.name || normalizedName,
-        userType: response.userType,
+      store.dispatch(onboardingApi.util.resetApiState());
+      navigation.replace('Onboarding', {
+        persona: config.persona,
+        step: entryStepForPersona(config.persona),
       });
     } catch (error: any) {
       if (error.response?.data?.code === DUPLICATE_EMAIL_CODE) {

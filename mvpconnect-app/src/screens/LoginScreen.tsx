@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { styles } from './LoginScreen.styles';
 import { theme } from '../theme/theme';
+import { onboardingApi } from '../onboarding/onboardingApi';
+import { store } from '../store/store';
 
 const connectionGradientWebStyle = {
   backgroundImage: `linear-gradient(90deg, ${theme.colors.brandBlue}, ${theme.colors.brandViolet})`,
@@ -73,6 +75,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       // Save auth data
       await storageHelpers.saveAuthData(response.accessToken, response.userType);
+      store.dispatch(onboardingApi.util.resetApiState());
 
       // Navigate to appropriate home screen
       if (response.userType === 'MUSICIAN') {

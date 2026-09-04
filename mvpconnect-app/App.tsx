@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Provider } from 'react-redux';
 import { useFonts } from 'expo-font';
 import {
   BarlowCondensed_600SemiBold,
@@ -14,6 +15,7 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { store } from './src/store/store';
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
@@ -31,9 +33,11 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <AppNavigator />
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <AppNavigator />
+      </SafeAreaProvider>
+    </Provider>
   );
 }

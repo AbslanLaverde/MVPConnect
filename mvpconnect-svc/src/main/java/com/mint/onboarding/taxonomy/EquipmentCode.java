@@ -1,0 +1,6 @@
+package com.mint.onboarding.taxonomy;
+
+public enum EquipmentCode {
+    DRUM_KIT, GUITAR_AMP, BASS_AMP, KEYBOARD_PIANO, PERCUSSION, DJ_EQUIPMENT,
+    MICROPHONES, DI_BOXES, STAGE_MONITORS, IEM_SYSTEM, INSTRUMENT_STANDS
+}

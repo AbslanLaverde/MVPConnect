@@ -2,9 +2,12 @@ import React, { useId, useState } from 'react';
 import {
   LayoutChangeEvent,
   Platform,
+  StyleProp,
   View,
+  ViewStyle,
   TextInput,
   Text,
+  TextStyle,
   TouchableOpacity,
   TextInputProps,
 } from 'react-native';
@@ -12,31 +15,47 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { theme } from '../theme/theme';
 import { styles } from './Input.styles';
 
-interface InputProps extends TextInputProps {
+export interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   required?: boolean;
+  optional?: boolean;
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  containerStyle?: any;
+  containerStyle?: StyleProp<ViewStyle>;
+  inputContainerStyle?: StyleProp<ViewStyle>;
+  inputStyle?: StyleProp<TextStyle>;
   brandTypography?: boolean;
   focusColor?: string;
   focusGradientColors?: readonly [string, string];
+  disabled?: boolean;
+  readOnly?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
   label,
   error,
   required,
+  optional,
   helperText,
   leftIcon,
   rightIcon,
   containerStyle,
+  inputContainerStyle,
+  inputStyle,
   brandTypography = false,
   focusColor = theme.colors.brandBlue,
   focusGradientColors,
+  disabled = false,
+  readOnly = false,
   secureTextEntry,
+  editable,
+  onFocus,
+  onBlur,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
   ...textInputProps
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -48,6 +67,12 @@ export const Input: React.FC<InputProps> = ({
   const showPassword = isPassword && isPasswordVisible;
   const showGradientFocus =
     isFocused && !error && Boolean(focusGradientColors) && inputSize.width > 0;
+  const isEditable = editable !== false && !disabled && !readOnly;
+  const fieldState = required ? 'required' : optional ? 'optional' : undefined;
+  const resolvedAccessibilityLabel = accessibilityLabel ?? (
+    label ? [label, fieldState].filter(Boolean).join(', ') : undefined
+  );
+  const resolvedAccessibilityHint = error ?? accessibilityHint ?? helperText;
 
   const handleInputLayout = (event: LayoutChangeEvent) => {
     if (!focusGradientColors) return;
@@ -63,6 +88,7 @@ export const Input: React.FC<InputProps> = ({
         <Text style={[styles.label, brandTypography && styles.labelBrand]}>
           {label}
           {required && <Text style={styles.required}> *</Text>}
+          {!required && optional && <Text style={styles.optional}> OPTIONAL</Text>}
         </Text>
       )}
       
@@ -74,6 +100,8 @@ export const Input: React.FC<InputProps> = ({
           isFocused && !error && { borderColor: focusColor },
           showGradientFocus && { borderColor: 'transparent' },
           Boolean(error) && styles.inputContainerError,
+          !isEditable && styles.inputContainerDisabled,
+          inputContainerStyle,
         ]}
       >
         {showGradientFocus && focusGradientColors ? (
@@ -110,26 +138,38 @@ export const Input: React.FC<InputProps> = ({
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         
         <TextInput
+          {...textInputProps}
           style={[
             styles.input,
             brandTypography && styles.inputBrand,
             Boolean(leftIcon) && styles.inputWithLeftIcon,
             Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+            inputStyle,
           ]}
-          accessibilityLabel={textInputProps.accessibilityLabel || label}
+          accessibilityLabel={resolvedAccessibilityLabel}
+          accessibilityHint={resolvedAccessibilityHint}
+          accessibilityState={{ ...accessibilityState, disabled, readOnly } as any}
           placeholderTextColor={theme.colors.disabledText}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          editable={isEditable}
+          onFocus={(event) => {
+            setIsFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setIsFocused(false);
+            onBlur?.(event);
+          }}
           secureTextEntry={isPassword && !showPassword}
-          {...textInputProps}
         />
         
         {isPassword && (
           <TouchableOpacity
-            style={styles.rightIcon}
+            style={[styles.rightIcon, !isEditable && styles.inputContainerDisabled]}
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+            disabled={!isEditable}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             accessibilityRole="button"
+            accessibilityState={{ disabled: !isEditable }}
           >
             <Text style={styles.passwordToggle}>
               {showPassword ? '◉' : '◎'}

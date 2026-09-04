@@ -5,6 +5,8 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { MusicianHomeScreen } from '../screens/MusicianHomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { OnboardingShell } from '../onboarding/OnboardingShell';
+import type { OnboardingPersona } from '../onboarding/onboardingTypes';
 import { theme } from '../theme/theme';
 
 export type RootStackParamList = {
@@ -13,6 +15,7 @@ export type RootStackParamList = {
   SignupArtist: undefined;
   SignupVenue: undefined;
   SignupPromoter: undefined;
+  Onboarding: { persona: OnboardingPersona; step: string };
   MusicianHome: { userId: string; userName: string; userType: string };
   Profile: { userId: string; userName?: string };
 };
@@ -28,6 +31,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       SignupArtist: 'signup/artist',
       SignupVenue: 'signup/venue',
       SignupPromoter: 'signup/promoter',
+      Onboarding: 'onboarding/:persona/:step',
     },
   },
 };
@@ -76,6 +80,11 @@ export const AppNavigator: React.FC = () => {
           name="SignupPromoter"
           component={SignupScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingShell}
+          options={{ headerShown: false, animationEnabled: false }}
         />
         <Stack.Screen
           name="MusicianHome"

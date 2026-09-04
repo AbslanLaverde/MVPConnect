@@ -2,12 +2,16 @@ package com.mint.config;
 
 import com.mint.dto.response.ErrorResponse;
 import com.mint.exceptions.DuplicateEmailException;
+import com.mint.exceptions.MediaException;
+import com.mint.exceptions.OnboardingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +25,73 @@ import java.util.List;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableRequest(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                "INVALID_REQUEST_BODY",
+                "The request body is malformed or contains unsupported fields or value types.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                "ACCESS_DENIED",
+                "The authenticated account is not allowed to perform this operation.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    @ExceptionHandler(MediaException.class)
+    public ResponseEntity<ErrorResponse> handleMediaException(
+            MediaException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(OnboardingException.class)
+    public ResponseEntity<ErrorResponse> handleOnboardingException(
+            OnboardingException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = ex.getDetails() == null
+                ? new ErrorResponse(
+                        ex.getStatus().value(),
+                        ex.getStatus().getReasonPhrase(),
+                        ex.getCode(),
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+                : new ErrorResponse(
+                        ex.getStatus().value(),
+                        ex.getStatus().getReasonPhrase(),
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        ex.getDetails()
+                );
+        if (ex.getDetails() != null) {
+            errorResponse.setCode(ex.getCode());
+        }
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
+    }
 
     /**
      * Handle a duplicate email across musician, venue, and promoter accounts.
