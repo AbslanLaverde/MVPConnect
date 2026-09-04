@@ -4,11 +4,16 @@ import com.mint.controllers.MusicianController;
 import com.mint.controllers.MediaController;
 import com.mint.controllers.OnboardingMediaController;
 import com.mint.controllers.OnboardingController;
+import com.mint.controllers.PromoterController;
+import com.mint.controllers.SelfAccountController;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.services.MediaService;
+import com.mint.services.DiscoveryProfileMapper;
 import com.mint.services.OnboardingMediaService;
 import com.mint.services.OnboardingService;
+import com.mint.services.PublicProfileService;
+import com.mint.services.SelfAccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -30,7 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         OnboardingController.class,
         OnboardingMediaController.class,
         MediaController.class,
-        MusicianController.class
+        MusicianController.class,
+        PromoterController.class,
+        SelfAccountController.class
 })
 @ContextConfiguration(classes = {
         SecurityConfig.class,
@@ -39,7 +46,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         OnboardingController.class,
         OnboardingMediaController.class,
         MediaController.class,
-        MusicianController.class
+        MusicianController.class,
+        PromoterController.class,
+        SelfAccountController.class
 })
 class SecurityConfigTest {
 
@@ -54,6 +63,18 @@ class SecurityConfigTest {
 
     @MockBean
     private MediaService mediaService;
+
+    @MockBean
+    private PublicProfileService publicProfileService;
+
+    @MockBean
+    private SelfAccountService selfAccountService;
+
+    @MockBean
+    private DiscoveryProfileMapper discoveryProfileMapper;
+
+    @MockBean
+    private PersonaAuthorizationService personaAuthorizationService;
 
     @MockBean
     private MusicianRepository musicianRepository;
@@ -77,9 +98,17 @@ class SecurityConfigTest {
 
     @Test
     void publicMusicianProfileReadRemainsAvailable() throws Exception {
-        when(musicianRepository.findById("missing")).thenReturn(Optional.empty());
+        when(publicProfileService.findMusician("missing")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/musicians/missing"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void publicPromoterProfileReadIsAvailable() throws Exception {
+        when(publicProfileService.findPromoter("missing")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/promoters/missing"))
                 .andExpect(status().isNotFound());
     }
 
@@ -88,6 +117,12 @@ class SecurityConfigTest {
         mockMvc.perform(put("/musicians/musician-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedSelfAccountRequestIsRejected() throws Exception {
+        mockMvc.perform(get("/me"))
                 .andExpect(status().isUnauthorized());
     }
 

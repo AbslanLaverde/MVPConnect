@@ -11,6 +11,7 @@ import com.mint.onboarding.PersonaType;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 
@@ -20,6 +21,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
+
+    @Test
+    void accessDeniedResponseDoesNotRevealTargetExistence() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/musicians/another-user");
+
+        ResponseEntity<ErrorResponse> response = new GlobalExceptionHandler()
+                .handleAccessDeniedException(new AccessDeniedException("sensitive detail"), request);
+
+        assertEquals(403, response.getStatusCode().value());
+        assertEquals("ACCESS_DENIED", response.getBody().getCode());
+        assertEquals(
+                "The authenticated account is not allowed to perform this operation.",
+                response.getBody().getMessage()
+        );
+    }
 
     @Test
     void duplicateEmailResponseIncludesMachineReadableCode() {

@@ -1,10 +1,18 @@
 package com.mint.controllers;
 
+import com.mint.dto.request.UpdateMusicianProfileRequest;
+import com.mint.dto.response.discovery.MusicianSearchResultResponse;
+import com.mint.dto.response.discovery.VenueMatchResponse;
+import com.mint.dto.response.profile.PublicMusicianProfileResponse;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.PersonaType;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mint.security.PersonaAuthorizationService;
+import com.mint.services.DiscoveryProfileMapper;
+import com.mint.services.PublicProfileService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,36 +24,34 @@ import java.util.stream.Collectors;
 @RequestMapping("/musicians")
 public class MusicianController {
 
-    @Autowired
-    private MusicianRepository musicianRepository;
+    private final MusicianRepository musicianRepository;
+    private final VenueRepository venueRepository;
+    private final PublicProfileService publicProfileService;
+    private final PersonaAuthorizationService personaAuthorizationService;
+    private final DiscoveryProfileMapper discoveryProfileMapper;
 
-    @Autowired
-    private VenueRepository venueRepository;
+    public MusicianController(
+            MusicianRepository musicianRepository,
+            VenueRepository venueRepository,
+            PublicProfileService publicProfileService,
+            PersonaAuthorizationService personaAuthorizationService,
+            DiscoveryProfileMapper discoveryProfileMapper) {
+        this.musicianRepository = musicianRepository;
+        this.venueRepository = venueRepository;
+        this.publicProfileService = publicProfileService;
+        this.personaAuthorizationService = personaAuthorizationService;
+        this.discoveryProfileMapper = discoveryProfileMapper;
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getMusician(@PathVariable String id) {
-        return musicianRepository.findById(id)
-                .map(m -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("id", m.getId());
-                    result.put("name", m.getName());
-                    result.put("email", m.getEmail());
-                    result.put("bio", m.getBio());
-                    result.put("location", m.getLocation());
-                    result.put("profileImageUrl", m.getProfileImageUrl());
-                    result.put("genres", m.getGenres());
-                    result.put("vibes", m.getVibes());
-                    result.put("minimumFee", m.getMinimumFee());
-                    result.put("willingToTravel", m.getWillingToTravel());
-                    result.put("websiteUrl", m.getWebsiteUrl());
-                    result.put("instagramHandle", m.getInstagramHandle());
-                    return ResponseEntity.ok(result);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<PublicMusicianProfileResponse> getMusician(@PathVariable String id) {
+        return publicProfileService.findMusician(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/matches")
-    public ResponseEntity<?> getVenueMatches(@PathVariable String id) {
+    public ResponseEntity<List<VenueMatchResponse>> getVenueMatches(@PathVariable String id) {
         Optional<Musician> optMusician = musicianRepository.findById(id);
         if (optMusician.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -61,7 +67,7 @@ public class MusicianController {
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
 
-        List<Map<String, Object>> matches = new ArrayList<>();
+        List<ScoredVenueMatch> matches = new ArrayList<>();
         for (Venue venue : venueRepository.findAll()) {
             if (!Boolean.TRUE.equals(venue.getLiveMusic())) continue;
 
@@ -73,41 +79,36 @@ public class MusicianController {
                     .count();
 
             if (matchCount > 0) {
-                Map<String, Object> m = new HashMap<>();
-                m.put("id", venue.getId());
-                m.put("venueName", venue.getVenueName());
-                m.put("location", venue.getLocation());
-                m.put("capacity", venue.getCapacity());
-                m.put("genrePreferences", venue.getGenrePreferences());
-                m.put("ambience", venue.getAmbience());
-                m.put("typicalBudget", venue.getTypicalBudget());
-                m.put("websiteUrl", venue.getWebsiteUrl());
-                m.put("matchScore", matchCount + "/" + venuePrefs.size() + " genres matched");
-                matches.add(m);
+                matches.add(new ScoredVenueMatch(
+                        matchCount,
+                        discoveryProfileMapper.venueMatch(
+                                venue,
+                                matchCount + "/" + venuePrefs.size() + " genres matched"
+                        )
+                ));
             }
         }
 
-        matches.sort((a, b) -> {
-            int scoreA = Integer.parseInt(a.get("matchScore").toString().split("/")[0]);
-            int scoreB = Integer.parseInt(b.get("matchScore").toString().split("/")[0]);
-            return Integer.compare(scoreB, scoreA);
-        });
+        matches.sort(Comparator.comparingLong(ScoredVenueMatch::score).reversed());
 
-        return ResponseEntity.ok(matches);
+        return ResponseEntity.ok(matches.stream().map(ScoredVenueMatch::response).toList());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMusician(@PathVariable String id, @RequestBody Map<String, Object> updates) {
+    public ResponseEntity<Map<String, String>> updateMusician(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateMusicianProfileRequest updates) {
+        personaAuthorizationService.requireOwner(PersonaType.MUSICIAN, id);
         return musicianRepository.findById(id)
                 .map(m -> {
-                    if (updates.containsKey("bio")) m.setBio((String) updates.get("bio"));
-                    if (updates.containsKey("location")) m.setLocation((String) updates.get("location"));
-                    if (updates.containsKey("genres")) m.setGenres((List<String>) updates.get("genres"));
-                    if (updates.containsKey("vibes")) m.setVibes((List<String>) updates.get("vibes"));
-                    if (updates.containsKey("minimumFee")) m.setMinimumFee((String) updates.get("minimumFee"));
-                    if (updates.containsKey("willingToTravel")) m.setWillingToTravel((Boolean) updates.get("willingToTravel"));
-                    if (updates.containsKey("websiteUrl")) m.setWebsiteUrl((String) updates.get("websiteUrl"));
-                    if (updates.containsKey("instagramHandle")) m.setInstagramHandle((String) updates.get("instagramHandle"));
+                    if (updates.hasBio()) m.setBio(updates.getBio());
+                    if (updates.hasLocation()) m.setLocation(updates.getLocation());
+                    if (updates.hasGenres()) m.setGenres(updates.getGenres());
+                    if (updates.hasVibes()) m.setVibes(updates.getVibes());
+                    if (updates.hasMinimumFee()) m.setMinimumFee(updates.getMinimumFee());
+                    if (updates.hasWillingToTravel()) m.setWillingToTravel(updates.getWillingToTravel());
+                    if (updates.hasWebsiteUrl()) m.setWebsiteUrl(updates.getWebsiteUrl());
+                    if (updates.hasInstagramHandle()) m.setInstagramHandle(updates.getInstagramHandle());
                     m.setUpdatedAt(LocalDateTime.now());
                     musicianRepository.save(m);
                     return ResponseEntity.ok(Map.of("status", "updated"));
@@ -116,7 +117,7 @@ public class MusicianController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchMusicians(
+    public ResponseEntity<List<MusicianSearchResultResponse>> searchMusicians(
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) String location) {
 
@@ -131,18 +132,13 @@ public class MusicianController {
             results = musicianRepository.findAll();
         }
 
-        List<Map<String, Object>> output = results.stream().map(m -> {
-            Map<String, Object> o = new HashMap<>();
-            o.put("id", m.getId());
-            o.put("name", m.getName());
-            o.put("location", m.getLocation());
-            o.put("genres", m.getGenres());
-            o.put("vibes", m.getVibes());
-            o.put("minimumFee", m.getMinimumFee());
-            o.put("willingToTravel", m.getWillingToTravel());
-            return o;
-        }).collect(Collectors.toList());
+        List<MusicianSearchResultResponse> output = results.stream()
+                .map(discoveryProfileMapper::musicianSearchResult)
+                .toList();
 
         return ResponseEntity.ok(output);
+    }
+
+    private record ScoredVenueMatch(long score, VenueMatchResponse response) {
     }
 }

@@ -10,6 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -21,6 +23,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +47,33 @@ class S3ObjectStorageServiceTest {
         MediaStorageProperties properties = new MediaStorageProperties();
         properties.setBucket("test-media");
         storageService = new S3ObjectStorageService(s3Client, presigner, properties);
+    }
+
+    @Test
+    void availabilityCheckUsesConfiguredBucket() {
+        when(s3Client.headBucket(any(HeadBucketRequest.class)))
+                .thenReturn(HeadBucketResponse.builder().build());
+
+        storageService.checkAvailability();
+
+        ArgumentCaptor<HeadBucketRequest> requestCaptor =
+                ArgumentCaptor.forClass(HeadBucketRequest.class);
+        verify(s3Client).headBucket(requestCaptor.capture());
+        assertEquals("test-media", requestCaptor.getValue().bucket());
+    }
+
+    @Test
+    void availabilityFailureUsesTheStorageAbstractionError() {
+        when(s3Client.headBucket(any(HeadBucketRequest.class))).thenThrow(
+                S3Exception.builder().statusCode(503).message("private provider detail").build()
+        );
+
+        ObjectStorageException exception = assertThrows(
+                ObjectStorageException.class,
+                storageService::checkAvailability
+        );
+
+        assertEquals("Object storage is unavailable.", exception.getMessage());
     }
 
     @Test

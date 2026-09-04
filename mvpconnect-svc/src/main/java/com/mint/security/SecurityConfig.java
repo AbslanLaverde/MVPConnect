@@ -85,7 +85,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/signup/**",          // All signup endpoints
                     "/auth/login",               // Login endpoint
-                    "/actuator/health",          // Health check
+                    "/actuator/health/**",       // Health and standard probe groups
                     "/error"                     // Error handling
                 ).permitAll()
 

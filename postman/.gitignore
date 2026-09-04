@@ -1,0 +1,3 @@
+# Local runner exports contain short-lived JWTs and presigned URLs.
+.*newman-report.json
+.*run-environment.json

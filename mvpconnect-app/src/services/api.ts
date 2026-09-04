@@ -146,10 +146,11 @@ export default api;
 export interface MusicianProfile {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   bio?: string;
-  location?: string;
+  location?: PublicLocation;
   profileImageUrl?: string;
+  profileImage?: PublicProfileMedia;
   genres?: string[];
   vibes?: string[];
   minimumFee?: string;
@@ -158,27 +159,70 @@ export interface MusicianProfile {
   instagramHandle?: string;
 }
 
+export interface MusicianProfileUpdate {
+  bio?: string | null;
+  location?: string | null;
+  genres?: string[] | null;
+  vibes?: string[] | null;
+  minimumFee?: string | null;
+  willingToTravel?: boolean | null;
+  websiteUrl?: string | null;
+  instagramHandle?: string | null;
+}
+
+export interface PublicProfileMedia {
+  mediaId: string;
+  url: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+export interface PublicLocation {
+  displayName?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  neighborhood?: string;
+}
+
+export interface PublicVenueLocation extends PublicLocation {
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface MusicianSearchResult {
+  id: string;
+  name: string;
+  location?: PublicLocation;
+  genres?: string[];
+  vibes?: string[];
+  profileImage?: PublicProfileMedia;
+}
+
 export interface VenueMatch {
   id: string;
   venueName: string;
-  location?: string;
+  location?: PublicVenueLocation;
   capacity?: number;
   genrePreferences?: string[];
   ambience?: string[];
-  typicalBudget?: string;
   websiteUrl?: string;
   matchScore?: string;
+  profileImage?: PublicProfileMedia;
 }
 
 export interface VenueSummary {
   id: string;
   venueName: string;
-  location?: string;
+  location?: PublicVenueLocation;
   capacity?: number;
   genrePreferences?: string[];
   ambience?: string[];
-  typicalBudget?: string;
-  liveMusic?: boolean;
+  profileImage?: PublicProfileMedia;
 }
 
 export const musicianAPI = {
@@ -187,7 +231,7 @@ export const musicianAPI = {
     return response.data;
   },
 
-  updateProfile: async (id: string, data: Partial<MusicianProfile>): Promise<void> => {
+  updateProfile: async (id: string, data: MusicianProfileUpdate): Promise<void> => {
     await api.put(`/musicians/${id}`, data);
   },
 
@@ -196,7 +240,7 @@ export const musicianAPI = {
     return response.data;
   },
 
-  search: async (params?: { genre?: string; location?: string }): Promise<MusicianProfile[]> => {
+  search: async (params?: { genre?: string; location?: string }): Promise<MusicianSearchResult[]> => {
     const response = await api.get('/musicians/search', { params });
     return response.data;
   },

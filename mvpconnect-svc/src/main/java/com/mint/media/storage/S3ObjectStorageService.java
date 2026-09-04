@@ -6,6 +6,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -35,6 +36,17 @@ public class S3ObjectStorageService implements ObjectStorageService {
         this.s3Client = s3Client;
         this.presigner = presigner;
         this.properties = properties;
+    }
+
+    @Override
+    public void checkAvailability() {
+        try {
+            s3Client.headBucket(HeadBucketRequest.builder()
+                    .bucket(properties.getBucket())
+                    .build());
+        } catch (SdkException exception) {
+            throw new ObjectStorageException("Object storage is unavailable.", exception);
+        }
     }
 
     @Override

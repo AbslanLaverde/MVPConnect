@@ -5,6 +5,8 @@ import java.util.Optional;
 
 public interface ObjectStorageService {
 
+    void checkAvailability();
+
     PresignedUpload generatePresignedUpload(
             String objectKey,
             String contentType,

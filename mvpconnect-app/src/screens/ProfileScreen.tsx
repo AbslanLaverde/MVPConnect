@@ -51,7 +51,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route 
         const profile = await musicianAPI.getProfile(userId);
         setName(profile.name || '');
         setBio(profile.bio || '');
-        setLocation(profile.location || '');
+        setLocation(profile.location?.displayName || '');
         setGenres(profile.genres || []);
         setVibes(profile.vibes || []);
         setMinimumFee(profile.minimumFee || '');
