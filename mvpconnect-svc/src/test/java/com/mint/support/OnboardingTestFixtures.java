@@ -50,7 +50,12 @@ public final class OnboardingTestFixtures {
                       "vibes": ["ATMOSPHERIC", "DARK"],
                       "eventTypes": ["CONCERT"],
                       "soundsLikeArtists": [
-                        {"entityType": "ARTIST", "displayName": "The National", "external": true}
+                        {
+                          "entityType": "ARTIST",
+                          "entityId": "external-the-national",
+                          "displayName": "The National",
+                          "external": true
+                        }
                       ]
                     }
                     """;

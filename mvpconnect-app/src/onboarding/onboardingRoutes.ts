@@ -10,6 +10,10 @@ export interface ResolvedOnboardingRoute {
   shouldRedirect: boolean;
 }
 
+export type AuthenticatedEntryRoute =
+  | { screen: 'home' }
+  | { screen: 'onboarding'; persona: OnboardingPersona; step: string };
+
 const orderedSteps = (state: OnboardingState) =>
   [...state.steps].sort((left, right) => left.position - right.position);
 
@@ -22,6 +26,25 @@ export const resumeStepFromState = (state: OnboardingState): string => {
     .find((step) => step.status !== 'COMPLETE' && step.status !== 'SKIPPED');
 
   return unresolved?.key ?? ordered.at(-1)?.key ?? '';
+};
+
+export const resolveAuthenticatedEntryRoute = (
+  state: OnboardingState,
+): AuthenticatedEntryRoute => {
+  if (state.status === 'COMPLETED') {
+    return { screen: 'home' };
+  }
+
+  const step = resumeStepFromState(state);
+  if (!step) {
+    throw new Error('Incomplete onboarding state does not contain a resumable step.');
+  }
+
+  return {
+    screen: 'onboarding',
+    persona: routePersonaForBackend(state.persona),
+    step,
+  };
 };
 
 export const resolveOnboardingRoute = (

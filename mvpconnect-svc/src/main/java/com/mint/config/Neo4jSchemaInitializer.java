@@ -20,7 +20,7 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(Neo4jSchemaInitializer.class);
 
-    static final List<String> CONSTRAINTS = List.of(
+    static final List<String> SCHEMA_STATEMENTS = List.of(
             "CREATE CONSTRAINT musician_id_unique IF NOT EXISTS FOR (node:Musician) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT venue_id_unique IF NOT EXISTS FOR (node:Venue) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT promoter_id_unique IF NOT EXISTS FOR (node:Promoter) REQUIRE node.id IS UNIQUE",
@@ -28,7 +28,13 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
             "CREATE CONSTRAINT onboarding_step_id_unique IF NOT EXISTS FOR (node:OnboardingStep) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT media_asset_id_unique IF NOT EXISTS FOR (node:MediaAsset) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT onboarding_draft_owner_version_unique IF NOT EXISTS "
-                    + "FOR (node:OnboardingDraft) REQUIRE node.ownerVersionKey IS UNIQUE"
+                    + "FOR (node:OnboardingDraft) REQUIRE node.ownerVersionKey IS UNIQUE",
+            "CREATE CONSTRAINT external_artist_id_unique IF NOT EXISTS "
+                    + "FOR (node:ExternalArtist) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT external_artist_spotify_id_unique IF NOT EXISTS "
+                    + "FOR (node:ExternalArtist) REQUIRE node.spotifyId IS UNIQUE",
+            "CREATE TEXT INDEX external_artist_normalized_name_text IF NOT EXISTS "
+                    + "FOR (node:ExternalArtist) ON (node.normalizedName)"
     );
 
     private final Driver driver;
@@ -45,10 +51,10 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         try (Session session = driver.session(SessionConfig.forDatabase(database))) {
             session.executeWrite(transaction -> {
-                CONSTRAINTS.forEach(statement -> transaction.run(statement).consume());
+                SCHEMA_STATEMENTS.forEach(statement -> transaction.run(statement).consume());
                 return null;
             });
         }
-        logger.info("Verified {} Neo4j schema constraints", CONSTRAINTS.size());
+        logger.info("Verified {} Neo4j schema statements", SCHEMA_STATEMENTS.size());
     }
 }

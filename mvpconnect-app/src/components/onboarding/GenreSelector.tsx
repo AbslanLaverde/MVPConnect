@@ -1,8 +1,8 @@
 import React from 'react';
 import { SelectChips, SelectChipsProps } from './SelectChips';
-import { APPROVED_GENRE_TAXONOMY } from './genreTaxonomy';
+import { GENRE_OPTIONS, GenreCode } from '../../onboarding/taxonomy/genres';
 
-export interface GenreSelectorProps extends Omit<SelectChipsProps, 'label' | 'options'> {
+export interface GenreSelectorProps extends Omit<SelectChipsProps<GenreCode>, 'label' | 'options'> {
   label?: string;
 }
 
@@ -15,6 +15,6 @@ export const GenreSelector: React.FC<GenreSelectorProps> = ({
     {...props}
     label={label}
     helperText={helperText}
-    options={APPROVED_GENRE_TAXONOMY}
+    options={GENRE_OPTIONS}
   />
 );

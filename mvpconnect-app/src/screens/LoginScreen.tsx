@@ -18,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { styles } from './LoginScreen.styles';
 import { theme } from '../theme/theme';
-import { onboardingApi } from '../onboarding/onboardingApi';
+import { fetchOnboardingState, onboardingApi } from '../onboarding/onboardingApi';
+import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { store } from '../store/store';
 
 const connectionGradientWebStyle = {
@@ -67,34 +68,52 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
 
     setLoading(true);
+    let authenticated = false;
     try {
       const response = await authAPI.login({
         email: email.toLowerCase().trim(),
         password,
       });
+      authenticated = true;
 
       // Save auth data
       await storageHelpers.saveAuthData(response.accessToken, response.userType);
       store.dispatch(onboardingApi.util.resetApiState());
 
-      // Navigate to appropriate home screen
-      if (response.userType === 'MUSICIAN') {
-        navigation.replace('MusicianHome', {
-          userId: response.userId,
-          userName: response.name || email.trim(),
-          userType: response.userType,
+      const onboardingState = await fetchOnboardingState();
+      await store.dispatch(
+        onboardingApi.util.upsertQueryData('getOnboarding', undefined, onboardingState),
+      );
+      const destination = resolveAuthenticatedEntryRoute(onboardingState);
+
+      if (destination.screen === 'onboarding') {
+        navigation.replace('Onboarding', {
+          persona: destination.persona,
+          step: destination.step,
         });
-      } else {
-        // For now, all types go to MusicianHome (venue/promoter screens TBD)
-        navigation.replace('MusicianHome', {
-          userId: response.userId,
-          userName: response.name || email.trim(),
-          userType: response.userType,
-        });
+        return;
       }
+
+      // Persona-specific home screens are still TBD. Preserve the existing home
+      // destination, but only after the backend confirms onboarding is complete.
+      navigation.replace('MusicianHome', {
+        userId: response.userId,
+        userName: response.name || email.trim(),
+        userType: response.userType,
+      });
     } catch (error: any) {
-      console.error('Login error:', error);
-      
+      console.error(authenticated ? 'Post-login routing error:' : 'Login error:', error);
+
+      if (authenticated) {
+        await storageHelpers.clearAuthData();
+        store.dispatch(onboardingApi.util.resetApiState());
+        Alert.alert(
+          'Error',
+          "We couldn't load your onboarding progress. Please sign in again.",
+        );
+        return;
+      }
+
       if (error.response?.status === 401) {
         Alert.alert('Error', 'Invalid email or password');
       } else if (error.response?.data?.message) {

@@ -82,6 +82,10 @@ public class MediaService {
         asset.setCreatedAt(now);
         asset.setUpdatedAt(now);
         mediaAssetRepository.save(asset);
+        LOGGER.info(
+                "media.upload.initialized mediaId={} accountId={} persona={} mediaType={} mediaContext={} sizeBytes={}",
+                asset.getId(), owner.userId(), owner.persona(), mediaType, mediaContext, asset.getSizeBytes()
+        );
 
         try {
             PresignedUpload upload = objectStorageService.generatePresignedUpload(
@@ -143,6 +147,10 @@ public class MediaService {
         asset.setStatus(MediaStatus.READY);
         asset.setUpdatedAt(LocalDateTime.now());
         mediaAssetRepository.save(asset);
+        LOGGER.info(
+                "media.upload.completed mediaId={} accountId={} persona={} mediaType={} sizeBytes={}",
+                asset.getId(), owner.userId(), owner.persona(), asset.getMediaType(), asset.getSizeBytes()
+        );
         return toResponse(asset);
     }
 
@@ -162,6 +170,10 @@ public class MediaService {
         }
         try {
             mediaAssetRepository.deleteWithOnboardingRelationships(asset.getId());
+            LOGGER.info(
+                    "media.deleted mediaId={} accountId={} persona={} mediaType={}",
+                    asset.getId(), owner.userId(), owner.persona(), asset.getMediaType()
+            );
         } catch (RuntimeException exception) {
             LOGGER.error(
                     "Media object was deleted but Neo4j cleanup failed for media asset {}. "

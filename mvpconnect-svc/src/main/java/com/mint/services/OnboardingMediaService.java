@@ -9,6 +9,8 @@ import com.mint.repositories.OnboardingDraftRepository;
 import com.mint.repositories.OnboardingStepRepository;
 import com.mint.security.AuthenticatedPersona;
 import com.mint.security.AuthenticatedPersonaProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,8 @@ import java.util.ArrayList;
 
 @Service
 public class OnboardingMediaService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(OnboardingMediaService.class);
 
     private final AuthenticatedPersonaProvider authenticatedPersonaProvider;
     private final OnboardingStepRegistry stepRegistry;
@@ -65,6 +69,15 @@ public class OnboardingMediaService {
             step.getMediaAssets().add(media);
             step.setUpdatedAt(LocalDateTime.now());
             onboardingStepRepository.save(step);
+            LOGGER.info(
+                    "onboarding.media.associated accountId={} persona={} step={} mediaId={}",
+                    owner.userId(), owner.persona(), stepKey, mediaId
+            );
+        } else {
+            LOGGER.debug(
+                    "onboarding.media.already-associated accountId={} persona={} step={} mediaId={}",
+                    owner.userId(), owner.persona(), stepKey, mediaId
+            );
         }
     }
 }

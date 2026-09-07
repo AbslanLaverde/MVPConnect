@@ -1,6 +1,7 @@
 package com.mint.security;
 
 import com.mint.controllers.MusicianController;
+import com.mint.controllers.ExternalArtistController;
 import com.mint.controllers.MediaController;
 import com.mint.controllers.LocationController;
 import com.mint.controllers.OnboardingMediaController;
@@ -10,6 +11,7 @@ import com.mint.controllers.SelfAccountController;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.services.MediaService;
+import com.mint.services.ExternalArtistService;
 import com.mint.services.GooglePlacesService;
 import com.mint.services.DiscoveryProfileMapper;
 import com.mint.services.OnboardingMediaService;
@@ -19,8 +21,8 @@ import com.mint.services.SelfAccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -40,7 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         LocationController.class,
         MusicianController.class,
         PromoterController.class,
-        SelfAccountController.class
+        SelfAccountController.class,
+        ExternalArtistController.class
 })
 @ContextConfiguration(classes = {
         SecurityConfig.class,
@@ -52,47 +55,51 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         LocationController.class,
         MusicianController.class,
         PromoterController.class,
-        SelfAccountController.class
+        SelfAccountController.class,
+        ExternalArtistController.class
 })
 class SecurityConfigTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private OnboardingService onboardingService;
 
-    @MockBean
+    @MockitoBean
     private OnboardingMediaService onboardingMediaService;
 
-    @MockBean
+    @MockitoBean
     private MediaService mediaService;
 
-    @MockBean
+    @MockitoBean
     private GooglePlacesService googlePlacesService;
 
-    @MockBean
+    @MockitoBean
     private PublicProfileService publicProfileService;
 
-    @MockBean
+    @MockitoBean
     private SelfAccountService selfAccountService;
 
-    @MockBean
+    @MockitoBean
+    private ExternalArtistService externalArtistService;
+
+    @MockitoBean
     private DiscoveryProfileMapper discoveryProfileMapper;
 
-    @MockBean
+    @MockitoBean
     private PersonaAuthorizationService personaAuthorizationService;
 
-    @MockBean
+    @MockitoBean
     private MusicianRepository musicianRepository;
 
-    @MockBean
+    @MockitoBean
     private VenueRepository venueRepository;
 
-    @MockBean
+    @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
-    @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
@@ -164,6 +171,22 @@ class SecurityConfigTest {
                         .param("mode", "CITY"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/locations/place").param("placeId", "place-1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedExternalArtistEndpointsAreRejected() throws Exception {
+        mockMvc.perform(get("/external-artists/search").param("q", "Interpol"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/external-artists/search/spotify").param("q", "Interpol"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/external-artists/resolve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"SPOTIFY\",\"providerArtistId\":\"id\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/external-artists/free-form")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Local Band\",\"spotifyAttemptStatus\":\"NO_MATCH\"}"))
                 .andExpect(status().isUnauthorized());
     }
 }

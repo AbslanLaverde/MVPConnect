@@ -42,6 +42,11 @@ const toApiError = (error: unknown): OnboardingApiError => {
   };
 };
 
+export const fetchOnboardingState = async (): Promise<OnboardingState> => {
+  const response = await api.get<OnboardingState>('/onboarding');
+  return response.data;
+};
+
 export const onboardingApi = createApi({
   reducerPath: 'onboardingApi',
   baseQuery: fakeBaseQuery<OnboardingApiError>(),
@@ -50,8 +55,7 @@ export const onboardingApi = createApi({
     getOnboarding: builder.query<OnboardingState, void>({
       queryFn: async () => {
         try {
-          const response = await api.get<OnboardingState>('/onboarding');
-          return { data: response.data };
+          return { data: await fetchOnboardingState() };
         } catch (error) {
           return { error: toApiError(error) };
         }

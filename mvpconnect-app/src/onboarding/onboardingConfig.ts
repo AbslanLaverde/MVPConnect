@@ -45,7 +45,7 @@ export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfi
     entryStep: 'room',
     stepPresentation: {
       room: { label: 'THE ROOM', placeholderTitle: 'Venue Room Placeholder' },
-      music: { label: 'THE MUSIC', placeholderTitle: 'Venue Music Placeholder' },
+      music: { label: 'YOUR MUSIC', placeholderTitle: 'Venue Music Placeholder' },
       stage: { label: 'THE STAGE', placeholderTitle: 'Venue Stage Placeholder' },
       booking: { label: 'BOOKING', placeholderTitle: 'Venue Booking Placeholder' },
       media: { label: 'MEDIA', placeholderTitle: 'Venue Media Placeholder' },
@@ -60,7 +60,7 @@ export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfi
     entryStep: 'business',
     stepPresentation: {
       business: { label: 'THE BUSINESS', placeholderTitle: 'Promoter Business Placeholder' },
-      specialties: { label: 'SPECIALTIES', placeholderTitle: 'Promoter Specialties Placeholder' },
+      specialties: { label: 'YOUR LANE', placeholderTitle: 'Promoter Lane Placeholder' },
       network: { label: 'YOUR NETWORK', placeholderTitle: 'Promoter Network Placeholder' },
       media: { label: 'MEDIA', placeholderTitle: 'Promoter Media Placeholder' },
       goals: { label: 'YOUR GOALS', placeholderTitle: 'Promoter Goals Placeholder' },

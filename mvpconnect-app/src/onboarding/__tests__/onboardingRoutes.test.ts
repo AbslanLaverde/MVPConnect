@@ -1,6 +1,7 @@
 import {
   nextStepFromState,
   previousStepFromState,
+  resolveAuthenticatedEntryRoute,
   resolveOnboardingRoute,
 } from '../onboardingRoutes';
 import { BackendPersona, OnboardingState } from '../onboardingTypes';
@@ -138,6 +139,55 @@ describe('resolveOnboardingRoute', () => {
     expect(state.steps).toHaveLength(expectedCount);
     expect(state.steps.map((step) => step.position)).toEqual(
       Array.from({ length: expectedCount }, (_, index) => index + 1),
+    );
+  });
+});
+
+describe('resolveAuthenticatedEntryRoute', () => {
+  it.each([
+    ['MUSICIAN', 'artist', 'sound', ['basics']],
+    ['VENUE', 'venue', 'stage', ['room', 'music']],
+    ['PROMOTER', 'promoter', 'network', ['business', 'specialties']],
+  ] as const)(
+    'resumes incomplete %s onboarding at the backend current step',
+    (backendPersona, routePersona, currentStep, completedKeys) => {
+      const state = stateFor(backendPersona, currentStep, [...completedKeys]);
+
+      expect(resolveAuthenticatedEntryRoute(state)).toEqual({
+        screen: 'onboarding',
+        persona: routePersona,
+        step: currentStep,
+      });
+    },
+  );
+
+  it('keeps a READY account in onboarding until completion is recorded', () => {
+    const state = stateFor('MUSICIAN', 'goals', ['basics', 'sound', 'live', 'media']);
+    state.status = 'READY';
+
+    expect(resolveAuthenticatedEntryRoute(state)).toEqual({
+      screen: 'onboarding',
+      persona: 'artist',
+      step: 'goals',
+    });
+  });
+
+  it('routes home only when onboarding is completed', () => {
+    const state = stateFor('VENUE', 'room');
+    state.status = 'COMPLETED';
+    state.currentStep = null;
+    state.steps = [];
+
+    expect(resolveAuthenticatedEntryRoute(state)).toEqual({ screen: 'home' });
+  });
+
+  it('rejects an incomplete state with no resumable steps', () => {
+    const state = stateFor('PROMOTER', 'business');
+    state.currentStep = null;
+    state.steps = [];
+
+    expect(() => resolveAuthenticatedEntryRoute(state)).toThrow(
+      'Incomplete onboarding state does not contain a resumable step.',
     );
   });
 });

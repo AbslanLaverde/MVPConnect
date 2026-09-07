@@ -2,10 +2,13 @@ package com.mint.config;
 
 import com.mint.dto.response.ErrorResponse;
 import com.mint.exceptions.DuplicateEmailException;
+import com.mint.exceptions.ExternalArtistException;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,10 +30,27 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(ExternalArtistException.class)
+    public ResponseEntity<ErrorResponse> handleExternalArtistException(
+            ExternalArtistException ex,
+            HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
+        return ResponseEntity.status(ex.getStatus()).body(new ErrorResponse(
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        ));
+    }
+
     @ExceptionHandler(LocationLookupException.class)
     public ResponseEntity<ErrorResponse> handleLocationLookupException(
             LocationLookupException ex,
             HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getStatus().value(),
                 ex.getStatus().getReasonPhrase(),
@@ -45,6 +65,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnreadableRequest(
             HttpMessageNotReadableException ex,
             HttpServletRequest request) {
+        logHandled(HttpStatus.BAD_REQUEST.value(), "INVALID_REQUEST_BODY", request, ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -59,6 +80,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex,
             HttpServletRequest request) {
+        logHandled(HttpStatus.FORBIDDEN.value(), "ACCESS_DENIED", request, ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 "Forbidden",
@@ -73,6 +95,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMediaException(
             MediaException ex,
             HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 ex.getStatus().value(),
                 ex.getStatus().getReasonPhrase(),
@@ -87,6 +110,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOnboardingException(
             OnboardingException ex,
             HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
         ErrorResponse errorResponse = ex.getDetails() == null
                 ? new ErrorResponse(
                         ex.getStatus().value(),
@@ -116,6 +140,8 @@ public class GlobalExceptionHandler {
             DuplicateEmailException ex,
             HttpServletRequest request) {
 
+        logHandled(HttpStatus.BAD_REQUEST.value(), DuplicateEmailException.CODE, request, ex);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -134,6 +160,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationErrors(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
+
+        logHandled(HttpStatus.BAD_REQUEST.value(), "VALIDATION_FAILED", request, ex);
 
         List<String> details = new ArrayList<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
@@ -159,6 +187,8 @@ public class GlobalExceptionHandler {
             BadCredentialsException ex,
             HttpServletRequest request) {
 
+        logHandled(HttpStatus.UNAUTHORIZED.value(), "AUTHENTICATION_FAILED", request, ex);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 "Authentication Failed",
@@ -176,6 +206,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFoundException(
             UsernameNotFoundException ex,
             HttpServletRequest request) {
+
+        logHandled(HttpStatus.NOT_FOUND.value(), "USER_NOT_FOUND", request, ex);
 
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
@@ -195,6 +227,8 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex,
             HttpServletRequest request) {
 
+        logHandled(HttpStatus.BAD_REQUEST.value(), "ILLEGAL_ARGUMENT", request, ex);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
@@ -213,6 +247,8 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        logHandled(HttpStatus.INTERNAL_SERVER_ERROR.value(), "UNEXPECTED_ERROR", request, ex);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
@@ -221,6 +257,26 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    private void logHandled(
+            int status,
+            String code,
+            HttpServletRequest request,
+            Exception exception) {
+        if (status >= 500) {
+            LOGGER.error(
+                    "api.exception.handled method={} path={} status={} code={} exception={}",
+                    request.getMethod(), request.getRequestURI(), status, code,
+                    exception.getClass().getSimpleName(), exception
+            );
+        } else {
+            LOGGER.warn(
+                    "api.exception.handled method={} path={} status={} code={} exception={}",
+                    request.getMethod(), request.getRequestURI(), status, code,
+                    exception.getClass().getSimpleName()
+            );
+        }
     }
 }
 

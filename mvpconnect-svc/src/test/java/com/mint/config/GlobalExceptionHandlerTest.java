@@ -5,6 +5,7 @@ import com.mint.dto.response.OnboardingCompletionStepError;
 import com.mint.dto.response.OnboardingCompletionValidationDetails;
 import com.mint.dto.response.OnboardingFieldError;
 import com.mint.exceptions.DuplicateEmailException;
+import com.mint.exceptions.ExternalArtistException;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
@@ -116,5 +117,19 @@ class GlobalExceptionHandlerTest {
         assertEquals(503, response.getStatusCode().value());
         assertEquals(LocationLookupException.UNAVAILABLE, response.getBody().getCode());
         assertEquals("Location suggestions are temporarily unavailable.", response.getBody().getMessage());
+    }
+
+    @Test
+    void spotifyUnavailableResponseUsesOnlyTheSafeProviderContract() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/external-artists/search/spotify");
+
+        ResponseEntity<ErrorResponse> response = new GlobalExceptionHandler()
+                .handleExternalArtistException(ExternalArtistException.spotifyUnavailable(), request);
+
+        assertEquals(503, response.getStatusCode().value());
+        assertEquals(ExternalArtistException.SPOTIFY_UNAVAILABLE, response.getBody().getCode());
+        assertEquals("Spotify artist search is temporarily unavailable.",
+                response.getBody().getMessage());
     }
 }

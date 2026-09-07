@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
+import { Text } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { AISuggestion, AISuggestionReview } from '../AISuggestionReview';
 import { GenreSelector } from '../GenreSelector';
 import { SocialConnectionField, SocialConnectionValue } from '../SocialConnectionField';
+import type { GenreCode } from '../../../onboarding/taxonomy';
 
 const GenreHarness = () => {
-  const [genres, setGenres] = useState<string[]>([]);
-  return <GenreSelector value={genres} onChange={setGenres} maxSelections={1} />;
+  const [genres, setGenres] = useState<GenreCode[]>([]);
+  return (
+    <>
+      <GenreSelector value={genres} onChange={setGenres} maxSelections={1} />
+      <Text accessibilityLabel="Selected genre values">{genres.join(',')}</Text>
+    </>
+  );
 };
 
 const SuggestionHarness = () => {
@@ -30,6 +37,7 @@ describe('domain-aware onboarding fields', () => {
 
     fireEvent.press(screen.getByLabelText('Rock'));
     expect(screen.getByLabelText('Rock').props.accessibilityState.checked).toBe(true);
+    expect(screen.getByLabelText('Selected genre values').props.children).toBe('ROCK');
     expect(screen.getByLabelText('Jazz').props.accessibilityState.disabled).toBe(true);
     expect(screen.queryByLabelText('Other')).toBeNull();
   });

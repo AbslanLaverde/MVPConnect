@@ -15,6 +15,8 @@ import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.security.JwtTokenProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,6 +33,8 @@ import java.util.Locale;
  */
 @Service
 public class AuthService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
     private MusicianRepository musicianRepository;
@@ -80,6 +84,8 @@ public class AuthService {
 
         musician = musicianRepository.save(musician);
 
+        LOGGER.info("account.created accountId={} persona=MUSICIAN", musician.getId());
+
         String token = jwtTokenProvider.generateTokenFromEmail(
             musician.getEmail(),
             musician.getId(),
@@ -127,6 +133,8 @@ public class AuthService {
 
         venue = venueRepository.save(venue);
 
+        LOGGER.info("account.created accountId={} persona=VENUE", venue.getId());
+
         String token = jwtTokenProvider.generateTokenFromEmail(
             venue.getEmail(),
             venue.getId(),
@@ -172,6 +180,8 @@ public class AuthService {
         promoter.setUpdatedAt(java.time.LocalDateTime.now());
         
         promoter = promoterRepository.save(promoter);
+
+        LOGGER.info("account.created accountId={} persona=PROMOTER", promoter.getId());
 
         String token = jwtTokenProvider.generateTokenFromEmail(
             promoter.getEmail(),
@@ -232,6 +242,8 @@ public class AuthService {
                 }
             }
         }
+
+        LOGGER.info("account.login.succeeded accountId={} persona={}", userId, userType);
 
         return new JwtAuthenticationResponse(
             token,

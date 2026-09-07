@@ -1,19 +1,20 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import type { TaxonomyOption } from '../../onboarding/taxonomy/types';
+import { OnboardingAccentFill } from '../../onboarding/OnboardingAccent';
+import type { OnboardingPersonaConfig } from '../../onboarding/onboardingConfig';
 import { FieldFrame } from './FieldFrame';
 import { fieldStyles } from './OnboardingFields.styles';
 
-export interface SelectionOption {
-  value: string;
-  label: string;
+export interface SelectionOption<Value extends string = string> extends TaxonomyOption<Value> {
   disabled?: boolean;
 }
 
-export interface SelectChipsProps {
+export interface SelectChipsProps<Value extends string = string> {
   label: string;
-  options: readonly SelectionOption[];
-  value: readonly string[];
-  onChange: (value: string[]) => void;
+  options: readonly SelectionOption<Value>[];
+  value: readonly Value[];
+  onChange: (value: Value[]) => void;
   maxSelections?: number;
   required?: boolean;
   optional?: boolean;
@@ -21,11 +22,15 @@ export interface SelectChipsProps {
   helperText?: string;
   error?: string;
   accessibilityLabel?: string;
+  accentConfig?: OnboardingPersonaConfig;
+  variant?: 'compact' | 'expressive';
+  showCounter?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const DEFAULT_SELECT_CHIP_LIMIT = 5;
 
-export const SelectChips: React.FC<SelectChipsProps> = ({
+export const SelectChips = <Value extends string,>({
   label,
   options,
   value,
@@ -37,10 +42,14 @@ export const SelectChips: React.FC<SelectChipsProps> = ({
   helperText,
   error,
   accessibilityLabel,
-}) => {
+  accentConfig,
+  variant = 'compact',
+  showCounter = false,
+  containerStyle,
+}: SelectChipsProps<Value>) => {
   const limitReached = value.length >= maxSelections;
 
-  const toggle = (option: SelectionOption) => {
+  const toggle = (option: SelectionOption<Value>) => {
     const selected = value.includes(option.value);
     if (disabled || option.disabled || (!selected && limitReached)) return;
     onChange(selected
@@ -54,7 +63,18 @@ export const SelectChips: React.FC<SelectChipsProps> = ({
       required={required}
       optional={optional}
       helperText={helperText}
+      helperBefore
       error={error}
+      containerStyle={containerStyle}
+      headerAccessory={showCounter ? (
+        <Text
+          testID={`${label}-selection-count`}
+          style={fieldStyles.selectionCounter}
+          accessibilityLabel={`${value.length} of ${maxSelections} selected`}
+        >
+          {`${value.length} / ${maxSelections}`}
+        </Text>
+      ) : undefined}
     >
       <View
         style={fieldStyles.optionsWrap}
@@ -68,7 +88,9 @@ export const SelectChips: React.FC<SelectChipsProps> = ({
               key={option.value}
               style={[
                 fieldStyles.chip,
+                variant === 'compact' ? fieldStyles.chipCompact : fieldStyles.chipExpressive,
                 selected && fieldStyles.chipSelected,
+                selected && accentConfig && { borderColor: accentConfig.accentStart },
                 unavailable && fieldStyles.chipUnavailable,
               ]}
               onPress={() => toggle(option)}
@@ -80,6 +102,13 @@ export const SelectChips: React.FC<SelectChipsProps> = ({
                 : undefined}
               accessibilityState={{ checked: selected, disabled: unavailable }}
             >
+              {selected && accentConfig ? (
+                <OnboardingAccentFill
+                  config={accentConfig}
+                  style={fieldStyles.chipAccentFill}
+                  testID={`${label}-${option.value}-selected-accent`}
+                />
+              ) : null}
               <Text style={[fieldStyles.chipText, selected && fieldStyles.chipTextSelected]}>
                 {selected ? `${option.label} ×` : option.label}
               </Text>
