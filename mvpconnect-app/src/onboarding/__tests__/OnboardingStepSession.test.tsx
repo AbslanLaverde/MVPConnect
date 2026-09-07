@@ -20,8 +20,8 @@ jest.mock('../../services/api', () => ({
 const mockedApi = api as jest.Mocked<typeof api>;
 
 const makeStep = (overrides: Partial<OnboardingStep> = {}): OnboardingStep => ({
-  key: 'sound',
-  position: 2,
+  key: 'live',
+  position: 3,
   required: true,
   status: 'NOT_STARTED',
   data: {},
@@ -102,7 +102,7 @@ describe('OnboardingStepSession', () => {
     await act(async () => jest.advanceTimersByTime(1000));
 
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith(
-      '/onboarding/steps/sound',
+      '/onboarding/steps/live',
       { data: { frameworkConfirmed: true } },
     ));
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -122,14 +122,48 @@ describe('OnboardingStepSession', () => {
     await act(async () => resolveRequest({
       data: makeState(
         makeStep({ status: 'COMPLETE', data: { frameworkConfirmed: true } }),
-        { currentStep: 'live' },
+        { currentStep: 'media' },
       ),
     }));
 
     await waitFor(() => expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
       persona: 'artist',
-      step: 'live',
+      step: 'media',
     }));
+  });
+
+  it('keeps real Step 2 persistence enabled when the later-step placeholder bypass is on', async () => {
+    const sound = makeStep({
+      key: 'sound',
+      position: 2,
+      status: 'IN_PROGRESS',
+      data: {
+        genres: ['ROCK'],
+        vibes: ['RAW'],
+        eventTypes: [],
+        soundsLikeArtists: [],
+      },
+    });
+    mockedApi.put.mockResolvedValueOnce({ data: sound } as any);
+    mockedApi.post.mockResolvedValueOnce({
+      data: makeState({ ...sound, status: 'COMPLETE' }, { currentStep: 'live' }),
+    } as any);
+    const screen = renderSession(sound, makeState(sound), true);
+
+    fireEvent.press(screen.getByLabelText('Continue to the next onboarding step'));
+
+    await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith(
+      '/onboarding/steps/sound',
+      { data: sound.data },
+    ));
+    await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith(
+      '/onboarding/steps/sound/complete',
+      { data: sound.data },
+    ));
+    expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
+      persona: 'artist',
+      step: 'live',
+    });
   });
 
   it('advances placeholder steps locally without calling a save endpoint when bypass is enabled', () => {
@@ -140,7 +174,7 @@ describe('OnboardingStepSession', () => {
 
     expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
       persona: 'artist',
-      step: 'live',
+      step: 'media',
     });
     expect(mockedApi.put).not.toHaveBeenCalled();
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -185,7 +219,7 @@ describe('OnboardingStepSession', () => {
     fireEvent.press(screen.getByLabelText('Framework placeholder is ready'));
 
     await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith(
-      '/onboarding/steps/sound/reopen',
+      '/onboarding/steps/live/reopen',
     ));
     expect(mockedApi.put).not.toHaveBeenCalled();
   });

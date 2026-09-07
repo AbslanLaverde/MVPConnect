@@ -47,6 +47,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -173,10 +174,15 @@ public class OnboardingStepContractService {
             List<OnboardingFieldError> errors) {
         for (ConstraintViolation<Object> violation : validator.validate(typedData)) {
             errors.add(new OnboardingFieldError(
-                    violation.getPropertyPath().toString(),
+                    validationPath(violation),
                     validationCode(violation)
             ));
         }
+    }
+
+    private String validationPath(ConstraintViolation<?> violation) {
+        return violation.getPropertyPath().toString()
+                .replace(".<list element>", "");
     }
 
     private String validationCode(ConstraintViolation<?> violation) {
@@ -212,7 +218,7 @@ public class OnboardingStepContractService {
             duplicates("genres", request.genres(), errors);
             duplicates("vibes", request.vibes(), errors);
             duplicates("eventTypes", request.eventTypes(), errors);
-            duplicates("soundsLikeArtists", request.soundsLikeArtists(), errors);
+            entityReferenceDuplicates("soundsLikeArtists", request.soundsLikeArtists(), errors);
             entityTypes("soundsLikeArtists", request.soundsLikeArtists(), EntityType.ARTIST, errors);
         } else if (data instanceof ArtistLiveStepRequest request) {
             if (!Boolean.TRUE.equals(request.touring()) && request.travelRadiusMiles() == null) {
@@ -223,7 +229,7 @@ public class OnboardingStepContractService {
                 errors.add(new OnboardingFieldError("setLengthMinutes", "INVALID"));
             }
             duplicates("equipmentBrought", request.equipmentBrought(), errors);
-            duplicates("venuesPlayed", request.venuesPlayed(), errors);
+            entityReferenceDuplicates("venuesPlayed", request.venuesPlayed(), errors);
             entityTypes("venuesPlayed", request.venuesPlayed(), EntityType.VENUE, errors);
             performanceMedia("performanceImages", request.performanceImages(), owner, step, errors);
         } else if (data instanceof ArtistMediaStepRequest request) {
@@ -242,7 +248,7 @@ public class OnboardingStepContractService {
             duplicates("genres", request.genres(), errors);
             duplicates("ambience", request.ambience(), errors);
             duplicates("eventTypes", request.eventTypes(), errors);
-            duplicates("artistsBooked", request.artistsBooked(), errors);
+            entityReferenceDuplicates("artistsBooked", request.artistsBooked(), errors);
             entityTypes("artistsBooked", request.artistsBooked(), EntityType.ARTIST, errors);
         } else if (data instanceof VenueStageStepRequest request) {
             duplicates("equipmentAvailable", request.equipmentAvailable(), errors);
@@ -266,11 +272,11 @@ public class OnboardingStepContractService {
             duplicates("genres", request.genres(), errors);
             duplicates("eventTypes", request.eventTypes(), errors);
             duplicates("vibes", request.vibes(), errors);
-            duplicates("artistsWorkedWith", request.artistsWorkedWith(), errors);
+            entityReferenceDuplicates("artistsWorkedWith", request.artistsWorkedWith(), errors);
             entityTypes("artistsWorkedWith", request.artistsWorkedWith(), EntityType.ARTIST, errors);
         } else if (data instanceof PromoterNetworkStepRequest request) {
-            duplicates("artists", request.artists(), errors);
-            duplicates("venues", request.venues(), errors);
+            entityReferenceDuplicates("artists", request.artists(), errors);
+            entityReferenceDuplicates("venues", request.venues(), errors);
             duplicates("additionalMarkets", request.additionalMarkets(), errors);
             entityTypes("artists", request.artists(), EntityType.ARTIST, errors);
             entityTypes("venues", request.venues(), EntityType.VENUE, errors);
@@ -375,11 +381,41 @@ public class OnboardingStepContractService {
             EntityType expectedType,
             List<OnboardingFieldError> errors) {
         for (int index = 0; index < references.size(); index++) {
-            if (references.get(index).entityType() != expectedType) {
+            EntityReferenceDto reference = references.get(index);
+            if (reference != null
+                    && reference.entityType() != null
+                    && reference.entityType() != expectedType) {
                 errors.add(new OnboardingFieldError(
                         field + "[" + index + "].entityType", "INVALID"));
             }
         }
+    }
+
+    private void entityReferenceDuplicates(
+            String field,
+            List<EntityReferenceDto> references,
+            List<OnboardingFieldError> errors) {
+        Set<EntityReferenceKey> seen = new HashSet<>();
+        for (EntityReferenceDto reference : references) {
+            EntityReferenceKey key = entityReferenceKey(reference);
+            if (key != null && !seen.add(key)) {
+                errors.add(new OnboardingFieldError(field, "DUPLICATE"));
+                return;
+            }
+        }
+    }
+
+    private EntityReferenceKey entityReferenceKey(EntityReferenceDto reference) {
+        if (reference == null || reference.entityType() == null) return null;
+        if (reference.entityId() != null) {
+            return new EntityReferenceKey(reference.entityType(), "id:" + reference.entityId());
+        }
+        if (reference.displayName() == null) return null;
+        String normalizedName = reference.displayName()
+                .strip()
+                .replaceAll("\\s+", " ")
+                .toLowerCase(Locale.ROOT);
+        return new EntityReferenceKey(reference.entityType(), "name:" + normalizedName);
     }
 
     private void duplicates(
@@ -396,10 +432,14 @@ public class OnboardingStepContractService {
             List<OnboardingFieldError> errors) {
         Set<K> seen = new HashSet<>();
         for (T value : values) {
+            if (value == null) continue;
             if (!seen.add(keyFunction.apply(value))) {
                 errors.add(new OnboardingFieldError(field, "DUPLICATE"));
                 return;
             }
         }
+    }
+
+    private record EntityReferenceKey(EntityType entityType, String identity) {
     }
 }

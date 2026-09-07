@@ -31,6 +31,7 @@ import com.mint.onboarding.taxonomy.RosterSizeRange;
 import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import com.mint.repositories.MediaAssetRepository;
+import com.mint.repositories.ExternalArtistRepository;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.OnboardingDraftRepository;
 import com.mint.repositories.OnboardingStepRepository;
@@ -85,6 +86,7 @@ class OnboardingServiceTest {
     @Mock private VenueRepository venueRepository;
     @Mock private PromoterRepository promoterRepository;
     @Mock private MediaAssetRepository mediaAssetRepository;
+    @Mock private ExternalArtistRepository externalArtistRepository;
     @Mock private MediaService mediaService;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -125,6 +127,8 @@ class OnboardingServiceTest {
                         any(AuthenticatedPersona.class), anyString(), any(MediaType.class)))
                 .thenAnswer(call -> readyMedia(
                         call.getArgument(1), call.getArgument(0), call.getArgument(2)));
+        lenient().when(externalArtistRepository.findExistingIds(any()))
+                .thenAnswer(call -> call.getArgument(0));
         lenient().when(musicianRepository.save(any(Musician.class)))
                 .thenAnswer(call -> rememberOwner(call.getArgument(0)));
         lenient().when(venueRepository.save(any(Venue.class)))
@@ -135,6 +139,8 @@ class OnboardingServiceTest {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         OnboardingStepContractService contractService = new OnboardingStepContractService(
                 stepRegistry, stepRepository, mediaService, validator, objectMapper);
+        ExternalArtistRelationshipService relationshipService =
+                new ExternalArtistRelationshipService(externalArtistRepository);
         service = new OnboardingService(
                 authenticatedPersonaProvider,
                 stepRegistry,
@@ -145,6 +151,7 @@ class OnboardingServiceTest {
                 promoterRepository,
                 mediaAssetRepository,
                 contractService,
+                relationshipService,
                 objectMapper
         );
     }
@@ -324,6 +331,36 @@ class OnboardingServiceTest {
     }
 
     @Test
+    void musicianCompletionCreatesSoundsLikeOnceUsingExternalArtistId() {
+        makeMusicianReadyWithReference("external-national");
+
+        service.completeOnboarding();
+        service.completeOnboarding();
+
+        verify(externalArtistRepository, times(1))
+                .linkSoundsLike("musician-1", "external-national");
+        assertTrue(currentStep("sound").getDataJson().contains("external-national"));
+    }
+
+    @Test
+    void missingExternalArtistStopsCompletionBeforeCanonicalMutation() {
+        makeMusicianReadyWithReference("missing-artist");
+        lenient().when(externalArtistRepository.findExistingIds(List.of("missing-artist")))
+                .thenReturn(List.of());
+
+        OnboardingException exception = assertThrows(
+                OnboardingException.class, service::completeOnboarding);
+
+        assertEquals(OnboardingException.NOT_READY, exception.getCode());
+        assertNull(musicians.get("musician-1").getBio());
+        assertNull(musicians.get("musician-1").getOnboardingCompletedAt());
+        verify(mediaAssetRepository, never()).replaceCanonicalProfileMedia(
+                anyString(), anyString(), anyString());
+        verify(externalArtistRepository, never())
+                .linkSoundsLike(anyString(), anyString());
+    }
+
+    @Test
     void invalidStoredStepStopsCompletionBeforeCanonicalMutation() {
         makeReady(PersonaType.MUSICIAN, "musician-1");
         currentStep("basics").setDataJson("{\"unexpected\":true}");
@@ -362,6 +399,7 @@ class OnboardingServiceTest {
                 data.set("artistsBooked", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
                                 .put("entityType", "ARTIST")
+                                .put("entityId", "external-venue-artist")
                                 .put("displayName", "Glass Houses")
                                 .put("external", true)));
             }
@@ -380,6 +418,7 @@ class OnboardingServiceTest {
         assertTrue(currentStep("media").getDataJson().contains("venue-gallery"));
         verify(mediaAssetRepository, times(1)).replaceCanonicalProfileMedia(
                 "venue-1", "VENUE", "venue-profile");
+        verify(externalArtistRepository).linkHasBooked("venue-1", "external-venue-artist");
     }
 
     @Test
@@ -396,6 +435,7 @@ class OnboardingServiceTest {
                 data.set("artistsWorkedWith", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
                                 .put("entityType", "ARTIST")
+                                .put("entityId", "external-promoter-artist")
                                 .put("displayName", "Glass Houses")
                                 .put("external", true)));
             }
@@ -429,6 +469,8 @@ class OnboardingServiceTest {
         assertTrue(currentStep("network").getDataJson().contains("The Marlowe Room"));
         assertTrue(currentStep("network").getDataJson().contains("Philadelphia"));
         assertTrue(currentStep("network").getDataJson().contains("promoter-show"));
+        verify(externalArtistRepository)
+                .linkHasWorkedWith("promoter-1", "external-promoter-artist");
     }
 
     @Test
@@ -537,6 +579,25 @@ class OnboardingServiceTest {
         }
         assertEquals(OnboardingDraftStatus.IN_PROGRESS, response.getStatus());
         return service.skipStep("media");
+    }
+
+    private void makeMusicianReadyWithReference(String externalArtistId) {
+        select(PersonaType.MUSICIAN, "musician-1");
+        service.getOnboarding();
+        for (String stepKey : stepRegistry.stepsFor(PersonaType.MUSICIAN)) {
+            if (stepKey.equals("media")) continue;
+            ObjectNode data = validStep(PersonaType.MUSICIAN, stepKey);
+            if (stepKey.equals("sound")) {
+                data.set("soundsLikeArtists", objectMapper.createArrayNode().add(
+                        objectMapper.createObjectNode()
+                                .put("entityType", "ARTIST")
+                                .put("entityId", externalArtistId)
+                                .put("displayName", "The National")
+                                .put("external", true)));
+            }
+            service.completeStep(stepKey, new SaveOnboardingStepRequest(data));
+        }
+        service.skipStep("media");
     }
 
     private void select(PersonaType persona, String ownerId) {

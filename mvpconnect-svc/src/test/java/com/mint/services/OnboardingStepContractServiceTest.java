@@ -15,6 +15,9 @@ import com.mint.nodes.OnboardingStep;
 import com.mint.onboarding.OnboardingStepRegistry;
 import com.mint.onboarding.PersonaType;
 import com.mint.onboarding.ValidatedOnboardingStep;
+import com.mint.onboarding.taxonomy.EventTypeCode;
+import com.mint.onboarding.taxonomy.GenreCode;
+import com.mint.onboarding.taxonomy.VibeCode;
 import com.mint.repositories.OnboardingStepRepository;
 import com.mint.security.AuthenticatedPersona;
 import jakarta.validation.Validation;
@@ -24,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
 
 import static com.mint.support.OnboardingTestFixtures.validStep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,6 +96,77 @@ class OnboardingStepContractServiceTest {
     }
 
     @Test
+    void approvedNewTaxonomyValuesAreAccepted() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.set("genres", enumArray("HARDCORE"));
+        data.set("vibes", enumArray("RELAXED"));
+        data.set("eventTypes", enumArray("COMMUNITY_EVENT"));
+
+        ValidatedOnboardingStep result = validate(PersonaType.MUSICIAN, "sound", data);
+        ArtistSoundStepRequest typed = assertInstanceOf(ArtistSoundStepRequest.class, result.data());
+
+        assertEquals(List.of(GenreCode.HARDCORE), typed.genres());
+        assertEquals(List.of(VibeCode.RELAXED), typed.vibes());
+        assertEquals(List.of(EventTypeCode.COMMUNITY_EVENT), typed.eventTypes());
+    }
+
+    @Test
+    void removedWorldGenreIsRejected() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.set("genres", enumArray("WORLD"));
+
+        assertField(PersonaType.MUSICIAN, "sound", data, "genres[0]", "INVALID");
+    }
+
+    @Test
+    void removedOrganicVibeIsRejected() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.set("vibes", enumArray("ORGANIC"));
+
+        assertField(PersonaType.MUSICIAN, "sound", data, "vibes[0]", "INVALID");
+    }
+
+    @Test
+    void removedSophisticatedVibeIsRejected() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.set("vibes", enumArray("SOPHISTICATED"));
+
+        assertField(PersonaType.MUSICIAN, "sound", data, "vibes[0]", "INVALID");
+    }
+
+    @Test
+    void removedCorporateEventIsRejected() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.set("eventTypes", enumArray("CORPORATE_EVENT"));
+
+        assertField(PersonaType.MUSICIAN, "sound", data, "eventTypes[0]", "INVALID");
+    }
+
+    @Test
+    void taxonomyListsRejectNullElementsWithIndexedErrors() {
+        ObjectNode nullGenre = validStep(PersonaType.MUSICIAN, "sound");
+        nullGenre.withArray("genres").addNull();
+        assertField(PersonaType.MUSICIAN, "sound", nullGenre, "genres[2]", "REQUIRED");
+
+        ObjectNode nullVibe = validStep(PersonaType.MUSICIAN, "sound");
+        nullVibe.withArray("vibes").addNull();
+        assertField(PersonaType.MUSICIAN, "sound", nullVibe, "vibes[2]", "REQUIRED");
+
+        ObjectNode nullEvent = validStep(PersonaType.MUSICIAN, "sound");
+        nullEvent.withArray("eventTypes").addNull();
+        assertField(PersonaType.MUSICIAN, "sound", nullEvent, "eventTypes[1]", "REQUIRED");
+    }
+
+    @Test
+    void artistReferenceListsRejectNullElementsWithIndexedErrors() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        data.withArray("soundsLikeArtists").addNull();
+
+        assertField(PersonaType.MUSICIAN, "sound", data,
+                "soundsLikeArtists[1]", "REQUIRED");
+    }
+
+    @Test
     void wrongPersonaStepContractIsRejected() {
         OnboardingException exception = assertThrows(
                 OnboardingException.class,
@@ -132,6 +208,62 @@ class OnboardingStepContractServiceTest {
         data.withArray("genres").removeAll().add("INDIE").add("INDIE");
 
         assertField(PersonaType.MUSICIAN, "sound", data, "genres", "DUPLICATE");
+    }
+
+    @Test
+    void unresolvedArtistReferencesUseNormalizedDisplayNameForDuplicates() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        ArrayNode references = data.putArray("soundsLikeArtists");
+        references.add(artistReference(null, "The National", true));
+        references.add(artistReference(null, " THE   NATIONAL ", true));
+
+        assertField(PersonaType.MUSICIAN, "sound", data,
+                "soundsLikeArtists", "DUPLICATE");
+    }
+
+    @Test
+    void resolvedArtistReferencesUseEntityIdForDuplicates() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        ArrayNode references = data.putArray("soundsLikeArtists");
+        references.add(artistReference("artist-123", "First Display Name", false));
+        references.add(artistReference("artist-123", "Updated Display Name", false));
+
+        assertField(PersonaType.MUSICIAN, "sound", data,
+                "soundsLikeArtists", "DUPLICATE");
+    }
+
+    @Test
+    void differentArtistReferencesRemainValidAndKeepTheirInputOrder() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
+        ArrayNode references = data.putArray("soundsLikeArtists");
+        references.add(artistReference(null, "The National", true));
+        references.add(artistReference(null, "Japanese Breakfast", true));
+
+        ValidatedOnboardingStep result = validate(PersonaType.MUSICIAN, "sound", data);
+        ArtistSoundStepRequest typed = assertInstanceOf(ArtistSoundStepRequest.class, result.data());
+
+        assertEquals("The National", typed.soundsLikeArtists().get(0).displayName());
+        assertEquals("Japanese Breakfast", typed.soundsLikeArtists().get(1).displayName());
+    }
+
+    @Test
+    void stepTwoSelectionMaximumsRemainUnchanged() {
+        ObjectNode artist = validStep(PersonaType.MUSICIAN, "sound");
+        artist.set("vibes", enumArray("ATMOSPHERIC", "DARK", "DREAMY", "ENERGETIC"));
+        assertField(PersonaType.MUSICIAN, "sound", artist, "vibes", "TOO_MANY");
+
+        ObjectNode venue = validStep(PersonaType.VENUE, "music");
+        venue.set("eventTypes", enumArray(
+                "CLUB_NIGHT", "COMMUNITY_EVENT", "CONCERT", "DJ_NIGHT", "FESTIVAL", "HOUSE_SHOW"));
+        assertField(PersonaType.VENUE, "music", venue, "eventTypes", "TOO_MANY");
+
+        ObjectNode promoter = validStep(PersonaType.PROMOTER, "specialties");
+        ArrayNode references = promoter.putArray("artistsWorkedWith");
+        for (int index = 1; index <= 6; index++) {
+            references.add(artistReference(null, "Artist " + index, true));
+        }
+        assertField(PersonaType.PROMOTER, "specialties", promoter,
+                "artistsWorkedWith", "TOO_MANY");
     }
 
     @Test
@@ -433,5 +565,18 @@ class OnboardingStepContractServiceTest {
         ArrayNode array = objectMapper.createArrayNode();
         for (String value : values) array.add(value);
         return array;
+    }
+
+    private ObjectNode artistReference(String entityId, String displayName, boolean external) {
+        ObjectNode reference = objectMapper.createObjectNode()
+                .put("entityType", "ARTIST")
+                .put("displayName", displayName)
+                .put("external", external);
+        if (entityId == null) {
+            reference.putNull("entityId");
+        } else {
+            reference.put("entityId", entityId);
+        }
+        return reference;
     }
 }

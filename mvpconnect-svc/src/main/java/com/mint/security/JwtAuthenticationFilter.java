@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,10 +52,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                logger.debug("Set authentication for user: {}", email);
+                if (userDetails instanceof CustomUserDetails principal) {
+                    MDC.put("accountId", principal.getId());
+                    MDC.put("persona", principal.getUserType());
+                    logger.debug(
+                            "auth.context.established accountId={} persona={}",
+                            principal.getId(), principal.getUserType()
+                    );
+                }
             }
         } catch (Exception ex) {
-            logger.error("Could not set user authentication in security context", ex);
+            logger.warn("auth.context.rejected exception={}", ex.getClass().getSimpleName());
+            logger.debug("Authentication context rejection details", ex);
         }
 
         filterChain.doFilter(request, response);

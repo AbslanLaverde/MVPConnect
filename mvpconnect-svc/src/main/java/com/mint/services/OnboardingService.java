@@ -48,8 +48,11 @@ import com.mint.repositories.OnboardingDraftRepository;
 import com.mint.repositories.OnboardingStepRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
+import com.mint.services.ExternalArtistRelationshipService.CanonicalArtistReferences;
 import com.mint.security.AuthenticatedPersona;
 import com.mint.security.AuthenticatedPersonaProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,6 +69,7 @@ import java.util.Objects;
 public class OnboardingService {
 
     public static final int MAX_STEP_PAYLOAD_BYTES = 128 * 1024;
+    private static final Logger LOGGER = LoggerFactory.getLogger(OnboardingService.class);
 
     private final AuthenticatedPersonaProvider authenticatedPersonaProvider;
     private final OnboardingStepRegistry stepRegistry;
@@ -76,6 +80,7 @@ public class OnboardingService {
     private final PromoterRepository promoterRepository;
     private final MediaAssetRepository mediaAssetRepository;
     private final OnboardingStepContractService stepContractService;
+    private final ExternalArtistRelationshipService externalArtistRelationshipService;
     private final ObjectMapper objectMapper;
     private final Object draftInitializationMonitor = new Object();
 
@@ -89,6 +94,7 @@ public class OnboardingService {
             PromoterRepository promoterRepository,
             MediaAssetRepository mediaAssetRepository,
             OnboardingStepContractService stepContractService,
+            ExternalArtistRelationshipService externalArtistRelationshipService,
             ObjectMapper objectMapper) {
         this.authenticatedPersonaProvider = authenticatedPersonaProvider;
         this.stepRegistry = stepRegistry;
@@ -99,6 +105,7 @@ public class OnboardingService {
         this.promoterRepository = promoterRepository;
         this.mediaAssetRepository = mediaAssetRepository;
         this.stepContractService = stepContractService;
+        this.externalArtistRelationshipService = externalArtistRelationshipService;
         this.objectMapper = objectMapper;
     }
 
@@ -141,6 +148,10 @@ public class OnboardingService {
         draft.setUpdatedAt(now);
         stepRepository.save(step);
         draftRepository.save(draft);
+        LOGGER.debug(
+                "onboarding.step.saved accountId={} persona={} step={} status={}",
+                context.identity().userId(), context.identity().persona(), stepKey, step.getStatus()
+        );
         return toStepResponse(context.identity().persona(), step);
     }
 
@@ -173,6 +184,10 @@ public class OnboardingService {
         draft.setUpdatedAt(now);
         stepRepository.save(step);
         draftRepository.save(draft);
+        LOGGER.info(
+                "onboarding.step.completed accountId={} persona={} step={}",
+                context.identity().userId(), context.identity().persona(), stepKey
+        );
         return toStateResponse(draft);
     }
 
@@ -195,6 +210,10 @@ public class OnboardingService {
         draft.setUpdatedAt(now);
         stepRepository.save(step);
         draftRepository.save(draft);
+        LOGGER.info(
+                "onboarding.step.skipped accountId={} persona={} step={}",
+                context.identity().userId(), context.identity().persona(), stepKey
+        );
         return toStateResponse(draft);
     }
 
@@ -218,6 +237,10 @@ public class OnboardingService {
         draft.setUpdatedAt(now);
         stepRepository.save(step);
         draftRepository.save(draft);
+        LOGGER.info(
+                "onboarding.step.reopened accountId={} persona={} step={}",
+                context.identity().userId(), context.identity().persona(), stepKey
+        );
         return toStateResponse(draft);
     }
 
@@ -245,6 +268,8 @@ public class OnboardingService {
         }
 
         Map<String, Object> validatedSteps = validateCompletedSteps(context, draft);
+        CanonicalArtistReferences artistReferences = externalArtistRelationshipService.validate(
+                context.identity().persona(), validatedSteps);
         String profileMediaId = promote(context, validatedSteps);
 
         LocalDateTime now = LocalDateTime.now();
@@ -260,7 +285,14 @@ public class OnboardingService {
         draft.setStatus(OnboardingDraftStatus.COMPLETED);
         draft.setUpdatedAt(now);
         saveOwner(context.owner());
+        externalArtistRelationshipService.createRelationships(
+                context.identity().userId(), artistReferences);
         draftRepository.save(draft);
+        LOGGER.info(
+                "onboarding.completed accountId={} persona={} version={}",
+                context.identity().userId(), context.identity().persona(),
+                OnboardingStepRegistry.CURRENT_VERSION
+        );
         return completionResponse(context.identity().persona(), context.owner());
     }
 
@@ -507,6 +539,11 @@ public class OnboardingService {
         owner.setOnboardingStatus(PersonaOnboardingStatus.IN_PROGRESS);
         owner.setOnboardingVersion(OnboardingStepRegistry.CURRENT_VERSION);
         saveOwner(owner);
+        LOGGER.info(
+                "onboarding.draft.created accountId={} persona={} version={} stepCount={}",
+                context.identity().userId(), persona, OnboardingStepRegistry.CURRENT_VERSION,
+                steps.size()
+        );
         return draft;
     }
 

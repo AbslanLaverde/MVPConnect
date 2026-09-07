@@ -62,7 +62,7 @@ public class GooglePlacesService {
             if (response == null || response.suggestions() == null) {
                 return List.of();
             }
-            return response.suggestions().stream()
+            List<LocationSuggestionResponse> suggestions = response.suggestions().stream()
                     .map(GoogleSuggestion::placePrediction)
                     .filter(prediction -> prediction != null
                             && StringUtils.hasText(prediction.placeId())
@@ -74,6 +74,8 @@ public class GooglePlacesService {
                             prediction.text().text()
                     ))
                     .toList();
+            log.debug("location.suggestions.received mode={} count={}", mode, suggestions.size());
+            return suggestions;
         } catch (RestClientException exception) {
             log.warn("Google Places autocomplete request failed: {}", exception.getClass().getSimpleName());
             throw LocationLookupException.unavailable();
@@ -96,7 +98,10 @@ public class GooglePlacesService {
             if (response == null || !StringUtils.hasText(response.id())) {
                 throw LocationLookupException.unavailable();
             }
-            return toResolvedLocation(response);
+            ResolvedLocationResponse resolved = toResolvedLocation(response);
+            log.debug("location.place.resolved hasCoordinates={}",
+                    resolved.latitude() != null && resolved.longitude() != null);
+            return resolved;
         } catch (LocationLookupException exception) {
             throw exception;
         } catch (RestClientException exception) {

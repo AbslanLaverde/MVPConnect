@@ -6,17 +6,20 @@ import type { OnboardingPersonaConfig } from './onboardingConfig';
 interface OnboardingAccentFillProps {
   config: OnboardingPersonaConfig;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export const OnboardingAccentFill: React.FC<OnboardingAccentFillProps> = ({
   config,
   style,
+  testID,
 }) => {
   const gradientId = `onboardingAccent${useId().replace(/:/g, '')}`;
 
   if (!config.accentEnd) {
     return (
       <View
+        testID={testID}
         style={[
           { backgroundColor: config.accentStart },
           { pointerEvents: 'none' } as ViewStyle,
@@ -28,6 +31,7 @@ export const OnboardingAccentFill: React.FC<OnboardingAccentFillProps> = ({
 
   return (
     <Svg
+      testID={testID}
       width="100%"
       height="100%"
       style={[{ pointerEvents: 'none' }, style] as any}
