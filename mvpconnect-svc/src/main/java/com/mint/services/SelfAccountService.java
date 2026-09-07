@@ -7,6 +7,7 @@ import com.mint.dto.response.account.VenueSelfAccountResponse;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.EquipmentItemCodec;
 import com.mint.onboarding.PersonaType;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
@@ -61,7 +62,7 @@ public class SelfAccountService {
                 musician.getGenres(), musician.getVibes(), musician.getEventTypes(),
                 musician.getMinimumFee(), musician.getWillingToTravel(), musician.getBookingStatus(),
                 musician.getTypicalDraw(), musician.getTravelRadiusMiles(), musician.getTouring(),
-                musician.getSetLengthMinutes(), musician.getEquipmentBrought(),
+                musician.getSetLengthMinutes(), EquipmentItemCodec.decode(musician.getEquipmentBrought()),
                 musician.getConnectionGoals(), musician.getWebsiteUrl(), musician.getInstagramHandle(),
                 musician.getOnboardingStatus(), musician.getOnboardingCompletedAt(),
                 musician.getOnboardingVersion(),
@@ -77,8 +78,8 @@ public class SelfAccountService {
                 venue.getDescription(), locationMapper.selfLocation(venue),
                 venue.getCapacity(), venue.getGenrePreferences(), venue.getAmbience(), venue.getEventTypes(),
                 venue.getStageWidthFeet(), venue.getStageDepthFeet(),
-                venue.getSoundEngineerAvailability(), venue.getPaAvailability(),
-                venue.getEquipmentAvailable(), venue.getProductionAmenities(), venue.getTypicalBudget(),
+                venue.getSoundEngineerAvailability(), venue.getSoundcheckAvailability(), venue.getPaAvailability(),
+                EquipmentItemCodec.decode(venue.getEquipmentAvailable()), venue.getProductionAmenities(), venue.getTypicalBudget(),
                 venue.getLiveMusic(), venue.getBookingStatus(), venue.getBookingMethod(),
                 venue.getDesiredArtistDraw(), venue.getConnectionGoals(), venue.getWebsiteUrl(),
                 venue.getBookingEmail(), venue.getOnboardingStatus(), venue.getOnboardingCompletedAt(),

@@ -2,6 +2,7 @@ package com.mint.security;
 
 import com.mint.controllers.MusicianController;
 import com.mint.controllers.ExternalArtistController;
+import com.mint.controllers.VenueIdentityController;
 import com.mint.controllers.MediaController;
 import com.mint.controllers.LocationController;
 import com.mint.controllers.OnboardingMediaController;
@@ -12,6 +13,7 @@ import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.services.MediaService;
 import com.mint.services.ExternalArtistService;
+import com.mint.services.VenueIdentityService;
 import com.mint.services.GooglePlacesService;
 import com.mint.services.DiscoveryProfileMapper;
 import com.mint.services.OnboardingMediaService;
@@ -43,7 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         MusicianController.class,
         PromoterController.class,
         SelfAccountController.class,
-        ExternalArtistController.class
+        ExternalArtistController.class,
+        VenueIdentityController.class
 })
 @ContextConfiguration(classes = {
         SecurityConfig.class,
@@ -56,7 +59,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         MusicianController.class,
         PromoterController.class,
         SelfAccountController.class,
-        ExternalArtistController.class
+        ExternalArtistController.class,
+        VenueIdentityController.class
 })
 class SecurityConfigTest {
 
@@ -83,6 +87,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private ExternalArtistService externalArtistService;
+
+    @MockitoBean
+    private VenueIdentityService venueIdentityService;
 
     @MockitoBean
     private DiscoveryProfileMapper discoveryProfileMapper;
@@ -187,6 +194,22 @@ class SecurityConfigTest {
         mockMvc.perform(post("/external-artists/free-form")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Local Band\",\"spotifyAttemptStatus\":\"NO_MATCH\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedVenueIdentityEndpointsAreRejected() throws Exception {
+        mockMvc.perform(get("/venue-identities/search").param("q", "Marlowe"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/venue-identities/search/google").param("q", "Marlowe"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/venue-identities/resolve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"GOOGLE\",\"providerPlaceId\":\"place-1\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/venue-identities/free-form")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Local Room\",\"googleAttemptStatus\":\"NO_MATCH\"}"))
                 .andExpect(status().isUnauthorized());
     }
 }

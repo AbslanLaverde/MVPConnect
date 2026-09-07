@@ -77,6 +77,7 @@ public class Musician implements OnboardingOwner {
     private Integer travelRadiusMiles;
     private Boolean touring;
     private Integer setLengthMinutes;
+    // EquipmentItemCodec canonical form: CODE when quantity is unspecified, CODE:quantity otherwise.
     private List<String> equipmentBrought;
     private List<String> connectionGoals;
 

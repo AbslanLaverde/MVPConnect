@@ -34,7 +34,13 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
             "CREATE CONSTRAINT external_artist_spotify_id_unique IF NOT EXISTS "
                     + "FOR (node:ExternalArtist) REQUIRE node.spotifyId IS UNIQUE",
             "CREATE TEXT INDEX external_artist_normalized_name_text IF NOT EXISTS "
-                    + "FOR (node:ExternalArtist) ON (node.normalizedName)"
+                    + "FOR (node:ExternalArtist) ON (node.normalizedName)",
+            "CREATE CONSTRAINT venue_identity_id_unique IF NOT EXISTS "
+                    + "FOR (node:VenueIdentity) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT venue_identity_google_place_id_unique IF NOT EXISTS "
+                    + "FOR (node:VenueIdentity) REQUIRE node.googlePlaceId IS UNIQUE",
+            "CREATE TEXT INDEX venue_identity_normalized_name_text IF NOT EXISTS "
+                    + "FOR (node:VenueIdentity) ON (node.normalizedName)"
     );
 
     private final Driver driver;

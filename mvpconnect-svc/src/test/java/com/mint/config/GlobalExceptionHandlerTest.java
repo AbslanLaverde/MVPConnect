@@ -9,6 +9,7 @@ import com.mint.exceptions.ExternalArtistException;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
+import com.mint.exceptions.VenueIdentityException;
 import com.mint.onboarding.PersonaType;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -130,6 +131,21 @@ class GlobalExceptionHandlerTest {
         assertEquals(503, response.getStatusCode().value());
         assertEquals(ExternalArtistException.SPOTIFY_UNAVAILABLE, response.getBody().getCode());
         assertEquals("Spotify artist search is temporarily unavailable.",
+                response.getBody().getMessage());
+    }
+
+    @Test
+    void googleVenueUnavailableResponseUsesOnlyTheSafeProviderContract() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/venue-identities/search/google");
+
+        ResponseEntity<ErrorResponse> response = new GlobalExceptionHandler()
+                .handleVenueIdentityException(VenueIdentityException.googleUnavailable(), request);
+
+        assertEquals(503, response.getStatusCode().value());
+        assertEquals(VenueIdentityException.GOOGLE_PLACES_UNAVAILABLE,
+                response.getBody().getCode());
+        assertEquals("Google venue search is temporarily unavailable.",
                 response.getBody().getMessage());
     }
 }

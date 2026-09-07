@@ -34,8 +34,10 @@ import { isOnboardingStepValid } from './onboardingValidation';
 import { styles } from './OnboardingShell.styles';
 import { isRealStepOne } from './onboardingStepOne';
 import { isRealStepTwo } from './onboardingStepTwo';
+import { isRealStepThree } from './onboardingStepThree';
 import { OnboardingRealStepSession } from './OnboardingRealStepSession';
 import { OnboardingRealStepTwoSession } from './OnboardingRealStepTwoSession';
+import { OnboardingRealStepThreeSession } from './OnboardingRealStepThreeSession';
 
 type OperationKind = 'autosave' | 'complete' | 'skip' | 'reopen';
 
@@ -378,6 +380,16 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = (prop
   if (isRealStepTwo(props.config.persona, props.step.key)) {
     return (
       <OnboardingRealStepTwoSession
+        state={props.state}
+        step={props.step}
+        config={props.config}
+        navigation={props.navigation}
+      />
+    );
+  }
+  if (isRealStepThree(props.config.persona, props.step.key)) {
+    return (
+      <OnboardingRealStepThreeSession
         state={props.state}
         step={props.step}
         config={props.config}

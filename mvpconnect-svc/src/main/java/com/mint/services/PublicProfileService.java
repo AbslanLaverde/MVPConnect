@@ -8,6 +8,7 @@ import com.mint.dto.response.profile.PublicVenueProfileResponse;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.EquipmentItemCodec;
 import com.mint.onboarding.PersonaType;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
@@ -54,7 +55,7 @@ public class PublicProfileService {
                 musician.getTravelRadiusMiles(),
                 musician.getTouring(),
                 musician.getSetLengthMinutes(),
-                musician.getEquipmentBrought(),
+                EquipmentItemCodec.decode(musician.getEquipmentBrought()),
                 musician.getConnectionGoals(),
                 musician.getWebsiteUrl(),
                 musician.getInstagramHandle(),
@@ -76,8 +77,9 @@ public class PublicProfileService {
                 venue.getStageWidthFeet(),
                 venue.getStageDepthFeet(),
                 venue.getSoundEngineerAvailability(),
+                venue.getSoundcheckAvailability(),
                 venue.getPaAvailability(),
-                venue.getEquipmentAvailable(),
+                EquipmentItemCodec.decode(venue.getEquipmentAvailable()),
                 venue.getProductionAmenities(),
                 venue.getBookingStatus(),
                 venue.getBookingMethod(),

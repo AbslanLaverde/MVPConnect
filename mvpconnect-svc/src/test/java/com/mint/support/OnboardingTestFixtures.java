@@ -65,7 +65,10 @@ public final class OnboardingTestFixtures {
                       "typicalDraw": "FROM_101_TO_250",
                       "touring": true,
                       "setLengthMinutes": 60,
-                      "equipmentBrought": ["GUITAR_AMP"],
+                      "equipmentBrought": [
+                        {"code": "GUITAR_AMP", "quantity": 2},
+                        {"code": "DRUM_KIT", "quantity": null}
+                      ],
                       "venuesPlayed": [],
                       "performanceImages": []
                     }
@@ -106,8 +109,12 @@ public final class OnboardingTestFixtures {
                       "stageWidthFeet": 24.0,
                       "stageDepthFeet": 16.0,
                       "soundEngineerAvailability": "IN_HOUSE",
+                      "soundcheckAvailability": "FULL_SOUNDCHECK",
                       "paAvailability": "FULL_HOUSE_PA",
-                      "equipmentAvailable": ["MICROPHONES", "STAGE_MONITORS"],
+                      "equipmentAvailable": [
+                        {"code": "MICROPHONES", "quantity": 6},
+                        {"code": "STAGE_MONITORS", "quantity": null}
+                      ],
                       "productionAmenities": ["GREEN_ROOM"]
                     }
                     """;

@@ -14,6 +14,10 @@ export interface ArtistEntityReferenceDto extends EntityReferenceDto {
   entityType: 'ARTIST';
 }
 
+export interface VenueEntityReferenceDto extends EntityReferenceDto {
+  entityType: 'VENUE';
+}
+
 export interface ArtistSoundStepRequest extends OnboardingStepData {
   genres: GenreCode[];
   vibes: VibeCode[];

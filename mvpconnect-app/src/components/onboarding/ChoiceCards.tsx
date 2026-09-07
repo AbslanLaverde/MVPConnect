@@ -1,5 +1,7 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { OnboardingAccentFill } from '../../onboarding/OnboardingAccent';
+import type { OnboardingPersonaConfig } from '../../onboarding/onboardingConfig';
 import { FieldFrame } from './FieldFrame';
 import { fieldStyles } from './OnboardingFields.styles';
 
@@ -22,6 +24,8 @@ export interface ChoiceCardsProps {
   error?: string;
   orientation?: 'row' | 'column';
   accessibilityLabel?: string;
+  accentConfig?: OnboardingPersonaConfig;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
@@ -36,6 +40,8 @@ export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
   error,
   orientation = 'column',
   accessibilityLabel,
+  accentConfig,
+  containerStyle,
 }) => (
   <FieldFrame
     label={label}
@@ -43,6 +49,7 @@ export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
     optional={optional}
     helperText={helperText}
     error={error}
+    containerStyle={containerStyle}
   >
     <View
       style={orientation === 'row' ? fieldStyles.choicesRow : fieldStyles.choicesColumn}
@@ -59,6 +66,7 @@ export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
               fieldStyles.choiceCard,
               orientation === 'row' && fieldStyles.choiceCardRow,
               selected && fieldStyles.choiceCardSelected,
+              selected && accentConfig && { borderColor: accentConfig.accentStart },
               unavailable && fieldStyles.chipUnavailable,
             ]}
             onPress={() => onChange(option.value)}
@@ -68,7 +76,16 @@ export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
             accessibilityHint={option.description}
             accessibilityState={{ checked: selected, selected, disabled: unavailable }}
           >
-            <Text style={fieldStyles.choiceLabel}>{option.label}</Text>
+            {selected && accentConfig ? (
+              <OnboardingAccentFill
+                config={accentConfig}
+                style={fieldStyles.choiceAccentFill}
+                testID={`${label}-${option.value}-selected-accent`}
+              />
+            ) : null}
+            <Text style={fieldStyles.choiceLabel}>
+              {selected ? `✓ ${option.label}` : option.label}
+            </Text>
             {option.description ? (
               <Text style={fieldStyles.choiceDescription}>{option.description}</Text>
             ) : null}

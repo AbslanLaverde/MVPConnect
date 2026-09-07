@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mint.dto.onboarding.artist.ArtistMediaStepRequest;
+import com.mint.dto.onboarding.artist.ArtistLiveStepRequest;
 import com.mint.dto.onboarding.artist.ArtistSoundStepRequest;
+import com.mint.dto.onboarding.venue.VenueStageStepRequest;
 import com.mint.dto.response.OnboardingFieldError;
 import com.mint.dto.response.OnboardingStepValidationDetails;
 import com.mint.exceptions.MediaException;
@@ -16,7 +18,9 @@ import com.mint.onboarding.OnboardingStepRegistry;
 import com.mint.onboarding.PersonaType;
 import com.mint.onboarding.ValidatedOnboardingStep;
 import com.mint.onboarding.taxonomy.EventTypeCode;
+import com.mint.onboarding.taxonomy.EquipmentCode;
 import com.mint.onboarding.taxonomy.GenreCode;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VibeCode;
 import com.mint.repositories.OnboardingStepRepository;
 import com.mint.security.AuthenticatedPersona;
@@ -25,6 +29,8 @@ import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -354,6 +360,91 @@ class OnboardingStepContractServiceTest {
     }
 
     @Test
+    void equipmentItemRequiresCode() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "live");
+        data.set("equipmentBrought", objectMapper.createArrayNode().add(
+                objectMapper.createObjectNode().put("quantity", 2)));
+
+        assertField(PersonaType.MUSICIAN, "live", data,
+                "equipmentBrought[0].code", "REQUIRED");
+    }
+
+    @Test
+    void equipmentQuantitiesAcceptOmittedNullAndInclusiveBoundsAndKeepOrder() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "live");
+        ArrayNode equipment = data.putArray("equipmentBrought");
+        equipment.add(objectMapper.createObjectNode().put("code", "DRUM_KIT"));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "MICROPHONES").putNull("quantity"));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "GUITAR_AMP").put("quantity", 1));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "STAGE_MONITORS").put("quantity", 99));
+
+        ValidatedOnboardingStep result = validate(PersonaType.MUSICIAN, "live", data);
+        ArtistLiveStepRequest typed = assertInstanceOf(ArtistLiveStepRequest.class, result.data());
+
+        assertEquals(List.of(
+                        EquipmentCode.DRUM_KIT,
+                        EquipmentCode.MICROPHONES,
+                        EquipmentCode.GUITAR_AMP,
+                        EquipmentCode.STAGE_MONITORS),
+                typed.equipmentBrought().stream().map(item -> item.code()).toList());
+        assertEquals(List.of(1, 99), typed.equipmentBrought().stream()
+                .map(item -> item.quantity()).filter(java.util.Objects::nonNull).toList());
+        assertTrue(result.dataJson().contains("\"code\":\"GUITAR_AMP\",\"quantity\":1"));
+        assertTrue(result.dataJson().contains("\"code\":\"DRUM_KIT\",\"quantity\":null"));
+    }
+
+    @Test
+    void equipmentQuantityBelowMinimumIsRejected() {
+        assertInvalidEquipmentQuantity(0);
+        assertInvalidEquipmentQuantity(-1);
+    }
+
+    @Test
+    void equipmentQuantityAboveMaximumIsRejected() {
+        assertInvalidEquipmentQuantity(100);
+    }
+
+    @Test
+    void equipmentQuantityFractionAndWrongTypeAreRejected() {
+        ObjectNode fractional = validStep(PersonaType.MUSICIAN, "live");
+        fractional.set("equipmentBrought", objectMapper.createArrayNode().add(
+                objectMapper.createObjectNode().put("code", "MICROPHONES").put("quantity", 1.5)));
+        assertField(PersonaType.MUSICIAN, "live", fractional,
+                "equipmentBrought[0].quantity", "INVALID");
+
+        ObjectNode wrongType = validStep(PersonaType.MUSICIAN, "live");
+        wrongType.set("equipmentBrought", objectMapper.createArrayNode().add(
+                objectMapper.createObjectNode().put("code", "MICROPHONES").put("quantity", "4")));
+        assertField(PersonaType.MUSICIAN, "live", wrongType,
+                "equipmentBrought[0].quantity", "INVALID");
+    }
+
+    @Test
+    void duplicateEquipmentCodesAreRejectedWithoutMerging() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "live");
+        ArrayNode equipment = data.putArray("equipmentBrought");
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "MICROPHONES").put("quantity", 2));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "MICROPHONES").put("quantity", 4));
+
+        assertField(PersonaType.MUSICIAN, "live", data,
+                "equipmentBrought", "DUPLICATE");
+    }
+
+    @Test
+    void legacyCodeOnlyArtistEquipmentRequestShapeIsRejected() {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "live");
+        data.set("equipmentBrought", objectMapper.createArrayNode().add("MICROPHONES"));
+
+        assertField(PersonaType.MUSICIAN, "live", data,
+                "equipmentBrought[0]", "INVALID");
+    }
+
+    @Test
     void artistGoalsRequireAtLeastOneGoal() {
         ObjectNode data = validStep(PersonaType.MUSICIAN, "goals");
         data.withArray("connectionGoals").removeAll();
@@ -386,14 +477,61 @@ class OnboardingStepContractServiceTest {
     }
 
     @Test
-    void venueStageRequiresEngineerAndPaStatuses() {
+    void venueStageRequiresEngineerSoundcheckAndPaStatuses() {
         ObjectNode data = validStep(PersonaType.VENUE, "stage");
         data.remove("soundEngineerAvailability");
+        data.remove("soundcheckAvailability");
         data.remove("paAvailability");
 
         assertFields(PersonaType.VENUE, "stage", data,
                 new OnboardingFieldError("soundEngineerAvailability", "REQUIRED"),
+                new OnboardingFieldError("soundcheckAvailability", "REQUIRED"),
                 new OnboardingFieldError("paAvailability", "REQUIRED"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(SoundcheckAvailability.class)
+    void venueStageAcceptsEverySoundcheckAvailability(SoundcheckAvailability availability) {
+        ObjectNode data = validStep(PersonaType.VENUE, "stage");
+        data.put("soundcheckAvailability", availability.name());
+
+        VenueStageStepRequest typed = assertInstanceOf(
+                VenueStageStepRequest.class,
+                validate(PersonaType.VENUE, "stage", data).data());
+
+        assertEquals(availability, typed.soundcheckAvailability());
+    }
+
+    @Test
+    void venueStageRejectsInvalidSoundcheckAvailability() {
+        ObjectNode data = validStep(PersonaType.VENUE, "stage");
+        data.put("soundcheckAvailability", "MAYBE");
+
+        assertField(PersonaType.VENUE, "stage", data,
+                "soundcheckAvailability", "INVALID");
+    }
+
+    @Test
+    void venueEquipmentUsesTypedQuantityContractAndKeepsNormalizedDraftValues() {
+        ObjectNode data = validStep(PersonaType.VENUE, "stage");
+        ArrayNode equipment = data.putArray("equipmentAvailable");
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "STAGE_MONITORS").put("quantity", 4));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "DI_BOXES").put("quantity", 6));
+        equipment.add(objectMapper.createObjectNode()
+                .put("code", "DRUM_KIT").putNull("quantity"));
+
+        ValidatedOnboardingStep result = validate(PersonaType.VENUE, "stage", data);
+        VenueStageStepRequest typed = assertInstanceOf(VenueStageStepRequest.class, result.data());
+
+        assertEquals(List.of(
+                        EquipmentCode.STAGE_MONITORS,
+                        EquipmentCode.DI_BOXES,
+                        EquipmentCode.DRUM_KIT),
+                typed.equipmentAvailable().stream().map(item -> item.code()).toList());
+        assertTrue(result.dataJson().contains("\"code\":\"DI_BOXES\",\"quantity\":6"));
+        assertTrue(result.dataJson().contains("\"code\":\"DRUM_KIT\",\"quantity\":null"));
     }
 
     @Test
@@ -578,5 +716,15 @@ class OnboardingStepContractServiceTest {
             reference.put("entityId", entityId);
         }
         return reference;
+    }
+
+    private void assertInvalidEquipmentQuantity(int quantity) {
+        ObjectNode data = validStep(PersonaType.MUSICIAN, "live");
+        data.set("equipmentBrought", objectMapper.createArrayNode().add(
+                objectMapper.createObjectNode()
+                        .put("code", "MICROPHONES")
+                        .put("quantity", quantity)));
+        assertField(PersonaType.MUSICIAN, "live", data,
+                "equipmentBrought[0].quantity", "INVALID");
     }
 }

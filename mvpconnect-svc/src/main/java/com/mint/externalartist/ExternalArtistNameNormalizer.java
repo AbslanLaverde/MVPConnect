@@ -1,6 +1,6 @@
 package com.mint.externalartist;
 
-import java.util.Locale;
+import com.mint.identity.IdentityNameNormalizer;
 
 public final class ExternalArtistNameNormalizer {
 
@@ -8,10 +8,10 @@ public final class ExternalArtistNameNormalizer {
     }
 
     public static String displayName(String value) {
-        return value == null ? "" : value.trim().replaceAll("\\s+", " ");
+        return IdentityNameNormalizer.displayName(value);
     }
 
     public static String normalize(String value) {
-        return displayName(value).toLowerCase(Locale.ROOT);
+        return IdentityNameNormalizer.normalize(value);
     }
 }

@@ -6,6 +6,7 @@ import com.mint.onboarding.taxonomy.BookingMethod;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 import com.mint.onboarding.taxonomy.PaAvailability;
 import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -74,7 +75,9 @@ public class Venue implements OnboardingOwner {
     private Double stageWidthFeet;
     private Double stageDepthFeet;
     private SoundEngineerAvailability soundEngineerAvailability;
+    private SoundcheckAvailability soundcheckAvailability;
     private PaAvailability paAvailability;
+    // EquipmentItemCodec canonical form: CODE when quantity is unspecified, CODE:quantity otherwise.
     private List<String> equipmentAvailable;
     private List<String> productionAmenities;
 

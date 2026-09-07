@@ -1,6 +1,8 @@
 export * from './AISuggestionReview';
 export * from './ArtistReferenceInput';
+export * from './EntityReferenceResolverInput';
 export * from './ChoiceCards';
+export * from './EquipmentSelector';
 export * from './EventTypeSelector';
 export * from './GenreSelector';
 export * from './ImageGalleryUploader';
@@ -13,4 +15,5 @@ export * from './TextArea';
 export * from './TextField';
 export * from './UrlField';
 export * from './VibeSelector';
+export * from './VenueReferenceInput';
 export * from './genreTaxonomy';

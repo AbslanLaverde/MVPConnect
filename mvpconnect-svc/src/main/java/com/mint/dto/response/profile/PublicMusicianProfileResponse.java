@@ -1,5 +1,6 @@
 package com.mint.dto.response.profile;
 
+import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.onboarding.taxonomy.ArtistBookingStatus;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 
@@ -18,7 +19,7 @@ public record PublicMusicianProfileResponse(
         Integer travelRadiusMiles,
         Boolean touring,
         Integer setLengthMinutes,
-        List<String> equipmentBrought,
+        List<EquipmentItemDto> equipmentBrought,
         List<String> connectionGoals,
         String websiteUrl,
         String instagramHandle,

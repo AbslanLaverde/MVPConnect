@@ -5,18 +5,26 @@ import com.mint.config.GooglePlacesProperties;
 import com.mint.dto.response.location.LocationSuggestionResponse;
 import com.mint.dto.response.location.ResolvedLocationResponse;
 import com.mint.exceptions.LocationLookupException;
+import com.mint.exceptions.VenueIdentityException;
+import com.mint.googleplaces.GooglePhotoAuthorAttributionData;
+import com.mint.googleplaces.GooglePhotoPresentationData;
+import com.mint.googleplaces.GoogleVenueIdentityData;
+import com.mint.identity.IdentityNameNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.net.URI;
+import java.util.Optional;
 
 @Service
 public class GooglePlacesService {
@@ -26,6 +34,17 @@ public class GooglePlacesService {
             "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text";
     private static final String DETAILS_FIELD_MASK =
             "id,formattedAddress,addressComponents,location";
+    private static final String VENUE_SEARCH_FIELD_MASK =
+            "places.id,places.displayName,places.formattedAddress,places.addressComponents,"
+                    + "places.location,places.googleMapsUri,places.websiteUri,places.businessStatus,"
+                    + "places.photos";
+    private static final String VENUE_DETAILS_FIELD_MASK =
+            "id,displayName,formattedAddress,addressComponents,location,googleMapsUri,"
+                    + "websiteUri,businessStatus,photos";
+    private static final String VENUE_PHOTO_DETAILS_FIELD_MASK = "id,googleMapsUri,photos";
+    private static final int VENUE_SEARCH_LIMIT = 10;
+    private static final int VENUE_PHOTO_MAX_WIDTH = 640;
+    private static final int VENUE_PHOTO_MAX_HEIGHT = 480;
 
     private final RestClient restClient;
     private final GooglePlacesProperties properties;
@@ -110,6 +129,105 @@ public class GooglePlacesService {
         }
     }
 
+    public List<GoogleVenueIdentityData> searchVenues(String rawQuery) {
+        String query = normalizeVenueQuery(rawQuery);
+        if (!configured()) {
+            throw VenueIdentityException.googleUnavailable();
+        }
+
+        try {
+            GoogleTextSearchResponse response = restClient.post()
+                    .uri("/v1/places:searchText")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-Goog-Api-Key", properties.getApiKey())
+                    .header("X-Goog-FieldMask", VENUE_SEARCH_FIELD_MASK)
+                    .body(new GoogleTextSearchRequest(query, VENUE_SEARCH_LIMIT, "en"))
+                    .retrieve()
+                    .body(GoogleTextSearchResponse.class);
+            if (response == null || response.places() == null) {
+                return List.of();
+            }
+            List<GoogleVenueIdentityData> venues = response.places().stream()
+                    .filter(GooglePlacesService::usableVenue)
+                    .limit(VENUE_SEARCH_LIMIT)
+                    .map(this::toVenueIdentityData)
+                    .toList();
+            log.debug("venue_identity.google.search.received count={}", venues.size());
+            return venues;
+        } catch (VenueIdentityException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            log.warn("venue_identity.google.search.failed exception={}",
+                    exception.getClass().getSimpleName());
+            throw VenueIdentityException.googleUnavailable();
+        }
+    }
+
+    public GoogleVenueIdentityData resolveVenue(String rawPlaceId) {
+        String placeId = normalizePlaceId(rawPlaceId);
+        if (!configured()) {
+            throw VenueIdentityException.googleUnavailable();
+        }
+
+        try {
+            GooglePlaceDetails response = restClient.get()
+                    .uri("/v1/places/{placeId}", placeId)
+                    .header("X-Goog-Api-Key", properties.getApiKey())
+                    .header("X-Goog-FieldMask", VENUE_DETAILS_FIELD_MASK)
+                    .retrieve()
+                    .body(GooglePlaceDetails.class);
+            if (!usableVenue(response)) {
+                throw VenueIdentityException.googleVenueNotFound();
+            }
+            GoogleVenueIdentityData venue = toVenueIdentityData(response);
+            log.debug("venue_identity.google.place.resolved hasCoordinates={}",
+                    venue.locationLatitude() != null && venue.locationLongitude() != null);
+            return venue;
+        } catch (HttpClientErrorException.NotFound exception) {
+            throw VenueIdentityException.googleVenueNotFound();
+        } catch (VenueIdentityException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            log.warn("venue_identity.google.resolve.failed exception={}",
+                    exception.getClass().getSimpleName());
+            throw VenueIdentityException.googleUnavailable();
+        }
+    }
+
+    /**
+     * Loads transient provider-owned photo presentation for a durable Google-backed identity.
+     * A photo problem is deliberately represented as no presentation data; it must never make
+     * a local VenueIdentity unusable.
+     */
+    public GooglePhotoPresentationData presentVenuePhoto(String rawPlaceId) {
+        String placeId;
+        try {
+            placeId = normalizePlaceId(rawPlaceId);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+        if (!configured()) {
+            return null;
+        }
+
+        try {
+            GooglePlaceDetails response = restClient.get()
+                    .uri("/v1/places/{placeId}", placeId)
+                    .header("X-Goog-Api-Key", properties.getApiKey())
+                    .header("X-Goog-FieldMask", VENUE_PHOTO_DETAILS_FIELD_MASK)
+                    .retrieve()
+                    .body(GooglePlaceDetails.class);
+            if (response == null || !placeId.equals(response.id())) {
+                return null;
+            }
+            return resolveFirstPhoto(response.id(), response.googleMapsUri(), response.photos());
+        } catch (RestClientException exception) {
+            log.debug("venue_identity.google.photo.presentation_unavailable exception={}",
+                    exception.getClass().getSimpleName());
+            return null;
+        }
+    }
+
     private boolean configured() {
         return StringUtils.hasText(properties.getApiKey());
     }
@@ -118,6 +236,16 @@ public class GooglePlacesService {
         String query = rawQuery == null ? "" : rawQuery.trim();
         if (query.length() < 2 || query.length() > 200) {
             throw new IllegalArgumentException("Location query must be between 2 and 200 characters.");
+        }
+        return query;
+    }
+
+    private static String normalizeVenueQuery(String rawQuery) {
+        String query = IdentityNameNormalizer.displayName(rawQuery);
+        if (query.length() < 2 || query.length() > 100) {
+            throw VenueIdentityException.invalid(
+                    "Venue search must be between 2 and 100 characters."
+            );
         }
         return query;
     }
@@ -168,6 +296,125 @@ public class GooglePlacesService {
                 blankToNull(neighborhood),
                 place.id()
         );
+    }
+
+    private static boolean usableVenue(GooglePlaceDetails place) {
+        return place != null
+                && StringUtils.hasText(place.id())
+                && place.displayName() != null
+                && StringUtils.hasText(place.displayName().text());
+    }
+
+    private GoogleVenueIdentityData toVenueIdentityData(GooglePlaceDetails place) {
+        ResolvedLocationResponse location = toResolvedLocation(place);
+        return new GoogleVenueIdentityData(
+                place.id(),
+                IdentityNameNormalizer.displayName(place.displayName().text()),
+                blankToNull(place.googleMapsUri()),
+                blankToNull(place.websiteUri()),
+                blankToNull(place.businessStatus()),
+                location.displayName(),
+                location.addressLine1(),
+                location.addressLine2(),
+                location.city(),
+                location.state(),
+                location.postalCode(),
+                location.country(),
+                location.latitude(),
+                location.longitude(),
+                location.neighborhood(),
+                resolveFirstPhoto(place.id(), place.googleMapsUri(), place.photos())
+        );
+    }
+
+    private GooglePhotoPresentationData resolveFirstPhoto(
+            String expectedPlaceId,
+            String placeGoogleMapsUri,
+            List<GooglePhoto> photos) {
+        if (photos == null || photos.isEmpty()) {
+            return null;
+        }
+        GooglePhoto photo = photos.stream()
+                .filter(candidate -> candidate != null && StringUtils.hasText(candidate.name()))
+                .findFirst()
+                .orElse(null);
+        if (photo == null) {
+            return null;
+        }
+        Optional<GooglePhotoNameParts> nameParts = photoNameParts(photo.name(), expectedPlaceId);
+        if (nameParts.isEmpty()) {
+            log.debug("venue_identity.google.photo.invalid_resource_name");
+            return null;
+        }
+
+        try {
+            GooglePhotoNameParts parts = nameParts.get();
+            GooglePhotoMedia media = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/v1/places/{placeId}/photos/{photoReference}/media")
+                            .queryParam("maxWidthPx", VENUE_PHOTO_MAX_WIDTH)
+                            .queryParam("maxHeightPx", VENUE_PHOTO_MAX_HEIGHT)
+                            .queryParam("skipHttpRedirect", true)
+                            .build(parts.placeId(), parts.photoReference()))
+                    .header("X-Goog-Api-Key", properties.getApiKey())
+                    .retrieve()
+                    .body(GooglePhotoMedia.class);
+            String photoUri = media == null ? null : safeHttpsUri(media.photoUri());
+            if (photoUri == null) {
+                return null;
+            }
+            List<GooglePhotoAuthorAttributionData> attributions = photo.authorAttributions() == null
+                    ? List.of()
+                    : photo.authorAttributions().stream()
+                            .filter(attribution -> attribution != null)
+                            .map(attribution -> new GooglePhotoAuthorAttributionData(
+                                    blankToNull(attribution.displayName()),
+                                    safeHttpsUri(attribution.uri()),
+                                    safeHttpsUri(attribution.photoUri())
+                            ))
+                            .toList();
+            return new GooglePhotoPresentationData(
+                    photoUri,
+                    attributions,
+                    firstNonBlank(
+                            safeHttpsUri(photo.googleMapsUri()),
+                            safeHttpsUri(placeGoogleMapsUri)
+                    )
+            );
+        } catch (RestClientException | IllegalArgumentException exception) {
+            log.debug("venue_identity.google.photo.media_unavailable exception={}",
+                    exception.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private static Optional<GooglePhotoNameParts> photoNameParts(
+            String rawPhotoName,
+            String expectedPlaceId) {
+        String[] segments = rawPhotoName == null ? new String[0] : rawPhotoName.trim().split("/");
+        if (segments.length != 4
+                || !"places".equals(segments[0])
+                || !"photos".equals(segments[2])
+                || !expectedPlaceId.equals(segments[1])
+                || !StringUtils.hasText(segments[3])
+                || segments[3].chars().anyMatch(Character::isISOControl)) {
+            return Optional.empty();
+        }
+        return Optional.of(new GooglePhotoNameParts(segments[1], segments[3]));
+    }
+
+    private static String safeHttpsUri(String rawUri) {
+        if (!StringUtils.hasText(rawUri)) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(rawUri.trim());
+            return "https".equalsIgnoreCase(uri.getScheme()) && StringUtils.hasText(uri.getHost())
+                    ? uri.toString()
+                    : null;
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private static String component(
@@ -233,6 +480,16 @@ public class GooglePlacesService {
     private record GoogleAutocompleteResponse(List<GoogleSuggestion> suggestions) {
     }
 
+    private record GoogleTextSearchRequest(
+            String textQuery,
+            Integer pageSize,
+            String languageCode
+    ) {
+    }
+
+    private record GoogleTextSearchResponse(List<GooglePlaceDetails> places) {
+    }
+
     private record GoogleSuggestion(GooglePlacePrediction placePrediction) {
     }
 
@@ -244,10 +501,37 @@ public class GooglePlacesService {
 
     private record GooglePlaceDetails(
             String id,
+            GoogleText displayName,
             String formattedAddress,
             List<GoogleAddressComponent> addressComponents,
-            GooglePoint location
+            GooglePoint location,
+            String googleMapsUri,
+            String websiteUri,
+            String businessStatus,
+            List<GooglePhoto> photos
     ) {
+    }
+
+    private record GooglePhoto(
+            String name,
+            Integer widthPx,
+            Integer heightPx,
+            List<GoogleAuthorAttribution> authorAttributions,
+            String googleMapsUri
+    ) {
+    }
+
+    private record GoogleAuthorAttribution(
+            String displayName,
+            String uri,
+            String photoUri
+    ) {
+    }
+
+    private record GooglePhotoMedia(String photoUri) {
+    }
+
+    private record GooglePhotoNameParts(String placeId, String photoReference) {
     }
 
     private record GoogleAddressComponent(

@@ -6,6 +6,7 @@ import com.mint.exceptions.ExternalArtistException;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
+import com.mint.exceptions.VenueIdentityException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,20 @@ import java.util.List;
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(VenueIdentityException.class)
+    public ResponseEntity<ErrorResponse> handleVenueIdentityException(
+            VenueIdentityException ex,
+            HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
+        return ResponseEntity.status(ex.getStatus()).body(new ErrorResponse(
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        ));
+    }
 
     @ExceptionHandler(ExternalArtistException.class)
     public ResponseEntity<ErrorResponse> handleExternalArtistException(

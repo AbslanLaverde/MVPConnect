@@ -1,5 +1,6 @@
 package com.mint.dto.response.account;
 
+import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.response.profile.PublicProfileMediaResponse;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
@@ -7,6 +8,7 @@ import com.mint.onboarding.taxonomy.BookingMethod;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 import com.mint.onboarding.taxonomy.PaAvailability;
 import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 
 import java.time.LocalDateTime;
@@ -26,8 +28,9 @@ public record VenueSelfAccountResponse(
         Double stageWidthFeet,
         Double stageDepthFeet,
         SoundEngineerAvailability soundEngineerAvailability,
+        SoundcheckAvailability soundcheckAvailability,
         PaAvailability paAvailability,
-        List<String> equipmentAvailable,
+        List<EquipmentItemDto> equipmentAvailable,
         List<String> productionAmenities,
         String typicalBudget,
         Boolean liveMusic,

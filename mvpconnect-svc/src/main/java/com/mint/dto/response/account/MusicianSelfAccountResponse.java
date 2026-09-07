@@ -1,5 +1,6 @@
 package com.mint.dto.response.account;
 
+import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.response.profile.PublicProfileMediaResponse;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
@@ -26,7 +27,7 @@ public record MusicianSelfAccountResponse(
         Integer travelRadiusMiles,
         Boolean touring,
         Integer setLengthMinutes,
-        List<String> equipmentBrought,
+        List<EquipmentItemDto> equipmentBrought,
         List<String> connectionGoals,
         String websiteUrl,
         String instagramHandle,

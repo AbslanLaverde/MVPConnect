@@ -14,6 +14,7 @@ export interface NumberFieldProps extends Omit<
   integerOnly?: boolean;
   prefix?: string;
   suffix?: string;
+  onValidityChange?: (valid: boolean) => void;
 }
 
 export const validateNumberFieldValue = (
@@ -42,6 +43,7 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   integerOnly = false,
   prefix,
   suffix,
+  onValidityChange,
   required,
   error,
   onBlur,
@@ -52,7 +54,11 @@ export const NumberField: React.FC<NumberFieldProps> = ({
 
   useEffect(() => {
     setRawValue(value === undefined ? '' : String(value));
-  }, [value]);
+    onValidityChange?.(!validateNumberFieldValue(
+      value === undefined ? '' : String(value),
+      { required, min, max, integerOnly },
+    ));
+  }, [integerOnly, max, min, required, value]);
 
   const localError = touched
     ? validateNumberFieldValue(rawValue, { required, min, max, integerOnly })
@@ -60,11 +66,13 @@ export const NumberField: React.FC<NumberFieldProps> = ({
 
   const handleChange = (nextValue: string) => {
     setRawValue(nextValue);
+    const nextError = validateNumberFieldValue(nextValue, { required, min, max, integerOnly });
+    onValidityChange?.(!nextError);
     if (!nextValue.trim()) {
       onChange(undefined);
       return;
     }
-    if (!validateNumberFieldValue(nextValue, { min, max, integerOnly })) {
+    if (!nextError) {
       onChange(Number(nextValue));
     }
   };
