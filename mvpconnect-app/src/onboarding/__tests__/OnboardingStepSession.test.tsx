@@ -20,7 +20,7 @@ jest.mock('../../services/api', () => ({
 const mockedApi = api as jest.Mocked<typeof api>;
 
 const makeStep = (overrides: Partial<OnboardingStep> = {}): OnboardingStep => ({
-  key: 'live',
+  key: 'custom',
   position: 3,
   required: true,
   status: 'NOT_STARTED',
@@ -29,10 +29,11 @@ const makeStep = (overrides: Partial<OnboardingStep> = {}): OnboardingStep => ({
 });
 
 const makeState = (step: OnboardingStep, overrides: Partial<OnboardingState> = {}): OnboardingState => {
+  const thirdStepKey = step.key === 'sound' ? 'live' : 'custom';
   const defaultSteps: OnboardingStep[] = [
     { key: 'basics', position: 1, required: true, status: 'NOT_STARTED', data: {} },
     { key: 'sound', position: 2, required: true, status: 'NOT_STARTED', data: {} },
-    { key: 'live', position: 3, required: true, status: 'NOT_STARTED', data: {} },
+    { key: thirdStepKey, position: 3, required: true, status: 'NOT_STARTED', data: {} },
     { key: 'media', position: 4, required: false, status: 'NOT_STARTED', data: {} },
     { key: 'goals', position: 5, required: true, status: 'NOT_STARTED', data: {} },
   ];
@@ -102,7 +103,7 @@ describe('OnboardingStepSession', () => {
     await act(async () => jest.advanceTimersByTime(1000));
 
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith(
-      '/onboarding/steps/live',
+      '/onboarding/steps/custom',
       { data: { frameworkConfirmed: true } },
     ));
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -219,7 +220,7 @@ describe('OnboardingStepSession', () => {
     fireEvent.press(screen.getByLabelText('Framework placeholder is ready'));
 
     await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith(
-      '/onboarding/steps/live/reopen',
+      '/onboarding/steps/custom/reopen',
     ));
     expect(mockedApi.put).not.toHaveBeenCalled();
   });

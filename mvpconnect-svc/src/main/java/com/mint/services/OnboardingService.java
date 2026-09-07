@@ -35,6 +35,7 @@ import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
 import com.mint.onboarding.OnboardingDraftStatus;
 import com.mint.onboarding.OnboardingOwner;
+import com.mint.onboarding.EquipmentItemCodec;
 import com.mint.onboarding.OnboardingStepDefinition;
 import com.mint.onboarding.OnboardingStepRegistry;
 import com.mint.onboarding.OnboardingStepStatus;
@@ -49,6 +50,7 @@ import com.mint.repositories.OnboardingStepRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
 import com.mint.services.ExternalArtistRelationshipService.CanonicalArtistReferences;
+import com.mint.services.VenueIdentityRelationshipService.CanonicalVenueReferences;
 import com.mint.security.AuthenticatedPersona;
 import com.mint.security.AuthenticatedPersonaProvider;
 import org.slf4j.Logger;
@@ -81,6 +83,7 @@ public class OnboardingService {
     private final MediaAssetRepository mediaAssetRepository;
     private final OnboardingStepContractService stepContractService;
     private final ExternalArtistRelationshipService externalArtistRelationshipService;
+    private final VenueIdentityRelationshipService venueIdentityRelationshipService;
     private final ObjectMapper objectMapper;
     private final Object draftInitializationMonitor = new Object();
 
@@ -95,6 +98,7 @@ public class OnboardingService {
             MediaAssetRepository mediaAssetRepository,
             OnboardingStepContractService stepContractService,
             ExternalArtistRelationshipService externalArtistRelationshipService,
+            VenueIdentityRelationshipService venueIdentityRelationshipService,
             ObjectMapper objectMapper) {
         this.authenticatedPersonaProvider = authenticatedPersonaProvider;
         this.stepRegistry = stepRegistry;
@@ -106,6 +110,7 @@ public class OnboardingService {
         this.mediaAssetRepository = mediaAssetRepository;
         this.stepContractService = stepContractService;
         this.externalArtistRelationshipService = externalArtistRelationshipService;
+        this.venueIdentityRelationshipService = venueIdentityRelationshipService;
         this.objectMapper = objectMapper;
     }
 
@@ -270,6 +275,8 @@ public class OnboardingService {
         Map<String, Object> validatedSteps = validateCompletedSteps(context, draft);
         CanonicalArtistReferences artistReferences = externalArtistRelationshipService.validate(
                 context.identity().persona(), validatedSteps);
+        CanonicalVenueReferences venueReferences = venueIdentityRelationshipService.validate(
+                context.identity().persona(), validatedSteps);
         String profileMediaId = promote(context, validatedSteps);
 
         LocalDateTime now = LocalDateTime.now();
@@ -287,6 +294,8 @@ public class OnboardingService {
         saveOwner(context.owner());
         externalArtistRelationshipService.createRelationships(
                 context.identity().userId(), artistReferences);
+        venueIdentityRelationshipService.createRelationships(
+                context.identity().userId(), venueReferences);
         draftRepository.save(draft);
         LOGGER.info(
                 "onboarding.completed accountId={} persona={} version={}",
@@ -355,7 +364,7 @@ public class OnboardingService {
         musician.setTravelRadiusMiles(live.travelRadiusMiles());
         musician.setTouring(live.touring());
         musician.setSetLengthMinutes(live.setLengthMinutes());
-        musician.setEquipmentBrought(codes(live.equipmentBrought()));
+        musician.setEquipmentBrought(EquipmentItemCodec.encode(live.equipmentBrought()));
         musician.setConnectionGoals(codes(goals.connectionGoals()));
         if (media != null) musician.setWebsiteUrl(media.websiteUrl());
         return basics.profileImage().mediaId();
@@ -378,8 +387,9 @@ public class OnboardingService {
         venue.setStageWidthFeet(stage.stageWidthFeet());
         venue.setStageDepthFeet(stage.stageDepthFeet());
         venue.setSoundEngineerAvailability(stage.soundEngineerAvailability());
+        venue.setSoundcheckAvailability(stage.soundcheckAvailability());
         venue.setPaAvailability(stage.paAvailability());
-        venue.setEquipmentAvailable(codes(stage.equipmentAvailable()));
+        venue.setEquipmentAvailable(EquipmentItemCodec.encode(stage.equipmentAvailable()));
         venue.setProductionAmenities(codes(stage.productionAmenities()));
         venue.setBookingStatus(booking.bookingStatus());
         venue.setBookingMethod(booking.bookingMethod());

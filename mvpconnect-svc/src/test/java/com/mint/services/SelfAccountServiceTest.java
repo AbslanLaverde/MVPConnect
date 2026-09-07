@@ -12,6 +12,7 @@ import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
@@ -25,10 +26,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,6 +72,7 @@ class SelfAccountServiceTest {
         musician.setMinimumFee("$500");
         musician.setLocationDisplay("Brooklyn, NY");
         musician.setLocationAddressLine1("Private apartment");
+        musician.setEquipmentBrought(List.of("GUITAR_AMP:2", "MICROPHONES"));
         musician.setProfileImageUrl("https://legacy.example/image.jpg");
         musician.setOnboardingStatus(PersonaOnboardingStatus.COMPLETE);
         musician.setOnboardingCompletedAt(LocalDateTime.of(2026, 9, 4, 12, 0));
@@ -85,6 +90,8 @@ class SelfAccountServiceTest {
         assertEquals("$500", json.get("minimumFee").asText());
         assertEquals("Private apartment", json.path("location").path("addressLine1").asText());
         assertEquals("media-1", json.path("profileImage").path("mediaId").asText());
+        assertEquals(2, json.path("equipmentBrought").get(0).path("quantity").asInt());
+        assertTrue(json.path("equipmentBrought").get(1).path("quantity").isNull());
         assertFalse(json.has("password"));
         assertFalse(json.has("profileImageUrl"));
         assertFalse(json.has("onboardingDrafts"));
@@ -98,6 +105,8 @@ class SelfAccountServiceTest {
         venue.setId("venue-1");
         venue.setVenueName("The Marlowe Room");
         venue.setEmail("venue@example.com");
+        venue.setSoundcheckAvailability(SoundcheckAvailability.BY_ARRANGEMENT);
+        venue.setEquipmentAvailable(List.of("DI_BOXES:6", "DRUM_KIT"));
         when(personaProvider.current()).thenReturn(new AuthenticatedPersona("venue-1", PersonaType.VENUE));
         when(venueRepository.findById("venue-1")).thenReturn(Optional.of(venue));
 
@@ -106,6 +115,10 @@ class SelfAccountServiceTest {
         assertInstanceOf(VenueSelfAccountResponse.class, response);
         assertEquals(PersonaType.VENUE, ((VenueSelfAccountResponse) response).persona());
         assertEquals("The Marlowe Room", ((VenueSelfAccountResponse) response).displayName());
+        assertEquals(SoundcheckAvailability.BY_ARRANGEMENT,
+                ((VenueSelfAccountResponse) response).soundcheckAvailability());
+        assertEquals(6, ((VenueSelfAccountResponse) response).equipmentAvailable().getFirst().quantity());
+        assertNull(((VenueSelfAccountResponse) response).equipmentAvailable().get(1).quantity());
     }
 
     @Test

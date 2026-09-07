@@ -13,6 +13,7 @@ public final class OnboardingConstraints {
     public static final int POSTAL_CODE_MAX = 32;
     public static final int COUNTRY_MAX = 120;
     public static final int LOCATION_DISPLAY_MAX = 250;
+    public static final int PROVIDER_PLACE_ID_MAX = 512;
 
     private OnboardingConstraints() {
     }

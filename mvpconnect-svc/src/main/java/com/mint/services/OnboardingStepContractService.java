@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.mint.dto.onboarding.artist.ArtistBasicsStepRequest;
 import com.mint.dto.onboarding.artist.ArtistGoalsStepRequest;
 import com.mint.dto.onboarding.artist.ArtistLiveStepRequest;
@@ -17,6 +20,7 @@ import com.mint.dto.onboarding.promoter.PromoterMediaStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterSpecialtiesStepRequest;
 import com.mint.dto.onboarding.shared.EntityReferenceDto;
+import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.onboarding.shared.MediaReferenceDto;
 import com.mint.dto.onboarding.shared.PerformanceMediaReferenceDto;
 import com.mint.dto.onboarding.venue.VenueBookingStepRequest;
@@ -74,7 +78,11 @@ public class OnboardingStepContractService {
         this.validator = validator;
         this.strictObjectMapper = objectMapper.copy()
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
+                .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
+        this.strictObjectMapper.coercionConfigFor(LogicalType.Integer)
+                .setCoercion(CoercionInputShape.String, CoercionAction.Fail)
+                .setCoercion(CoercionInputShape.Float, CoercionAction.Fail);
     }
 
     public ValidatedOnboardingStep validate(
@@ -228,7 +236,7 @@ public class OnboardingStepContractService {
                     && !ALLOWED_SET_LENGTHS.contains(request.setLengthMinutes())) {
                 errors.add(new OnboardingFieldError("setLengthMinutes", "INVALID"));
             }
-            duplicates("equipmentBrought", request.equipmentBrought(), errors);
+            duplicatesBy("equipmentBrought", request.equipmentBrought(), EquipmentItemDto::code, errors);
             entityReferenceDuplicates("venuesPlayed", request.venuesPlayed(), errors);
             entityTypes("venuesPlayed", request.venuesPlayed(), EntityType.VENUE, errors);
             performanceMedia("performanceImages", request.performanceImages(), owner, step, errors);
@@ -251,7 +259,7 @@ public class OnboardingStepContractService {
             entityReferenceDuplicates("artistsBooked", request.artistsBooked(), errors);
             entityTypes("artistsBooked", request.artistsBooked(), EntityType.ARTIST, errors);
         } else if (data instanceof VenueStageStepRequest request) {
-            duplicates("equipmentAvailable", request.equipmentAvailable(), errors);
+            duplicatesBy("equipmentAvailable", request.equipmentAvailable(), EquipmentItemDto::code, errors);
             duplicates("productionAmenities", request.productionAmenities(), errors);
         } else if (data instanceof VenueBookingStepRequest request) {
             // Bean Validation owns booking status, method, and email format rules.

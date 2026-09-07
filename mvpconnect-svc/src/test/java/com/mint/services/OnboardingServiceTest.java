@@ -29,6 +29,7 @@ import com.mint.onboarding.taxonomy.PaAvailability;
 import com.mint.onboarding.taxonomy.PromoterAcceptingStatus;
 import com.mint.onboarding.taxonomy.RosterSizeRange;
 import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import com.mint.repositories.MediaAssetRepository;
 import com.mint.repositories.ExternalArtistRepository;
@@ -37,6 +38,7 @@ import com.mint.repositories.OnboardingDraftRepository;
 import com.mint.repositories.OnboardingStepRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
+import com.mint.repositories.VenueIdentityRepository;
 import com.mint.security.AuthenticatedPersona;
 import com.mint.security.AuthenticatedPersonaProvider;
 import jakarta.validation.Validation;
@@ -87,6 +89,7 @@ class OnboardingServiceTest {
     @Mock private PromoterRepository promoterRepository;
     @Mock private MediaAssetRepository mediaAssetRepository;
     @Mock private ExternalArtistRepository externalArtistRepository;
+    @Mock private VenueIdentityRepository venueIdentityRepository;
     @Mock private MediaService mediaService;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -129,6 +132,8 @@ class OnboardingServiceTest {
                         call.getArgument(1), call.getArgument(0), call.getArgument(2)));
         lenient().when(externalArtistRepository.findExistingIds(any()))
                 .thenAnswer(call -> call.getArgument(0));
+        lenient().when(venueIdentityRepository.findExistingIds(any()))
+                .thenAnswer(call -> call.getArgument(0));
         lenient().when(musicianRepository.save(any(Musician.class)))
                 .thenAnswer(call -> rememberOwner(call.getArgument(0)));
         lenient().when(venueRepository.save(any(Venue.class)))
@@ -141,6 +146,8 @@ class OnboardingServiceTest {
                 stepRegistry, stepRepository, mediaService, validator, objectMapper);
         ExternalArtistRelationshipService relationshipService =
                 new ExternalArtistRelationshipService(externalArtistRepository);
+        VenueIdentityRelationshipService venueRelationshipService =
+                new VenueIdentityRelationshipService(venueIdentityRepository);
         service = new OnboardingService(
                 authenticatedPersonaProvider,
                 stepRegistry,
@@ -152,6 +159,7 @@ class OnboardingServiceTest {
                 mediaAssetRepository,
                 contractService,
                 relationshipService,
+                venueRelationshipService,
                 objectMapper
         );
     }
@@ -251,6 +259,7 @@ class OnboardingServiceTest {
         assertEquals(ArtistBookingStatus.ACTIVELY_BOOKING, musician.getBookingStatus());
         assertEquals(DrawRangeCode.FROM_101_TO_250, musician.getTypicalDraw());
         assertEquals(60, musician.getSetLengthMinutes());
+        assertEquals(List.of("GUITAR_AMP:2", "DRUM_KIT"), musician.getEquipmentBrought());
         assertEquals("$500", musician.getMinimumFee());
         assertFalse(musician.getWillingToTravel());
         assertEquals("legacy-profile-url", musician.getProfileImageUrl());
@@ -277,7 +286,9 @@ class OnboardingServiceTest {
         assertEquals("123 Orchard Street", venue.getLocationAddressLine1());
         assertEquals(List.of("INDIE", "ROCK"), venue.getGenrePreferences());
         assertEquals(SoundEngineerAvailability.IN_HOUSE, venue.getSoundEngineerAvailability());
+        assertEquals(SoundcheckAvailability.FULL_SOUNDCHECK, venue.getSoundcheckAvailability());
         assertEquals(PaAvailability.FULL_HOUSE_PA, venue.getPaAvailability());
+        assertEquals(List.of("MICROPHONES:6", "STAGE_MONITORS"), venue.getEquipmentAvailable());
         assertEquals(VenueBookingStatus.ACTIVELY_BOOKING, venue.getBookingStatus());
         assertEquals(BookingMethod.BOTH, venue.getBookingMethod());
         assertEquals("booking@marloweroom.example", venue.getBookingEmail());
@@ -326,12 +337,33 @@ class OnboardingServiceTest {
 
         assertEquals(first, second);
         assertEquals(completedAt, second.onboardingCompletedAt());
+        assertEquals(List.of("GUITAR_AMP:2", "DRUM_KIT"),
+                musicians.get("musician-1").getEquipmentBrought());
         verify(mediaAssetRepository, times(1)).replaceCanonicalProfileMedia(
                 "musician-1", "MUSICIAN", "musician-profile");
     }
 
     @Test
-    void musicianCompletionCreatesSoundsLikeOnceUsingExternalArtistId() {
+    void venueCompletionRetryDoesNotAlterEquipmentOrSoundcheckState() {
+        makeReady(PersonaType.VENUE, "venue-1");
+
+        service.completeOnboarding();
+        Venue venue = venues.get("venue-1");
+        List<String> equipmentAfterFirstCompletion = List.copyOf(venue.getEquipmentAvailable());
+        SoundcheckAvailability soundcheckAfterFirstCompletion = venue.getSoundcheckAvailability();
+
+        service.completeOnboarding();
+
+        assertEquals(List.of("MICROPHONES:6", "STAGE_MONITORS"), equipmentAfterFirstCompletion);
+        assertEquals(equipmentAfterFirstCompletion, venue.getEquipmentAvailable());
+        assertEquals(SoundcheckAvailability.FULL_SOUNDCHECK, soundcheckAfterFirstCompletion);
+        assertEquals(soundcheckAfterFirstCompletion, venue.getSoundcheckAvailability());
+        verify(mediaAssetRepository, times(1)).replaceCanonicalProfileMedia(
+                "venue-1", "VENUE", "venue-profile");
+    }
+
+    @Test
+    void musicianCompletionCreatesCanonicalReferenceRelationshipsOnceAndRetainsDrafts() {
         makeMusicianReadyWithReference("external-national");
 
         service.completeOnboarding();
@@ -339,7 +371,10 @@ class OnboardingServiceTest {
 
         verify(externalArtistRepository, times(1))
                 .linkSoundsLike("musician-1", "external-national");
+        verify(venueIdentityRepository, times(1))
+                .linkPlayedAt("musician-1", "venue-identity-1");
         assertTrue(currentStep("sound").getDataJson().contains("external-national"));
+        assertTrue(currentStep("live").getDataJson().contains("venue-identity-1"));
     }
 
     @Test
@@ -447,6 +482,7 @@ class OnboardingServiceTest {
                 data.set("venues", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
                                 .put("entityType", "VENUE")
+                                .put("entityId", "venue-identity-1")
                                 .put("displayName", "The Marlowe Room")));
                 data.set("additionalMarkets", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
@@ -471,6 +507,8 @@ class OnboardingServiceTest {
         assertTrue(currentStep("network").getDataJson().contains("promoter-show"));
         verify(externalArtistRepository)
                 .linkHasWorkedWith("promoter-1", "external-promoter-artist");
+        verify(venueIdentityRepository)
+                .linkWorksWith("promoter-1", "venue-identity-1");
     }
 
     @Test
@@ -593,6 +631,14 @@ class OnboardingServiceTest {
                                 .put("entityType", "ARTIST")
                                 .put("entityId", externalArtistId)
                                 .put("displayName", "The National")
+                                .put("external", true)));
+            }
+            if (stepKey.equals("live")) {
+                data.set("venuesPlayed", objectMapper.createArrayNode().add(
+                        objectMapper.createObjectNode()
+                                .put("entityType", "VENUE")
+                                .put("entityId", "venue-identity-1")
+                                .put("displayName", "Baby's All Right")
                                 .put("external", true)));
             }
             service.completeStep(stepKey, new SaveOnboardingStepRequest(data));

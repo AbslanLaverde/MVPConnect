@@ -2367,7 +2367,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"data\": {\n    \"bookingStatus\": \"ACTIVELY_BOOKING\",\n    \"typicalDraw\": \"FROM_50_TO_100\",\n    \"travelRadiusMiles\": 100,\n    \"touring\": false,\n    \"setLengthMinutes\": 45,\n    \"equipmentBrought\": [\n      \"GUITAR_AMP\",\n      \"BASS_AMP\"\n    ],\n    \"venuesPlayed\": [\n      {\n        \"entityType\": \"VENUE\",\n        \"entityId\": \"{{venueId}}\",\n        \"displayName\": \"E2E Marlowe Room\",\n        \"external\": false\n      }\n    ],\n    \"performanceImages\": []\n  }\n}",
+              "raw": "{\n  \"data\": {\n    \"bookingStatus\": \"ACTIVELY_BOOKING\",\n    \"typicalDraw\": \"FROM_50_TO_100\",\n    \"travelRadiusMiles\": 100,\n    \"touring\": false,\n    \"setLengthMinutes\": 45,\n    \"equipmentBrought\": [\n      {\n        \"code\": \"GUITAR_AMP\",\n        \"quantity\": 2\n      },\n      {\n        \"code\": \"MICROPHONES\",\n        \"quantity\": 4\n      },\n      {\n        \"code\": \"DRUM_KIT\",\n        \"quantity\": null\n      }\n    ],\n    \"venuesPlayed\": [\n      {\n        \"entityType\": \"VENUE\",\n        \"entityId\": \"{{venueId}}\",\n        \"displayName\": \"E2E Marlowe Room\",\n        \"external\": false\n      }\n    ],\n    \"performanceImages\": []\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2726,7 +2726,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"data\": {\n    \"stageWidthFeet\": 20,\n    \"stageDepthFeet\": 12,\n    \"soundEngineerAvailability\": \"IN_HOUSE\",\n    \"paAvailability\": \"FULL_HOUSE_PA\",\n    \"equipmentAvailable\": [\n      \"DRUM_KIT\",\n      \"MICROPHONES\",\n      \"STAGE_MONITORS\"\n    ],\n    \"productionAmenities\": [\n      \"GREEN_ROOM\",\n      \"LOAD_IN_ACCESS\",\n      \"MERCH_AREA\"\n    ]\n  }\n}",
+              "raw": "{\n  \"data\": {\n    \"stageWidthFeet\": 20,\n    \"stageDepthFeet\": 12,\n    \"soundEngineerAvailability\": \"IN_HOUSE\",\n    \"soundcheckAvailability\": \"FULL_SOUNDCHECK\",\n    \"paAvailability\": \"FULL_HOUSE_PA\",\n    \"equipmentAvailable\": [\n      {\n        \"code\": \"STAGE_MONITORS\",\n        \"quantity\": 4\n      },\n      {\n        \"code\": \"DI_BOXES\",\n        \"quantity\": 6\n      },\n      {\n        \"code\": \"DRUM_KIT\",\n        \"quantity\": null\n      }\n    ],\n    \"productionAmenities\": [\n      \"GREEN_ROOM\",\n      \"LOAD_IN_ACCESS\",\n      \"MERCH_AREA\"\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4205,7 +4205,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"data\": {\n    \"bookingStatus\": \"ACTIVELY_BOOKING\",\n    \"typicalDraw\": \"FROM_50_TO_100\",\n    \"travelRadiusMiles\": null,\n    \"touring\": false,\n    \"setLengthMinutes\": 45,\n    \"equipmentBrought\": [\n      \"GUITAR_AMP\",\n      \"BASS_AMP\"\n    ],\n    \"venuesPlayed\": [\n      {\n        \"entityType\": \"VENUE\",\n        \"entityId\": \"{{venueId}}\",\n        \"displayName\": \"E2E Marlowe Room\",\n        \"external\": false\n      }\n    ],\n    \"performanceImages\": []\n  }\n}",
+              "raw": "{\n  \"data\": {\n    \"bookingStatus\": \"ACTIVELY_BOOKING\",\n    \"typicalDraw\": \"FROM_50_TO_100\",\n    \"travelRadiusMiles\": null,\n    \"touring\": false,\n    \"setLengthMinutes\": 45,\n    \"equipmentBrought\": [\n      {\n        \"code\": \"GUITAR_AMP\",\n        \"quantity\": 2\n      },\n      {\n        \"code\": \"MICROPHONES\",\n        \"quantity\": 4\n      },\n      {\n        \"code\": \"DRUM_KIT\",\n        \"quantity\": null\n      }\n    ],\n    \"venuesPlayed\": [\n      {\n        \"entityType\": \"VENUE\",\n        \"entityId\": \"{{venueId}}\",\n        \"displayName\": \"E2E Marlowe Room\",\n        \"external\": false\n      }\n    ],\n    \"performanceImages\": []\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

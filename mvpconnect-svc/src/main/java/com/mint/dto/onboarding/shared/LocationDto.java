@@ -11,6 +11,7 @@ import static com.mint.dto.onboarding.shared.OnboardingConstraints.COUNTRY_MAX;
 import static com.mint.dto.onboarding.shared.OnboardingConstraints.LOCATION_DISPLAY_MAX;
 import static com.mint.dto.onboarding.shared.OnboardingConstraints.NEIGHBORHOOD_MAX;
 import static com.mint.dto.onboarding.shared.OnboardingConstraints.POSTAL_CODE_MAX;
+import static com.mint.dto.onboarding.shared.OnboardingConstraints.PROVIDER_PLACE_ID_MAX;
 import static com.mint.dto.onboarding.shared.OnboardingConstraints.STATE_MAX;
 import static com.mint.dto.onboarding.shared.OnboardingNormalization.string;
 
@@ -25,7 +26,7 @@ public record LocationDto(
         @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
         @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
         @Size(max = NEIGHBORHOOD_MAX) String neighborhood,
-        @Size(max = 255) String placeId) {
+        @Size(max = PROVIDER_PLACE_ID_MAX) String placeId) {
 
     public LocationDto {
         displayName = string(displayName);

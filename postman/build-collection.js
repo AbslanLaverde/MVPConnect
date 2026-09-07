@@ -241,7 +241,11 @@ const artistLive = {
   travelRadiusMiles: 100,
   touring: false,
   setLengthMinutes: 45,
-  equipmentBrought: ['GUITAR_AMP', 'BASS_AMP'],
+  equipmentBrought: [
+    { code: 'GUITAR_AMP', quantity: 2 },
+    { code: 'MICROPHONES', quantity: 4 },
+    { code: 'DRUM_KIT', quantity: null },
+  ],
   venuesPlayed: [{
     entityType: 'VENUE',
     entityId: '{{venueId}}',
@@ -286,8 +290,13 @@ const venueStage = {
   stageWidthFeet: 20,
   stageDepthFeet: 12,
   soundEngineerAvailability: 'IN_HOUSE',
+  soundcheckAvailability: 'FULL_SOUNDCHECK',
   paAvailability: 'FULL_HOUSE_PA',
-  equipmentAvailable: ['DRUM_KIT', 'MICROPHONES', 'STAGE_MONITORS'],
+  equipmentAvailable: [
+    { code: 'STAGE_MONITORS', quantity: 4 },
+    { code: 'DI_BOXES', quantity: 6 },
+    { code: 'DRUM_KIT', quantity: null },
+  ],
   productionAmenities: ['GREEN_ROOM', 'LOAD_IN_ACCESS', 'MERCH_AREA'],
 };
 

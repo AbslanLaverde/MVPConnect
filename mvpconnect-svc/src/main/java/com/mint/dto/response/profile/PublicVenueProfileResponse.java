@@ -1,9 +1,11 @@
 package com.mint.dto.response.profile;
 
+import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.onboarding.taxonomy.BookingMethod;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 import com.mint.onboarding.taxonomy.PaAvailability;
 import com.mint.onboarding.taxonomy.SoundEngineerAvailability;
+import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 
 import java.util.List;
@@ -20,8 +22,9 @@ public record PublicVenueProfileResponse(
         Double stageWidthFeet,
         Double stageDepthFeet,
         SoundEngineerAvailability soundEngineerAvailability,
+        SoundcheckAvailability soundcheckAvailability,
         PaAvailability paAvailability,
-        List<String> equipmentAvailable,
+        List<EquipmentItemDto> equipmentAvailable,
         List<String> productionAmenities,
         VenueBookingStatus bookingStatus,
         BookingMethod bookingMethod,
