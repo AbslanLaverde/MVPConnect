@@ -8,6 +8,7 @@ import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
 import com.mint.onboarding.EquipmentItemCodec;
+import com.mint.onboarding.LocationListCodec;
 import com.mint.onboarding.PersonaType;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
@@ -96,6 +97,9 @@ public class SelfAccountService {
                 promoter.getGenreSpecialties(), promoter.getEventTypes(), promoter.getVibePreferences(),
                 promoter.getAcceptingNewArtists(), promoter.getCurrentRosterSize(),
                 promoter.getAcceptingStatus(), promoter.getRosterSizeRange(),
+                LocationListCodec.decode(promoter.getAdditionalMarkets()).stream()
+                        .map(locationMapper::selfLocation)
+                        .toList(),
                 promoter.getConnectionGoals(), promoter.getWebsiteUrl(), promoter.getPhone(),
                 promoter.getOnboardingStatus(), promoter.getOnboardingCompletedAt(),
                 promoter.getOnboardingVersion(),

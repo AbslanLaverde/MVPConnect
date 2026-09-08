@@ -22,7 +22,8 @@ class ExternalArtistRepositoryContractTest {
 
     @Test
     void canonicalRelationshipsUseMergeForIdempotency() throws Exception {
-        List<String> methods = List.of("linkSoundsLike", "linkHasBooked", "linkHasWorkedWith");
+        List<String> methods = List.of(
+                "linkSoundsLike", "linkHasBooked", "linkHasWorkedWith", "linkHasOnRoster");
         for (String methodName : methods) {
             Method method = ExternalArtistRepository.class
                     .getMethod(methodName, String.class, String.class);

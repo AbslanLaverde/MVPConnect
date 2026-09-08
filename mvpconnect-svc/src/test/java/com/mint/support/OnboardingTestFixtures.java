@@ -160,7 +160,7 @@ public final class OnboardingTestFixtures {
                     {
                       "acceptingStatus": "ACTIVELY_ACCEPTING",
                       "rosterSize": "ONE_TO_FIVE",
-                      "artists": [],
+                      "rosterArtists": [],
                       "venues": [],
                       "additionalMarkets": [],
                       "pastShows": []

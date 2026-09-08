@@ -23,6 +23,7 @@ public record PromoterSelfAccountResponse(
         Integer currentRosterSize,
         PromoterAcceptingStatus acceptingStatus,
         RosterSizeRange rosterSizeRange,
+        List<SelfLocationResponse> additionalMarkets,
         List<String> connectionGoals,
         String websiteUrl,
         String phone,

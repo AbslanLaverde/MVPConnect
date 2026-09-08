@@ -16,13 +16,13 @@ import static com.mint.dto.onboarding.shared.OnboardingNormalization.list;
 public record PromoterNetworkStepRequest(
         @NotNull PromoterAcceptingStatus acceptingStatus,
         RosterSizeRange rosterSize,
-        @Size(max = 5) List<@Valid EntityReferenceDto> artists,
+        @Size(max = 5) List<@Valid EntityReferenceDto> rosterArtists,
         @Size(max = 5) List<@Valid EntityReferenceDto> venues,
         @Size(max = 5) List<@Valid LocationDto> additionalMarkets,
         List<@Valid PerformanceMediaReferenceDto> pastShows) {
 
     public PromoterNetworkStepRequest {
-        artists = list(artists);
+        rosterArtists = list(rosterArtists);
         venues = list(venues);
         additionalMarkets = list(additionalMarkets);
         pastShows = list(pastShows);

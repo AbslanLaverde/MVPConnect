@@ -38,6 +38,8 @@ import { isRealStepThree } from './onboardingStepThree';
 import { OnboardingRealStepSession } from './OnboardingRealStepSession';
 import { OnboardingRealStepTwoSession } from './OnboardingRealStepTwoSession';
 import { OnboardingRealStepThreeSession } from './OnboardingRealStepThreeSession';
+import { OnboardingRealBookingNetworkSession } from './OnboardingRealBookingNetworkSession';
+import { isRealBookingNetworkStep } from './onboardingBookingNetwork';
 
 type OperationKind = 'autosave' | 'complete' | 'skip' | 'reopen';
 
@@ -390,6 +392,16 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = (prop
   if (isRealStepThree(props.config.persona, props.step.key)) {
     return (
       <OnboardingRealStepThreeSession
+        state={props.state}
+        step={props.step}
+        config={props.config}
+        navigation={props.navigation}
+      />
+    );
+  }
+  if (isRealBookingNetworkStep(props.config.persona, props.step.key)) {
+    return (
+      <OnboardingRealBookingNetworkSession
         state={props.state}
         step={props.step}
         config={props.config}

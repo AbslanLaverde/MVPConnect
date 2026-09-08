@@ -594,6 +594,59 @@ class OnboardingStepContractServiceTest {
     }
 
     @Test
+    void promoterNetworkUsesRosterArtistsAndRejectsTheOldArtistsField() {
+        ObjectNode accepted = validStep(PersonaType.PROMOTER, "network");
+        accepted.set("rosterArtists", objectMapper.createArrayNode().add(
+                artistReference("external-1", "Artist One", true)));
+
+        assertInstanceOf(com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest.class,
+                validate(PersonaType.PROMOTER, "network", accepted).data());
+
+        ObjectNode rejected = validStep(PersonaType.PROMOTER, "network");
+        rejected.set("artists", objectMapper.createArrayNode());
+        assertField(PersonaType.PROMOTER, "network", rejected, "artists", "INVALID");
+    }
+
+    @Test
+    void promoterNetworkRejectsTooManyOrDuplicateRosterArtists() {
+        ObjectNode tooMany = validStep(PersonaType.PROMOTER, "network");
+        ArrayNode references = tooMany.putArray("rosterArtists");
+        for (int index = 0; index < 6; index++) {
+            references.add(artistReference("artist-" + index, "Artist " + index, true));
+        }
+        assertField(PersonaType.PROMOTER, "network", tooMany, "rosterArtists", "TOO_MANY");
+
+        ObjectNode duplicate = validStep(PersonaType.PROMOTER, "network");
+        duplicate.set("rosterArtists", objectMapper.createArrayNode()
+                .add(artistReference("same-id", "Artist One", true))
+                .add(artistReference("same-id", "Different Label", true)));
+        assertField(PersonaType.PROMOTER, "network", duplicate, "rosterArtists", "DUPLICATE");
+    }
+
+    @Test
+    void promoterNetworkRejectsSemanticMarketDuplicates() {
+        ObjectNode samePlace = validStep(PersonaType.PROMOTER, "network");
+        samePlace.set("additionalMarkets", objectMapper.createArrayNode()
+                .add(market("Austin, TX", "Austin", "TX", "US", "place-austin"))
+                .add(market("Austin metro", "Round Rock", "TX", "US", " PLACE-AUSTIN ")));
+        assertField(PersonaType.PROMOTER, "network", samePlace,
+                "additionalMarkets", "DUPLICATE");
+
+        ObjectNode sameRegion = validStep(PersonaType.PROMOTER, "network");
+        sameRegion.set("additionalMarkets", objectMapper.createArrayNode()
+                .add(market("Austin, TX", "Austin", "TX", "US", null))
+                .add(market("Greater Austin", "  AUSTIN ", "tx", " us ", null)));
+        assertField(PersonaType.PROMOTER, "network", sameRegion,
+                "additionalMarkets", "DUPLICATE");
+
+        ObjectNode distinct = validStep(PersonaType.PROMOTER, "network");
+        distinct.set("additionalMarkets", objectMapper.createArrayNode()
+                .add(market("Austin, TX", "Austin", "TX", "US", null))
+                .add(market("Chicago, IL", "Chicago", "IL", "US", null)));
+        validate(PersonaType.PROMOTER, "network", distinct);
+    }
+
+    @Test
     void promoterGoalsRequireAtLeastOneGoal() {
         ObjectNode data = validStep(PersonaType.PROMOTER, "goals");
         data.withArray("connectionGoals").removeAll();
@@ -703,6 +756,21 @@ class OnboardingStepContractServiceTest {
         ArrayNode array = objectMapper.createArrayNode();
         for (String value : values) array.add(value);
         return array;
+    }
+
+    private ObjectNode market(
+            String displayName,
+            String city,
+            String state,
+            String country,
+            String placeId) {
+        ObjectNode market = objectMapper.createObjectNode()
+                .put("displayName", displayName)
+                .put("city", city)
+                .put("state", state)
+                .put("country", country);
+        if (placeId != null) market.put("placeId", placeId);
+        return market;
     }
 
     private ObjectNode artistReference(String entityId, String displayName, boolean external) {

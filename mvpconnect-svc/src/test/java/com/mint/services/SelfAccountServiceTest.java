@@ -12,6 +12,8 @@ import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
+import com.mint.onboarding.LocationListCodec;
+import com.mint.dto.onboarding.shared.LocationDto;
 import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
@@ -127,6 +129,9 @@ class SelfAccountServiceTest {
         promoter.setId("promoter-1");
         promoter.setBusinessName("Night Signal Presents");
         promoter.setEmail("promoter@example.com");
+        promoter.setAdditionalMarkets(LocationListCodec.encode(List.of(new LocationDto(
+                "Austin, TX", null, null, "Austin", "TX", null, "US",
+                30.2672, -97.7431, null, "place-austin"))));
         when(personaProvider.current()).thenReturn(new AuthenticatedPersona("promoter-1", PersonaType.PROMOTER));
         when(promoterRepository.findById("promoter-1")).thenReturn(Optional.of(promoter));
 
@@ -135,5 +140,7 @@ class SelfAccountServiceTest {
         assertInstanceOf(PromoterSelfAccountResponse.class, response);
         assertEquals(PersonaType.PROMOTER, ((PromoterSelfAccountResponse) response).persona());
         assertEquals("Night Signal Presents", ((PromoterSelfAccountResponse) response).displayName());
+        assertEquals("Austin", ((PromoterSelfAccountResponse) response)
+                .additionalMarkets().getFirst().city());
     }
 }

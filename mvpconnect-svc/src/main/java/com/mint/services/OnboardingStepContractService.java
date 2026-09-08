@@ -23,6 +23,7 @@ import com.mint.dto.onboarding.shared.EntityReferenceDto;
 import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.onboarding.shared.MediaReferenceDto;
 import com.mint.dto.onboarding.shared.PerformanceMediaReferenceDto;
+import com.mint.dto.onboarding.shared.LocationDto;
 import com.mint.dto.onboarding.venue.VenueBookingStepRequest;
 import com.mint.dto.onboarding.venue.VenueGoalsStepRequest;
 import com.mint.dto.onboarding.venue.VenueMediaStepRequest;
@@ -283,10 +284,10 @@ public class OnboardingStepContractService {
             entityReferenceDuplicates("artistsWorkedWith", request.artistsWorkedWith(), errors);
             entityTypes("artistsWorkedWith", request.artistsWorkedWith(), EntityType.ARTIST, errors);
         } else if (data instanceof PromoterNetworkStepRequest request) {
-            entityReferenceDuplicates("artists", request.artists(), errors);
+            entityReferenceDuplicates("rosterArtists", request.rosterArtists(), errors);
             entityReferenceDuplicates("venues", request.venues(), errors);
-            duplicates("additionalMarkets", request.additionalMarkets(), errors);
-            entityTypes("artists", request.artists(), EntityType.ARTIST, errors);
+            locationDuplicates("additionalMarkets", request.additionalMarkets(), errors);
+            entityTypes("rosterArtists", request.rosterArtists(), EntityType.ARTIST, errors);
             entityTypes("venues", request.venues(), EntityType.VENUE, errors);
             performanceMedia("pastShows", request.pastShows(), owner, step, errors);
         } else if (data instanceof PromoterMediaStepRequest request) {
@@ -424,6 +425,38 @@ public class OnboardingStepContractService {
                 .replaceAll("\\s+", " ")
                 .toLowerCase(Locale.ROOT);
         return new EntityReferenceKey(reference.entityType(), "name:" + normalizedName);
+    }
+
+    private void locationDuplicates(
+            String field,
+            List<LocationDto> locations,
+            List<OnboardingFieldError> errors) {
+        Set<String> seenPlaceIds = new HashSet<>();
+        Set<String> seenRegions = new HashSet<>();
+        for (LocationDto location : locations) {
+            if (location == null) continue;
+            String placeId = normalizeIdentityPart(location.placeId());
+            String region = String.join("|",
+                    normalizeIdentityPartOrEmpty(location.city()),
+                    normalizeIdentityPartOrEmpty(location.state()),
+                    normalizeIdentityPartOrEmpty(location.country()));
+            boolean duplicatePlace = placeId != null && !seenPlaceIds.add(placeId);
+            boolean duplicateRegion = !seenRegions.add(region);
+            if (duplicatePlace || duplicateRegion) {
+                errors.add(new OnboardingFieldError(field, "DUPLICATE"));
+                return;
+            }
+        }
+    }
+
+    private String normalizeIdentityPart(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeIdentityPartOrEmpty(String value) {
+        String normalized = normalizeIdentityPart(value);
+        return normalized == null ? "" : normalized;
     }
 
     private void duplicates(

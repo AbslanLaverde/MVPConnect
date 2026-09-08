@@ -36,6 +36,7 @@ export interface LocationFieldProps {
   mode?: 'search' | 'city' | 'address';
   focusColor?: string;
   focusGradientColors?: readonly [string, string];
+  showNeighborhood?: boolean;
   onSuggestionActivityChange?: (active: boolean) => void;
   fieldErrors?: Partial<Record<
     'addressLine1' | 'addressLine2' | 'city' | 'state' | 'postalCode' | 'country' | 'neighborhood',
@@ -64,6 +65,7 @@ export const LocationField: React.FC<LocationFieldProps> = ({
   mode = 'search',
   focusColor,
   focusGradientColors,
+  showNeighborhood = true,
   onSuggestionActivityChange,
   fieldErrors = {},
 }) => {
@@ -362,18 +364,20 @@ export const LocationField: React.FC<LocationFieldProps> = ({
       />
       {providerStatus}
       {suggestionList}
-      <TextField
-        label="NEIGHBORHOOD"
-        optional
-        value={value.neighborhood ?? ''}
-        onChangeText={(neighborhood) => onChange({ ...value, neighborhood })}
-        disabled={disabled}
-        helperText="Optional. Useful when a neighborhood adds local context."
-        autoCapitalize="words"
-        focusColor={focusColor}
-        focusGradientColors={focusGradientColors}
-        accessibilityLabel="Neighborhood, optional"
-      />
+      {showNeighborhood ? (
+        <TextField
+          label="NEIGHBORHOOD"
+          optional
+          value={value.neighborhood ?? ''}
+          onChangeText={(neighborhood) => onChange({ ...value, neighborhood })}
+          disabled={disabled}
+          helperText="Optional. Useful when a neighborhood adds local context."
+          autoCapitalize="words"
+          focusColor={focusColor}
+          focusGradientColors={focusGradientColors}
+          accessibilityLabel="Neighborhood, optional"
+        />
+      ) : null}
     </View>
   );
 };

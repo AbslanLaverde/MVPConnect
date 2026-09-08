@@ -2,6 +2,7 @@ package com.mint.services;
 
 import com.mint.dto.onboarding.artist.ArtistSoundStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterSpecialtiesStepRequest;
+import com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest;
 import com.mint.dto.onboarding.shared.EntityReferenceDto;
 import com.mint.dto.onboarding.venue.VenueMusicStepRequest;
 import com.mint.dto.response.OnboardingCompletionStepError;
@@ -27,12 +28,27 @@ public class ExternalArtistRelationshipService {
     }
 
     public CanonicalArtistReferences validate(PersonaType persona, Map<String, Object> steps) {
-        ReferenceSet referenceSet = referencesFor(persona, steps);
+        List<ReferenceSet> referenceSets = referencesFor(persona, steps);
+        List<OnboardingCompletionStepError> stepErrors = new ArrayList<>();
+        List<String> primaryIds = validateReferenceSet(referenceSets.getFirst(), stepErrors);
+        List<String> rosterIds = referenceSets.size() == 1
+                ? List.of()
+                : validateReferenceSet(referenceSets.get(1), stepErrors);
+        if (!stepErrors.isEmpty()) {
+            throw OnboardingException.notReady(stepErrors);
+        }
+        return new CanonicalArtistReferences(persona, primaryIds, rosterIds);
+    }
+
+    private List<String> validateReferenceSet(
+            ReferenceSet referenceSet,
+            List<OnboardingCompletionStepError> stepErrors) {
         List<EntityReferenceDto> references = referenceSet.references();
         List<OnboardingFieldError> errors = new ArrayList<>();
         List<String> ids = new ArrayList<>();
         for (int index = 0; index < references.size(); index++) {
-            String id = references.get(index).entityId();
+            EntityReferenceDto reference = references.get(index);
+            String id = reference == null ? null : reference.entityId();
             if (id == null || id.isBlank()) {
                 errors.add(new OnboardingFieldError(
                         referenceSet.fieldName() + "[" + index + "].entityId", "REQUIRED"));
@@ -46,17 +62,17 @@ public class ExternalArtistRelationshipService {
                 ? Set.of()
                 : new LinkedHashSet<>(repository.findExistingIds(List.copyOf(uniqueIds)));
         for (int index = 0; index < references.size(); index++) {
-            String id = references.get(index).entityId();
+            EntityReferenceDto reference = references.get(index);
+            String id = reference == null ? null : reference.entityId();
             if (id != null && !id.isBlank() && !existingIds.contains(id)) {
                 errors.add(new OnboardingFieldError(
                         referenceSet.fieldName() + "[" + index + "].entityId", "NOT_FOUND"));
             }
         }
         if (!errors.isEmpty()) {
-            throw OnboardingException.notReady(List.of(
-                    new OnboardingCompletionStepError(referenceSet.stepKey(), errors)));
+            stepErrors.add(new OnboardingCompletionStepError(referenceSet.stepKey(), errors));
         }
-        return new CanonicalArtistReferences(persona, List.copyOf(uniqueIds));
+        return List.copyOf(uniqueIds);
     }
 
     public void createRelationships(String ownerId, CanonicalArtistReferences references) {
@@ -67,23 +83,32 @@ public class ExternalArtistRelationshipService {
                 case PROMOTER -> repository.linkHasWorkedWith(ownerId, artistId);
             }
         }
+        for (String artistId : references.rosterArtistIds()) {
+            repository.linkHasOnRoster(ownerId, artistId);
+        }
     }
 
-    private ReferenceSet referencesFor(PersonaType persona, Map<String, Object> steps) {
+    private List<ReferenceSet> referencesFor(PersonaType persona, Map<String, Object> steps) {
         return switch (persona) {
-            case MUSICIAN -> new ReferenceSet(
+            case MUSICIAN -> List.of(new ReferenceSet(
                     "sound",
                     "soundsLikeArtists",
-                    required(steps, "sound", ArtistSoundStepRequest.class).soundsLikeArtists());
-            case VENUE -> new ReferenceSet(
+                    required(steps, "sound", ArtistSoundStepRequest.class).soundsLikeArtists()));
+            case VENUE -> List.of(new ReferenceSet(
                     "music",
                     "artistsBooked",
-                    required(steps, "music", VenueMusicStepRequest.class).artistsBooked());
-            case PROMOTER -> new ReferenceSet(
-                    "specialties",
-                    "artistsWorkedWith",
-                    required(steps, "specialties", PromoterSpecialtiesStepRequest.class)
-                            .artistsWorkedWith());
+                    required(steps, "music", VenueMusicStepRequest.class).artistsBooked()));
+            case PROMOTER -> List.of(
+                    new ReferenceSet(
+                            "specialties",
+                            "artistsWorkedWith",
+                            required(steps, "specialties", PromoterSpecialtiesStepRequest.class)
+                                    .artistsWorkedWith()),
+                    new ReferenceSet(
+                            "network",
+                            "rosterArtists",
+                            required(steps, "network", PromoterNetworkStepRequest.class)
+                                    .rosterArtists()));
         };
     }
 
@@ -99,6 +124,9 @@ public class ExternalArtistRelationshipService {
             List<EntityReferenceDto> references) {
     }
 
-    public record CanonicalArtistReferences(PersonaType persona, List<String> externalArtistIds) {
+    public record CanonicalArtistReferences(
+            PersonaType persona,
+            List<String> externalArtistIds,
+            List<String> rosterArtistIds) {
     }
 }

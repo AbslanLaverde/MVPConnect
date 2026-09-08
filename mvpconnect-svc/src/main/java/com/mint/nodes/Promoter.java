@@ -74,6 +74,8 @@ public class Promoter implements OnboardingOwner {
 
     private PromoterAcceptingStatus acceptingStatus;
     private RosterSizeRange rosterSizeRange;
+    /** Canonical JSON-encoded LocationDto values, one Neo4j string-list item per market. */
+    private List<String> additionalMarkets;
     private List<String> connectionGoals;
 
     // ========== CONTACT INFO ==========
