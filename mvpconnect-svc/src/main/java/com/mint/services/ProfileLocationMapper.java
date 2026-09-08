@@ -1,5 +1,6 @@
 package com.mint.services;
 
+import com.mint.dto.onboarding.shared.LocationDto;
 import com.mint.dto.response.account.SelfLocationResponse;
 import com.mint.dto.response.profile.PublicLocationResponse;
 import com.mint.dto.response.profile.PublicVenueLocationResponse;
@@ -74,6 +75,14 @@ public class ProfileLocationMapper {
                 promoter.getLocationCountry(), promoter.getLocationLatitude(),
                 promoter.getLocationLongitude(), promoter.getLocationNeighborhood(),
                 promoter.getLocationPlaceId()
+        );
+    }
+
+    public SelfLocationResponse selfLocation(LocationDto location) {
+        return selfLocation(
+                location.displayName(), location.addressLine1(), location.addressLine2(),
+                location.city(), location.state(), location.postalCode(), location.country(),
+                location.latitude(), location.longitude(), location.neighborhood(), location.placeId()
         );
     }
 

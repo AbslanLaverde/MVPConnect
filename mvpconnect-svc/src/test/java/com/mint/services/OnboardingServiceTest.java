@@ -475,20 +475,26 @@ class OnboardingServiceTest {
                                 .put("external", true)));
             }
             if (stepKey.equals("network")) {
-                data.set("artists", objectMapper.createArrayNode().add(
+                data.set("rosterArtists", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
                                 .put("entityType", "ARTIST")
+                                .put("entityId", "external-roster-artist")
                                 .put("displayName", "Glass Houses")));
                 data.set("venues", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
                                 .put("entityType", "VENUE")
                                 .put("entityId", "venue-identity-1")
                                 .put("displayName", "The Marlowe Room")));
-                data.set("additionalMarkets", objectMapper.createArrayNode().add(
-                        objectMapper.createObjectNode()
+                data.set("additionalMarkets", objectMapper.createArrayNode()
+                        .add(objectMapper.createObjectNode()
                                 .put("displayName", "Philadelphia, PA")
                                 .put("city", "Philadelphia")
                                 .put("state", "PA")
+                                .put("country", "US"))
+                        .add(objectMapper.createObjectNode()
+                                .put("displayName", "Chicago, IL")
+                                .put("city", "Chicago")
+                                .put("state", "IL")
                                 .put("country", "US")));
                 data.set("pastShows", objectMapper.createArrayNode().add(
                         objectMapper.createObjectNode()
@@ -499,16 +505,23 @@ class OnboardingServiceTest {
         }
 
         service.completeOnboarding();
+        service.completeOnboarding();
 
         assertTrue(currentStep("specialties").getDataJson().contains("artistsWorkedWith"));
         assertTrue(currentStep("network").getDataJson().contains("Glass Houses"));
         assertTrue(currentStep("network").getDataJson().contains("The Marlowe Room"));
         assertTrue(currentStep("network").getDataJson().contains("Philadelphia"));
         assertTrue(currentStep("network").getDataJson().contains("promoter-show"));
-        verify(externalArtistRepository)
+        verify(externalArtistRepository, times(1))
                 .linkHasWorkedWith("promoter-1", "external-promoter-artist");
-        verify(venueIdentityRepository)
+        verify(externalArtistRepository, times(1))
+                .linkHasOnRoster("promoter-1", "external-roster-artist");
+        verify(venueIdentityRepository, times(1))
                 .linkWorksWith("promoter-1", "venue-identity-1");
+        var markets = com.mint.onboarding.LocationListCodec
+                .decode(promoters.get("promoter-1").getAdditionalMarkets());
+        assertEquals(List.of("Philadelphia", "Chicago"),
+                markets.stream().map(com.mint.dto.onboarding.shared.LocationDto::city).toList());
     }
 
     @Test

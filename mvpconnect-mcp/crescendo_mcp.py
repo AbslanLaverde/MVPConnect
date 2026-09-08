@@ -421,7 +421,7 @@ def get_venue(venue_id: str) -> str:
             result = session.run(
                 """
                 MATCH (v:Venue {id: $id})
-                RETURN v.id AS id, v.venueName AS venueName, v.email AS email,
+                RETURN v.id AS id, v.venueName AS venueName,
                        v.description AS description, v.location AS location,
                        v.logoUrl AS logoUrl, v.capacity AS capacity,
                        v.genrePreferences AS genrePreferences,
@@ -429,7 +429,6 @@ def get_venue(venue_id: str) -> str:
                        v.typicalBudget AS typicalBudget,
                        v.liveMusic AS liveMusic,
                        v.websiteUrl AS websiteUrl,
-                       v.bookingEmail AS bookingEmail,
                        v.createdAt AS createdAt
                 """,
                 id=venue_id,
@@ -446,7 +445,6 @@ def get_venue(venue_id: str) -> str:
                 "venue": {
                     "id": record.get("id"),
                     "venueName": record.get("venueName"),
-                    "email": record.get("email"),
                     "description": record.get("description") or "",
                     "location": record.get("location") or "",
                     "logoUrl": record.get("logoUrl") or "",
@@ -456,7 +454,6 @@ def get_venue(venue_id: str) -> str:
                     "typicalBudget": record.get("typicalBudget") or "",
                     "liveMusic": record.get("liveMusic") or False,
                     "websiteUrl": record.get("websiteUrl") or "",
-                    "bookingEmail": record.get("bookingEmail") or "",
                     "createdAt": str(record.get("createdAt") or ""),
                 },
             })

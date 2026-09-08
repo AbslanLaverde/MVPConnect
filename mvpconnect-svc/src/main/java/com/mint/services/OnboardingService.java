@@ -36,6 +36,7 @@ import com.mint.nodes.Venue;
 import com.mint.onboarding.OnboardingDraftStatus;
 import com.mint.onboarding.OnboardingOwner;
 import com.mint.onboarding.EquipmentItemCodec;
+import com.mint.onboarding.LocationListCodec;
 import com.mint.onboarding.OnboardingStepDefinition;
 import com.mint.onboarding.OnboardingStepRegistry;
 import com.mint.onboarding.OnboardingStepStatus;
@@ -419,6 +420,7 @@ public class OnboardingService {
         promoter.setVibePreferences(codes(specialties.vibes()));
         promoter.setAcceptingStatus(network.acceptingStatus());
         promoter.setRosterSizeRange(network.rosterSize());
+        promoter.setAdditionalMarkets(LocationListCodec.encode(network.additionalMarkets()));
         promoter.setConnectionGoals(codes(goals.connectionGoals()));
         return business.profileImage().mediaId();
     }

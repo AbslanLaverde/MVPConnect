@@ -517,6 +517,40 @@ export const fieldStyles = StyleSheet.create({
   locationFieldCompact: {
     width: 116,
   },
+  marketList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  marketEntry: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.strongBorder,
+    backgroundColor: theme.colors.elevatedSurface,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  marketName: {
+    color: theme.colors.primaryText,
+    fontFamily: theme.typography.fontFamily.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 0.7,
+    paddingHorizontal: theme.spacing.md,
+  },
+  marketRemove: {
+    minWidth: 44,
+    minHeight: 44,
+    borderLeftWidth: 1,
+    borderLeftColor: theme.colors.panelDivider,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marketRemoveText: {
+    color: theme.colors.error,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 15,
+  },
   uploader: {
     borderWidth: 1,
     borderColor: theme.colors.inputBorder,

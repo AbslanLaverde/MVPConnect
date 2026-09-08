@@ -88,4 +88,11 @@ public interface ExternalArtistRepository extends Neo4jRepository<ExternalArtist
             MERGE (owner)-[:HAS_WORKED_WITH]->(artist)
             """)
     void linkHasWorkedWith(String ownerId, String artistId);
+
+    @Query("""
+            MATCH (owner:Promoter {id: $ownerId})
+            MATCH (artist:ExternalArtist {id: $artistId})
+            MERGE (owner)-[:HAS_ON_ROSTER]->(artist)
+            """)
+    void linkHasOnRoster(String ownerId, String artistId);
 }
