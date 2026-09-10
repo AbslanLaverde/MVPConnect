@@ -1,6 +1,7 @@
 package com.mint.dto.response.account;
 
 import com.mint.dto.response.profile.PublicProfileMediaResponse;
+import com.mint.dto.response.externalconnection.SelfExternalConnectionResponse;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
 import com.mint.onboarding.taxonomy.PromoterAcceptingStatus;
@@ -30,5 +31,8 @@ public record PromoterSelfAccountResponse(
         PersonaOnboardingStatus onboardingStatus,
         LocalDateTime onboardingCompletedAt,
         Integer onboardingVersion,
-        PublicProfileMediaResponse profileImage) implements SelfAccountResponse {
+        PublicProfileMediaResponse profileImage,
+        PublicProfileMediaResponse bannerImage,
+        List<PublicProfileMediaResponse> galleryImages,
+        List<SelfExternalConnectionResponse> externalConnections) implements SelfAccountResponse {
 }

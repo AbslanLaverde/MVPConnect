@@ -8,6 +8,9 @@ import type {
   SaveOnboardingStepRequest,
 } from './onboardingTypes';
 import type { OwnedMediaResponse } from './onboardingMedia';
+import type { ExternalConnectionSummary } from '../services/externalConnectionService';
+import type { ExternalArtistResult } from '../services/externalArtistService';
+import type { GoalCode } from './goalTypes';
 
 export interface SelfProfileMedia {
   mediaId: string;
@@ -23,7 +26,19 @@ export interface SelfAccountResponse {
   displayName: string;
   email: string;
   profileImage?: SelfProfileMedia | null;
+  bannerImage?: SelfProfileMedia | null;
+  galleryImages?: SelfProfileMedia[];
+  externalConnections?: ExternalConnectionSummary[];
+  spotifyArtistIdentity?: ExternalArtistResult | null;
+  connectionGoals?: GoalCode[];
   [key: string]: unknown;
+}
+
+export interface OnboardingCompletionResponse {
+  persona: 'MUSICIAN' | 'VENUE' | 'PROMOTER';
+  status: 'COMPLETED';
+  onboardingCompletedAt: string;
+  onboardingVersion: number;
 }
 
 const toApiError = (error: unknown): OnboardingApiError => {
@@ -163,6 +178,28 @@ export const onboardingApi = createApi({
         }
       },
     }),
+    completeOnboarding: builder.mutation<OnboardingCompletionResponse, void>({
+      queryFn: async () => {
+        try {
+          const response = await api.post<OnboardingCompletionResponse>('/onboarding/complete');
+          return { data: response.data };
+        } catch (error) {
+          return { error: toApiError(error) };
+        }
+      },
+      async onQueryStarted(_request, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            onboardingApi.util.updateQueryData('getOnboarding', undefined, (draft) => {
+              draft.status = data.status;
+            }),
+          );
+        } catch {
+          // The graduation UI owns error presentation and retry behavior.
+        }
+      },
+    }),
   }),
 });
 
@@ -174,4 +211,5 @@ export const {
   useCompleteOnboardingStepMutation,
   useSkipOnboardingStepMutation,
   useReopenOnboardingStepMutation,
+  useCompleteOnboardingMutation,
 } = onboardingApi;

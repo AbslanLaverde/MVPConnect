@@ -181,17 +181,24 @@ describe('OnboardingStepSession', () => {
     expect(mockedApi.post).not.toHaveBeenCalled();
   });
 
-  it('offers Skip for backend-defined optional Media and advances locally during bypass', () => {
+  it('keeps real Media Skip backend-confirmed even when the later placeholder bypass is enabled', async () => {
     const media = makeStep({ key: 'media', position: 4, required: false });
+    mockedApi.get
+      .mockResolvedValueOnce({ data: [] } as any)
+      .mockResolvedValueOnce({ status: 204, data: undefined } as any);
+    mockedApi.post.mockResolvedValueOnce({
+      data: makeState({ ...media, status: 'SKIPPED' }, { currentStep: 'goals' }),
+    } as any);
     const screen = renderSession(media, makeState(media, { currentStep: 'media' }), true);
 
+    await waitFor(() => expect(screen.getByText('MAKE IT YOURS.')).toBeTruthy());
     fireEvent.press(screen.getByLabelText('Skip this optional step for now'));
 
-    expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
+    await waitFor(() => expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
       persona: 'artist',
       step: 'goals',
-    });
-    expect(mockedApi.post).not.toHaveBeenCalled();
+    }));
+    expect(mockedApi.post).toHaveBeenCalledWith('/onboarding/steps/media/skip');
   });
 
   it('keeps local values and stays on the step when completion fails', async () => {

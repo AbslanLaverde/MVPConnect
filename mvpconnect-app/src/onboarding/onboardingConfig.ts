@@ -16,10 +16,9 @@ export interface OnboardingPersonaConfig {
   stepPresentation: Readonly<Record<string, OnboardingStepPresentation>>;
 }
 
-// TODO(onboarding): Disable this bypass when the real onboarding step requests are
-// implemented. Production onboarding must once again require a backend-confirmed
-// save/completion before advancing to the next step.
-export const ONBOARDING_PLACEHOLDER_SAVE_BYPASS = true;
+// Every configured V1 onboarding step now has a real typed implementation.
+// Navigation must follow backend-confirmed step state throughout the flow.
+export const ONBOARDING_PLACEHOLDER_SAVE_BYPASS = false;
 
 export const ONBOARDING_CONFIG: Record<OnboardingPersona, OnboardingPersonaConfig> = {
   artist: {

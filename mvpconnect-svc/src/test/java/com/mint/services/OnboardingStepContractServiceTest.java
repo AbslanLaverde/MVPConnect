@@ -12,6 +12,10 @@ import com.mint.dto.response.OnboardingStepValidationDetails;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.OnboardingException;
 import com.mint.media.MediaType;
+import com.mint.externalconnection.ExternalConnectionStatus;
+import com.mint.externalconnection.ExternalConnectionMethod;
+import com.mint.externalconnection.ExternalProvider;
+import com.mint.nodes.ExternalConnection;
 import com.mint.nodes.MediaAsset;
 import com.mint.nodes.OnboardingStep;
 import com.mint.onboarding.OnboardingStepRegistry;
@@ -23,6 +27,8 @@ import com.mint.onboarding.taxonomy.GenreCode;
 import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VibeCode;
 import com.mint.repositories.OnboardingStepRepository;
+import com.mint.repositories.ExternalConnectionRepository;
+import com.mint.repositories.ExternalArtistRepository;
 import com.mint.security.AuthenticatedPersona;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -35,6 +41,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.mint.support.OnboardingTestFixtures.validStep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,6 +66,9 @@ class OnboardingStepContractServiceTest {
     @Mock
     private MediaService mediaService;
 
+    @Mock private ExternalConnectionRepository externalConnectionRepository;
+    @Mock private ExternalArtistRepository externalArtistRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final AuthenticatedPersona owner =
             new AuthenticatedPersona("musician-1", PersonaType.MUSICIAN);
@@ -71,6 +81,8 @@ class OnboardingStepContractServiceTest {
                 new OnboardingStepRegistry(),
                 stepRepository,
                 mediaService,
+                externalConnectionRepository,
+                externalArtistRepository,
                 validator,
                 objectMapper
         );
@@ -687,6 +699,41 @@ class OnboardingStepContractServiceTest {
     }
 
     @Test
+    void venueMediaAcceptsOnlyItsOwnCanonicalProviderConnection() {
+        AuthenticatedPersona venueOwner = new AuthenticatedPersona("venue-1", PersonaType.VENUE);
+        ObjectNode data = validStep(PersonaType.VENUE, "media");
+        data.set("instagramConnection", objectMapper.createObjectNode()
+                .put("connectionId", "connection-1")
+                .put("provider", "INSTAGRAM"));
+        ExternalConnection connection = new ExternalConnection();
+        connection.setId("connection-1");
+        connection.setOwnerId("venue-1");
+        connection.setOwnerPersona(PersonaType.VENUE);
+        connection.setProvider(ExternalProvider.INSTAGRAM);
+        connection.setConnectionMethod(ExternalConnectionMethod.PROFILE_URL);
+        connection.setStatus(ExternalConnectionStatus.UNVERIFIED);
+        when(externalConnectionRepository.findById("connection-1"))
+                .thenReturn(Optional.of(connection));
+
+        validate(venueOwner, "media", data);
+
+        connection.setOwnerId("another-venue");
+        assertField(venueOwner, "media", data,
+                "instagramConnection.connectionId", "INVALID");
+    }
+
+    @Test
+    void mediaConnectionReferenceMustMatchTheFieldProvider() {
+        ObjectNode data = validStep(PersonaType.PROMOTER, "media");
+        data.set("facebookConnection", objectMapper.createObjectNode()
+                .put("connectionId", "connection-1")
+                .put("provider", "TIKTOK"));
+
+        assertField(PersonaType.PROMOTER, "media", data,
+                "facebookConnection.provider", "INVALID");
+    }
+
+    @Test
     void entityReferencesMustMatchTheStepsExpectedType() {
         ObjectNode data = validStep(PersonaType.MUSICIAN, "sound");
         ((ObjectNode) data.withArray("soundsLikeArtists").get(0)).put("entityType", "VENUE");
@@ -756,6 +803,31 @@ class OnboardingStepContractServiceTest {
         ArrayNode array = objectMapper.createArrayNode();
         for (String value : values) array.add(value);
         return array;
+    }
+
+    @Test
+    void personaMediaGalleryLimitsAndDuplicatesAreEnforced() {
+        ObjectNode artist = validStep(PersonaType.MUSICIAN, "media");
+        ArrayNode artistGallery = objectMapper.createArrayNode();
+        for (int index = 0; index < 9; index++) {
+            artistGallery.add(objectMapper.createObjectNode().put("mediaId", "artist-" + index));
+        }
+        artist.set("showcaseImages", artistGallery);
+        assertField(PersonaType.MUSICIAN, "media", artist, "showcaseImages", "TOO_MANY");
+
+        ObjectNode venue = validStep(PersonaType.VENUE, "media");
+        ArrayNode venueGallery = objectMapper.createArrayNode();
+        for (int index = 0; index < 11; index++) {
+            venueGallery.add(objectMapper.createObjectNode().put("mediaId", "venue-" + index));
+        }
+        venue.set("galleryImages", venueGallery);
+        assertField(PersonaType.VENUE, "media", venue, "galleryImages", "TOO_MANY");
+
+        ObjectNode promoter = validStep(PersonaType.PROMOTER, "media");
+        promoter.set("galleryImages", objectMapper.createArrayNode()
+                .add(objectMapper.createObjectNode().put("mediaId", "same"))
+                .add(objectMapper.createObjectNode().put("mediaId", "same")));
+        assertField(PersonaType.PROMOTER, "media", promoter, "galleryImages", "DUPLICATE");
     }
 
     private ObjectNode market(

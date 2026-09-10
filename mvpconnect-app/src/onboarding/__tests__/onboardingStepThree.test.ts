@@ -66,7 +66,6 @@ describe('onboardingStepThree', () => {
         { code: 'DRUM_KIT', quantity: null },
       ],
       venuesPlayed: [venueReference(1)],
-      performanceImages: [],
     });
   });
 
@@ -87,6 +86,7 @@ describe('onboardingStepThree', () => {
       setLengthMinutes: 90,
       equipmentBrought: [{ code: 'MICROPHONES', quantity: 4 }],
       venuesPlayed: [venueReference(2)],
+      performanceImages: [],
     });
   });
 

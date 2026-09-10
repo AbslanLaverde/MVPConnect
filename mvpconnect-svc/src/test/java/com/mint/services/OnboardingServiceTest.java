@@ -33,6 +33,7 @@ import com.mint.onboarding.taxonomy.SoundcheckAvailability;
 import com.mint.onboarding.taxonomy.VenueBookingStatus;
 import com.mint.repositories.MediaAssetRepository;
 import com.mint.repositories.ExternalArtistRepository;
+import com.mint.repositories.ExternalConnectionRepository;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.OnboardingDraftRepository;
 import com.mint.repositories.OnboardingStepRepository;
@@ -73,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -89,6 +91,7 @@ class OnboardingServiceTest {
     @Mock private PromoterRepository promoterRepository;
     @Mock private MediaAssetRepository mediaAssetRepository;
     @Mock private ExternalArtistRepository externalArtistRepository;
+    @Mock private ExternalConnectionRepository externalConnectionRepository;
     @Mock private VenueIdentityRepository venueIdentityRepository;
     @Mock private MediaService mediaService;
 
@@ -143,7 +146,8 @@ class OnboardingServiceTest {
 
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         OnboardingStepContractService contractService = new OnboardingStepContractService(
-                stepRegistry, stepRepository, mediaService, validator, objectMapper);
+                stepRegistry, stepRepository, mediaService, externalConnectionRepository,
+                externalArtistRepository, validator, objectMapper);
         ExternalArtistRelationshipService relationshipService =
                 new ExternalArtistRelationshipService(externalArtistRepository);
         VenueIdentityRelationshipService venueRelationshipService =
@@ -453,7 +457,26 @@ class OnboardingServiceTest {
         assertTrue(currentStep("media").getDataJson().contains("venue-gallery"));
         verify(mediaAssetRepository, times(1)).replaceCanonicalProfileMedia(
                 "venue-1", "VENUE", "venue-profile");
+        verify(mediaAssetRepository, times(1)).replaceCanonicalBannerMedia(
+                "venue-1", "VENUE", "venue-banner");
+        verify(mediaAssetRepository, times(1)).replaceCanonicalGalleryMedia(
+                "venue-1", "VENUE", List.of(Map.of("mediaId", "venue-gallery", "sortOrder", 0)));
         verify(externalArtistRepository).linkHasBooked("venue-1", "external-venue-artist");
+    }
+
+    @Test
+    void completedEmptyMediaReplacesGalleryWithTheValidatedEmptyList() {
+        service.getOnboarding();
+        for (String stepKey : stepRegistry.stepsFor(PersonaType.MUSICIAN)) {
+            service.completeStep(stepKey, request(PersonaType.MUSICIAN, stepKey));
+        }
+
+        service.completeOnboarding();
+
+        verify(mediaAssetRepository).replaceCanonicalGalleryMedia(
+                "musician-1", "MUSICIAN", List.of());
+        verify(mediaAssetRepository, never()).replaceCanonicalBannerMedia(
+                eq("musician-1"), eq("MUSICIAN"), anyString());
     }
 
     @Test
@@ -525,13 +548,16 @@ class OnboardingServiceTest {
     }
 
     @Test
-    void completedOptionalMediaPromotesWebsiteButOnlyProfileImageBecomesCanonical() {
+    void completedOptionalArtistMediaPromotesWebsiteBannerAndOrderedGallery() {
         service.getOnboarding();
         for (String stepKey : stepRegistry.stepsFor(PersonaType.MUSICIAN)) {
             if (stepKey.equals("media")) {
                 ObjectNode media = validStep(PersonaType.MUSICIAN, "media");
                 media.put("websiteUrl", "  https://glasshouses.example  ");
                 media.set("bannerImage", objectMapper.createObjectNode().put("mediaId", "artist-banner"));
+                media.set("showcaseImages", objectMapper.createArrayNode()
+                        .add(objectMapper.createObjectNode().put("mediaId", "artist-gallery-2"))
+                        .add(objectMapper.createObjectNode().put("mediaId", "artist-gallery-1")));
                 service.completeStep(stepKey, new SaveOnboardingStepRequest(media));
             } else {
                 service.completeStep(stepKey, request(PersonaType.MUSICIAN, stepKey));
@@ -544,6 +570,12 @@ class OnboardingServiceTest {
         assertTrue(currentStep("media").getDataJson().contains("artist-banner"));
         verify(mediaAssetRepository, times(1)).replaceCanonicalProfileMedia(
                 "musician-1", "MUSICIAN", "musician-profile");
+        verify(mediaAssetRepository, times(1)).replaceCanonicalBannerMedia(
+                "musician-1", "MUSICIAN", "artist-banner");
+        verify(mediaAssetRepository, times(1)).replaceCanonicalGalleryMedia(
+                "musician-1", "MUSICIAN", List.of(
+                        Map.of("mediaId", "artist-gallery-2", "sortOrder", 0),
+                        Map.of("mediaId", "artist-gallery-1", "sortOrder", 1)));
     }
 
     @Test

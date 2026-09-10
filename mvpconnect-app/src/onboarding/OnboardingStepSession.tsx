@@ -40,6 +40,10 @@ import { OnboardingRealStepTwoSession } from './OnboardingRealStepTwoSession';
 import { OnboardingRealStepThreeSession } from './OnboardingRealStepThreeSession';
 import { OnboardingRealBookingNetworkSession } from './OnboardingRealBookingNetworkSession';
 import { isRealBookingNetworkStep } from './onboardingBookingNetwork';
+import { isRealMediaStep } from './onboardingMediaStep';
+import { OnboardingRealMediaSession } from './OnboardingRealMediaSession';
+import { isRealGoalsStep } from './onboardingGoals';
+import { OnboardingRealGoalsSession } from './OnboardingRealGoalsSession';
 
 type OperationKind = 'autosave' | 'complete' | 'skip' | 'reopen';
 
@@ -402,6 +406,26 @@ export const OnboardingStepSession: React.FC<OnboardingStepSessionProps> = (prop
   if (isRealBookingNetworkStep(props.config.persona, props.step.key)) {
     return (
       <OnboardingRealBookingNetworkSession
+        state={props.state}
+        step={props.step}
+        config={props.config}
+        navigation={props.navigation}
+      />
+    );
+  }
+  if (isRealMediaStep(props.config.persona, props.step.key)) {
+    return (
+      <OnboardingRealMediaSession
+        state={props.state}
+        step={props.step}
+        config={props.config}
+        navigation={props.navigation}
+      />
+    );
+  }
+  if (isRealGoalsStep(props.config.persona, props.step.key)) {
+    return (
+      <OnboardingRealGoalsSession
         state={props.state}
         step={props.step}
         config={props.config}

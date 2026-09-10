@@ -2,6 +2,7 @@ package com.mint.dto.response.profile;
 
 import com.mint.onboarding.taxonomy.PromoterAcceptingStatus;
 import com.mint.onboarding.taxonomy.RosterSizeRange;
+import com.mint.dto.response.externalconnection.PublicExternalConnectionResponse;
 
 import java.util.List;
 
@@ -16,6 +17,8 @@ public record PublicPromoterProfileResponse(
         List<String> vibePreferences,
         PromoterAcceptingStatus acceptingStatus,
         RosterSizeRange rosterSizeRange,
-        List<String> connectionGoals,
-        PublicProfileMediaResponse profileImage) {
+        PublicProfileMediaResponse profileImage,
+        PublicProfileMediaResponse bannerImage,
+        List<PublicProfileMediaResponse> galleryImages,
+        List<PublicExternalConnectionResponse> externalConnections) {
 }

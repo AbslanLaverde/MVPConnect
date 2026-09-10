@@ -2,7 +2,7 @@
 
 This guide covers the repeatable local smoke/integration suite for authentication, private media, public-profile privacy, typed onboarding, resume behavior, validation, ownership, completion, canonical promotion, Actuator readiness, Neo4j persistence, MinIO object storage, and guarded local cleanup.
 
-Last verified: September 4, 2026
+Last verified: September 9, 2026
 
 - Backend: `http://localhost:8080`
 - Neo4j Bolt: `bolt://localhost:7687`
@@ -10,8 +10,8 @@ Last verified: September 4, 2026
 - MinIO S3 API: `http://localhost:9000`
 - MinIO console: `http://localhost:9001`
 - Current onboarding schema version: `2`
-- Live runner result: `144` requests, `380` assertions, `0` failures
-- Maven result: `129` tests, `0` failures, `0` errors, `0` skipped
+- Live runner result: `167` requests, `432` assertions, `0` failures
+- Maven result: `255` tests, `0` failures, `0` errors, `0` skipped
 - Node cleanup result: `5` tests, `0` failures; live plan and execution removed the exact test run while preserving all control accounts
 
 ## Harness files
@@ -142,11 +142,11 @@ The two output files are intentionally ignored. Never commit a runner-exported e
 | Folder | Coverage |
 | --- | --- |
 | `00 - Health / Setup` | Aggregate health, process-only liveness, dependency readiness, unique run initialization, stale variable cleanup |
-| `01 - Auth` | Artist, Venue, and Promoter signup/login; persona and JWT capture |
-| `02 - Media` | Profile, banner, and gallery initialization; direct presigned PUT; complete; repeat complete; read/access URL; onboarding association; unsupported MIME; oversized file; missing object |
-| `03 - Artist Onboarding` | Typed `basics`, `sound`, `live`, optional `media` skip/reopen/complete with banner, `goals`, and READY state |
+| `01 - Auth` | Artist, Venue, and Promoter signup/login; persona/JWT capture; reusable shared reference fixtures; URL-first provider connections |
+| `02 - Media` | Profile, banner, and persona-context gallery initialization; direct presigned PUT; complete; repeat complete; read/access URL; onboarding association; unsupported MIME; oversized file; missing object |
+| `03 - Artist Onboarding` | Typed `basics`, `sound`, `live`, optional `media` skip/reopen/complete with banner, ordered gallery, URL-first connections, `goals`, and READY state |
 | `04 - Venue Onboarding` | Typed `room`, `music`, `stage`, `booking`, optional `media` skip/reopen/complete with banner/gallery, `goals`, and READY state |
-| `05 - Promoter Onboarding` | Typed `business`, `specialties`, `network`, optional `media` skip/reopen/complete with banner, `goals`, and READY state |
+| `05 - Promoter Onboarding` | Typed `business`, `specialties`, `network`, optional `media` skip/reopen/complete with banner/gallery and URL-first connections, `goals`, and READY state |
 | `06 - Onboarding Resume` | Disposable Artist signup, profile upload, partial completion, re-login, and persisted resume at `live` |
 | `07 - Negative Validation` | Required data, enum, size, duplicate, conditional, address, email, media readiness/type/association, unknown field, and premature completion failures |
 | `08 - Security / Ownership` | Typed Musician self-update validation and authorization, wrong-owner/persona denial, cross-owner media denial, invalid persona step, ignored owner query override, unauthenticated denial (including `/me`), owner delete |
@@ -160,7 +160,9 @@ Each run intentionally persists randomized local test records:
 - One completed Artist, Venue, and Promoter.
 - One partially completed resume-test Artist.
 - Onboarding drafts and step nodes for those owners.
-- READY profile images for all four owners, three READY banners, and one READY Venue gallery image.
+- READY profile images for all four owners, three READY banners, and four READY ordered gallery images.
+- Owner-scoped URL-first ExternalConnection records for Artist, Venue, and Promoter.
+- Two reusable shared reference fixtures (`ExternalArtist` and `VenueIdentity`), which later runs reuse and guarded account cleanup deliberately preserves.
 - One PENDING Artist media record used by negative tests.
 
 The collection deletes only its disposable unassociated media record. Use the guarded cleanup script after inspecting the run to remove all other data and objects owned by that exact `e2eRunId`.
@@ -173,7 +175,7 @@ Current schema version `2` uses these ordered steps:
 - Venue: `room`, `music`, `stage`, `booking`, `media`, `goals`.
 - Promoter: `business`, `specialties`, `network`, `media`, `goals`.
 
-Each happy path first verifies that optional `media` can be skipped, then reopens and completes it with real associated MinIO assets. At final completion, every step—including `media`—is `COMPLETE`, its normalized `dataJson` remains on the completed draft, and only PROFILE_IMAGE becomes canonical persona media.
+Each happy path first verifies that optional `media` can be skipped, then reopens and completes it with real associated MinIO assets. At final completion, every step—including `media`—is `COMPLETE`, its normalized `dataJson` remains on the completed draft, and PROFILE_IMAGE, BANNER_IMAGE, and ordered GALLERY_IMAGE assets become canonical persona media.
 
 The frontend placeholder navigation bypass remains enabled and is outside this backend test harness. This suite calls the real backend contracts directly and does not alter that temporary frontend behavior.
 
@@ -220,7 +222,7 @@ RETURN step.key, media.id, media.mediaType, media.status, media.objectKey
 ORDER BY step.position, media.sortOrder;
 ```
 
-The tested Artist `basics` step retains the profile and banner associations, while Artist `media` retains its banner. Venue `room` retains the profile and Venue `media` retains its banner/gallery. Promoter `business` retains the profile and Promoter `media` retains its banner.
+The tested Artist `basics` step retains the profile and wrong-type-test banner association, while Artist `media` retains its banner and two gallery images. Venue `room` retains the profile and Venue `media` retains its banner/gallery. Promoter `business` retains the profile and Promoter `media` retains its banner/gallery.
 
 ### Deferred draft data
 
@@ -231,7 +233,7 @@ WHERE step.key IN ['sound', 'live']
 RETURN step.key, step.dataJson;
 ```
 
-The live suite verifies retention of Artist `soundsLikeArtists`, `venuesPlayed`, and banner media; Venue `artistsBooked`, banner, and gallery media; and Promoter `artistsWorkedWith`, `artists`, `venues`, `additionalMarkets`, and banner media. Performance-image and past-show shapes remain covered by the Maven suite.
+The live suite verifies retention of Artist `soundsLikeArtists`, `venuesPlayed`, banner, ordered gallery, and URL-first connections; Venue `artistsBooked`, banner/gallery, and URL-first connections; and Promoter `artistsWorkedWith`, `rosterArtists`, `venues`, `additionalMarkets`, banner/gallery, and URL-first connections. Past-show compatibility remains covered by the Maven suite.
 
 ### Resume state
 
@@ -328,27 +330,24 @@ Safety rules:
 - Graph deletion is restricted to resolved owner IDs that also pass the exact email pattern; it never runs a broad graph delete.
 - The script verifies that no target accounts remain and that the non-E2E account count is unchanged.
 
-The verified cleanup run matched four E2E accounts and nine media records, removed eight real objects, safely recognized one never-uploaded negative-test object as absent, left zero target accounts, and preserved all 17 non-E2E control accounts.
+The verified cleanup run matched four E2E accounts and twelve media records, removed eleven real objects, safely recognized one never-uploaded negative-test object as absent, left zero target accounts, and preserved all three non-E2E control accounts plus the reusable shared reference fixtures.
 
 ## Real-infrastructure verification performed
 
 The verified hardening run used a fresh Spring Boot instance, the local Neo4j database, and Dockerized MinIO—not mocks.
 
-- Neo4j checks passed for completed owner/draft state, retained optional-media JSON, optional step-media relationships, canonical PROFILE_IMAGE-only relationships, legacy sentinels, and temporary URL non-persistence.
+- Neo4j-backed API checks passed for completed owner/draft state, retained optional-media JSON, canonical profile/banner/ordered-gallery relationships, URL-first connections, legacy sentinels, and temporary URL/object-key non-exposure.
 - MinIO handled profile, banner, and gallery uploads for all three personas, plus the resume and negative-test flows. Each uploaded fixture was `image/jpeg` and exactly `34,954` bytes.
 - Aggregate health, process-only liveness, and dependency readiness all returned UP; readiness reported Neo4j and object storage independently.
 - Safe public profiles returned canonical media with response-time URLs and passed private-field/object-key absence assertions.
-- The full Newman run completed `134` requests and `346` assertions with zero failures.
-- The full Maven suite completed `115` tests with zero failures, errors, or skips.
+- The full Newman run completed `167` requests and `432` assertions with zero failures.
+- The full Maven suite completed `255` tests with zero failures, errors, or skips.
 - The guarded cleanup was executed against that run and verified both graph and object-store cleanup without changing non-E2E account count.
 
 ## Known limitations and remaining risks
 
-- The authenticated Musician update still accepts an untyped `Map<String,Object>`. Ownership and protected fields are enforced, but malformed value types can still reach casts; a dedicated update DTO should replace it in a later profile-editing pass.
-- No authenticated self/account profile endpoint exists. The public profile contract must remain private-by-default, so account editing needs its own authenticated DTO and endpoint before the legacy editor becomes an active product path.
-- Public search/match responses still use older hand-built maps. They do not expose account credentials, but they should move to explicit discovery DTOs when those APIs are redesigned.
 - Public media URLs are deliberately short-lived. Clients must refresh the profile response after URL expiry; a later CDN can replace the presenter without changing persona storage.
-- The cleanup utility requires Docker Compose's MinIO client service and Neo4j's local HTTP transaction endpoint.
+- Real YouTube and SoundCloud authorization still requires an interactive provider-consent session; automated Newman coverage intentionally does not store provider credentials or authorization grants.
 - If the committed JPEG fixture changes, update its byte count and dimensions in `postman/build-collection.js`, regenerate the JSON files, and rerun the suite.
 
 ## Troubleshooting

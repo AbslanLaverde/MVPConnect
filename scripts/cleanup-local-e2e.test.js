@@ -69,9 +69,10 @@ test('dry run queries targets and controls without deleting anything', async () 
   const result = await cleanup(config, {
     neo4jStatement: async (_config, statement) => {
       calls.push(statement);
-      return calls.length === 1
-        ? [[OWNER_ID, `e2e-venue-${RUN_ID}@example.local`, ['Venue'], []]]
-        : [[7]];
+      if (statement.includes('RETURN owner.id')) {
+        return [[OWNER_ID, `e2e-venue-${RUN_ID}@example.local`, ['Venue'], []]];
+      }
+      return [[7]];
     },
     removeMinioObject: async () => assert.fail('dry run must not delete storage'),
   });
@@ -96,7 +97,11 @@ test('execute removes every media object before graph deletion', async () => {
         ]]];
       }
       if (queryCount === 2) return [[11]];
-      if (statement.includes('DETACH DELETE')) events.push('graph-delete');
+      if (statement.includes('DETACH DELETE')) {
+        assert.match(statement, /OAuthConnectionAttempt/);
+        assert.match(statement, /attempt\.ownerId = owner\.id/);
+        events.push('graph-delete');
+      }
       return queryCount === 5 ? [[11]] : [[0]];
     },
     removeMinioObject: async () => {

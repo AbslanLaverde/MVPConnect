@@ -26,13 +26,15 @@ export const FieldFrame: React.FC<FieldFrameProps> = ({
   containerStyle,
 }) => (
   <View style={[fieldStyles.fieldGroup, containerStyle]}>
-    {label ? (
+    {label || headerAccessory ? (
       <View style={fieldStyles.labelRow}>
-        <Text style={[fieldStyles.label, fieldStyles.labelInRow]}>
-          {label}
-          {required ? <Text style={fieldStyles.required}> *</Text> : null}
-          {!required && optional ? <Text style={fieldStyles.optional}> OPTIONAL</Text> : null}
-        </Text>
+        {label ? (
+          <Text style={[fieldStyles.label, fieldStyles.labelInRow]}>
+            {label}
+            {required ? <Text style={fieldStyles.required}> *</Text> : null}
+            {!required && optional ? <Text style={fieldStyles.optional}> OPTIONAL</Text> : null}
+          </Text>
+        ) : <View />}
         {headerAccessory}
       </View>
     ) : null}

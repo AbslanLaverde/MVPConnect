@@ -1,4 +1,6 @@
 import axios from 'axios';
+import type { ExternalArtistResult } from './externalArtistService';
+import type { PublicExternalConnection } from './externalConnectionService';
 // @ts-ignore: ignore missing type declarations for async-storage in this environment
 const AsyncStorage: any = require('@react-native-async-storage/async-storage').default;
 
@@ -151,12 +153,24 @@ export interface MusicianProfile {
   location?: PublicLocation;
   profileImageUrl?: string;
   profileImage?: PublicProfileMedia;
+  bannerImage?: PublicProfileMedia;
+  galleryImages?: PublicProfileMedia[];
+  externalConnections?: PublicExternalConnection[];
+  spotifyArtistIdentity?: ExternalArtistResult | null;
   genres?: string[];
   vibes?: string[];
   minimumFee?: string;
   willingToTravel?: boolean;
   websiteUrl?: string;
   instagramHandle?: string;
+}
+
+export interface VenueProfile extends VenueSummary {
+  description?: string;
+  websiteUrl?: string;
+  bannerImage?: PublicProfileMedia;
+  galleryImages?: PublicProfileMedia[];
+  externalConnections?: PublicExternalConnection[];
 }
 
 export interface MusicianProfileUpdate {
@@ -257,8 +271,8 @@ export const venueAPI = {
     return response.data;
   },
 
-  getVenue: async (id: string): Promise<any> => {
-    const response = await api.get(`/venues/${id}`);
+  getVenue: async (id: string): Promise<VenueProfile> => {
+    const response = await api.get<VenueProfile>(`/venues/${id}`);
     return response.data;
   },
 };

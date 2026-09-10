@@ -1,6 +1,8 @@
 package com.mint.dto.response.profile;
 
 import com.mint.dto.onboarding.shared.EquipmentItemDto;
+import com.mint.dto.response.externalartist.ExternalArtistResponse;
+import com.mint.dto.response.externalconnection.PublicExternalConnectionResponse;
 import com.mint.onboarding.taxonomy.ArtistBookingStatus;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 
@@ -20,8 +22,11 @@ public record PublicMusicianProfileResponse(
         Boolean touring,
         Integer setLengthMinutes,
         List<EquipmentItemDto> equipmentBrought,
-        List<String> connectionGoals,
         String websiteUrl,
         String instagramHandle,
-        PublicProfileMediaResponse profileImage) {
+        PublicProfileMediaResponse profileImage,
+        PublicProfileMediaResponse bannerImage,
+        List<PublicProfileMediaResponse> galleryImages,
+        List<PublicExternalConnectionResponse> externalConnections,
+        ExternalArtistResponse spotifyArtistIdentity) {
 }

@@ -44,7 +44,7 @@ export interface PromoterNetworkFormData {
   rosterArtists: ArtistEntityReferenceDto[];
   venues: VenueEntityReferenceDto[];
   additionalMarkets: OnboardingLocationData[];
-  pastShows: PerformanceMediaReferenceDto[];
+  pastShows?: PerformanceMediaReferenceDto[];
 }
 
 export interface PromoterNetworkStepRequest {
@@ -53,7 +53,7 @@ export interface PromoterNetworkStepRequest {
   rosterArtists: ArtistEntityReferenceDto[];
   venues: VenueEntityReferenceDto[];
   additionalMarkets: OnboardingLocationData[];
-  pastShows: PerformanceMediaReferenceDto[];
+  pastShows?: PerformanceMediaReferenceDto[];
 }
 
 export type BookingNetworkFormData = VenueBookingFormData | PromoterNetworkFormData;

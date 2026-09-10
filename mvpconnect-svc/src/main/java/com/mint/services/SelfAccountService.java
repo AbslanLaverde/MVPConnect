@@ -28,6 +28,8 @@ public class SelfAccountService {
     private final PromoterRepository promoterRepository;
     private final PublicProfileMediaService mediaService;
     private final ProfileLocationMapper locationMapper;
+    private final ExternalConnectionService externalConnectionService;
+    private final ArtistIdentityService artistIdentityService;
 
     public SelfAccountService(
             AuthenticatedPersonaProvider authenticatedPersonaProvider,
@@ -35,13 +37,17 @@ public class SelfAccountService {
             VenueRepository venueRepository,
             PromoterRepository promoterRepository,
             PublicProfileMediaService mediaService,
-            ProfileLocationMapper locationMapper) {
+            ProfileLocationMapper locationMapper,
+            ExternalConnectionService externalConnectionService,
+            ArtistIdentityService artistIdentityService) {
         this.authenticatedPersonaProvider = authenticatedPersonaProvider;
         this.musicianRepository = musicianRepository;
         this.venueRepository = venueRepository;
         this.promoterRepository = promoterRepository;
         this.mediaService = mediaService;
         this.locationMapper = locationMapper;
+        this.externalConnectionService = externalConnectionService;
+        this.artistIdentityService = artistIdentityService;
     }
 
     @Transactional(readOnly = true)
@@ -57,6 +63,8 @@ public class SelfAccountService {
     private MusicianSelfAccountResponse musician(AuthenticatedPersona identity) {
         Musician musician = musicianRepository.findById(identity.userId())
                 .orElseThrow(SelfAccountService::accountNotFound);
+        PublicProfileMediaService.CanonicalMediaBundle media =
+                mediaService.findCanonicalMedia(musician.getId(), PersonaType.MUSICIAN);
         return new MusicianSelfAccountResponse(
                 musician.getId(), PersonaType.MUSICIAN, musician.getName(), musician.getEmail(),
                 musician.getBio(), locationMapper.selfLocation(musician),
@@ -66,14 +74,18 @@ public class SelfAccountService {
                 musician.getSetLengthMinutes(), EquipmentItemCodec.decode(musician.getEquipmentBrought()),
                 musician.getConnectionGoals(), musician.getWebsiteUrl(), musician.getInstagramHandle(),
                 musician.getOnboardingStatus(), musician.getOnboardingCompletedAt(),
-                musician.getOnboardingVersion(),
-                mediaService.findProfileImage(musician.getId(), PersonaType.MUSICIAN)
+                musician.getOnboardingVersion(), media.profileImage(), media.bannerImage(), media.galleryImages(),
+                externalConnectionService.selfConnections(
+                        musician.getId(), PersonaType.MUSICIAN, musician.getInstagramHandle()),
+                artistIdentityService.findFor(musician.getId())
         );
     }
 
     private VenueSelfAccountResponse venue(AuthenticatedPersona identity) {
         Venue venue = venueRepository.findById(identity.userId())
                 .orElseThrow(SelfAccountService::accountNotFound);
+        PublicProfileMediaService.CanonicalMediaBundle media =
+                mediaService.findCanonicalMedia(venue.getId(), PersonaType.VENUE);
         return new VenueSelfAccountResponse(
                 venue.getId(), PersonaType.VENUE, venue.getVenueName(), venue.getEmail(),
                 venue.getDescription(), locationMapper.selfLocation(venue),
@@ -84,13 +96,16 @@ public class SelfAccountService {
                 venue.getLiveMusic(), venue.getBookingStatus(), venue.getBookingMethod(),
                 venue.getDesiredArtistDraw(), venue.getConnectionGoals(), venue.getWebsiteUrl(),
                 venue.getBookingEmail(), venue.getOnboardingStatus(), venue.getOnboardingCompletedAt(),
-                venue.getOnboardingVersion(), mediaService.findProfileImage(venue.getId(), PersonaType.VENUE)
+                venue.getOnboardingVersion(), media.profileImage(), media.bannerImage(), media.galleryImages(),
+                externalConnectionService.selfConnections(venue.getId(), PersonaType.VENUE)
         );
     }
 
     private PromoterSelfAccountResponse promoter(AuthenticatedPersona identity) {
         Promoter promoter = promoterRepository.findById(identity.userId())
                 .orElseThrow(SelfAccountService::accountNotFound);
+        PublicProfileMediaService.CanonicalMediaBundle media =
+                mediaService.findCanonicalMedia(promoter.getId(), PersonaType.PROMOTER);
         return new PromoterSelfAccountResponse(
                 promoter.getId(), PersonaType.PROMOTER, promoter.getBusinessName(), promoter.getEmail(),
                 promoter.getBio(), locationMapper.selfLocation(promoter),
@@ -102,8 +117,8 @@ public class SelfAccountService {
                         .toList(),
                 promoter.getConnectionGoals(), promoter.getWebsiteUrl(), promoter.getPhone(),
                 promoter.getOnboardingStatus(), promoter.getOnboardingCompletedAt(),
-                promoter.getOnboardingVersion(),
-                mediaService.findProfileImage(promoter.getId(), PersonaType.PROMOTER)
+                promoter.getOnboardingVersion(), media.profileImage(), media.bannerImage(), media.galleryImages(),
+                externalConnectionService.selfConnections(promoter.getId(), PersonaType.PROMOTER)
         );
     }
 

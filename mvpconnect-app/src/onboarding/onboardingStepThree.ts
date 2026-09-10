@@ -7,6 +7,7 @@ import type {
   ArtistTravelSelection,
   DrawRangeCode,
   EquipmentItemDto,
+  PerformanceMediaReferenceDto,
   StepThreeFormData,
   StepThreeRequest,
   VenueStageFormData,
@@ -215,6 +216,9 @@ export const hydrateArtistLiveData = (data: OnboardingStepData): ArtistLiveFormD
     : null,
   equipmentBrought: equipmentItems(data.equipmentBrought),
   venuesPlayed: venueReferences(data.venuesPlayed),
+  ...(Array.isArray(data.performanceImages)
+    ? { performanceImages: data.performanceImages as PerformanceMediaReferenceDto[] }
+    : {}),
 });
 
 export const hydrateVenueStageData = (data: OnboardingStepData): VenueStageFormData => ({
@@ -262,7 +266,9 @@ export const normalizeArtistLiveDataForPayload = (
     setLengthMinutes: data.setLengthMinutes,
     equipmentBrought: data.equipmentBrought.map((item) => ({ ...item })),
     venuesPlayed: normalizedVenueReferences(data.venuesPlayed),
-    performanceImages: [],
+    ...(data.performanceImages !== undefined
+      ? { performanceImages: data.performanceImages.map((item) => ({ ...item })) }
+      : {}),
   };
 };
 

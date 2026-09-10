@@ -36,6 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @ExtendWith(MockitoExtension.class)
 class SelfAccountServiceTest {
@@ -45,6 +48,8 @@ class SelfAccountServiceTest {
     @Mock private VenueRepository venueRepository;
     @Mock private PromoterRepository promoterRepository;
     @Mock private PublicProfileMediaService mediaService;
+    @Mock private ExternalConnectionService externalConnectionService;
+    @Mock private ArtistIdentityService artistIdentityService;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final PublicProfileMediaResponse image = new PublicProfileMediaResponse(
@@ -60,8 +65,12 @@ class SelfAccountServiceTest {
                 venueRepository,
                 promoterRepository,
                 mediaService,
-                new ProfileLocationMapper()
+                new ProfileLocationMapper(),
+                externalConnectionService,
+                artistIdentityService
         );
+        lenient().when(mediaService.findCanonicalMedia(anyString(), any(PersonaType.class)))
+                .thenReturn(new PublicProfileMediaService.CanonicalMediaBundle(null, null, List.of()));
     }
 
     @Test
@@ -75,13 +84,15 @@ class SelfAccountServiceTest {
         musician.setLocationDisplay("Brooklyn, NY");
         musician.setLocationAddressLine1("Private apartment");
         musician.setEquipmentBrought(List.of("GUITAR_AMP:2", "MICROPHONES"));
+        musician.setConnectionGoals(List.of("BOOK_SHOWS", "FIND_PROMOTERS"));
         musician.setProfileImageUrl("https://legacy.example/image.jpg");
         musician.setOnboardingStatus(PersonaOnboardingStatus.COMPLETE);
         musician.setOnboardingCompletedAt(LocalDateTime.of(2026, 9, 4, 12, 0));
         musician.setOnboardingVersion(2);
         when(personaProvider.current()).thenReturn(new AuthenticatedPersona("musician-1", PersonaType.MUSICIAN));
         when(musicianRepository.findById("musician-1")).thenReturn(Optional.of(musician));
-        when(mediaService.findProfileImage("musician-1", PersonaType.MUSICIAN)).thenReturn(image);
+        when(mediaService.findCanonicalMedia("musician-1", PersonaType.MUSICIAN))
+                .thenReturn(new PublicProfileMediaService.CanonicalMediaBundle(image, null, List.of()));
 
         SelfAccountResponse response = service.getCurrentAccount();
         JsonNode json = objectMapper.valueToTree(response);
@@ -94,6 +105,8 @@ class SelfAccountServiceTest {
         assertEquals("media-1", json.path("profileImage").path("mediaId").asText());
         assertEquals(2, json.path("equipmentBrought").get(0).path("quantity").asInt());
         assertTrue(json.path("equipmentBrought").get(1).path("quantity").isNull());
+        assertEquals(List.of("BOOK_SHOWS", "FIND_PROMOTERS"),
+                ((MusicianSelfAccountResponse) response).connectionGoals());
         assertFalse(json.has("password"));
         assertFalse(json.has("profileImageUrl"));
         assertFalse(json.has("onboardingDrafts"));
@@ -109,6 +122,7 @@ class SelfAccountServiceTest {
         venue.setEmail("venue@example.com");
         venue.setSoundcheckAvailability(SoundcheckAvailability.BY_ARRANGEMENT);
         venue.setEquipmentAvailable(List.of("DI_BOXES:6", "DRUM_KIT"));
+        venue.setConnectionGoals(List.of("FILL_OPEN_DATES"));
         when(personaProvider.current()).thenReturn(new AuthenticatedPersona("venue-1", PersonaType.VENUE));
         when(venueRepository.findById("venue-1")).thenReturn(Optional.of(venue));
 
@@ -121,6 +135,8 @@ class SelfAccountServiceTest {
                 ((VenueSelfAccountResponse) response).soundcheckAvailability());
         assertEquals(6, ((VenueSelfAccountResponse) response).equipmentAvailable().getFirst().quantity());
         assertNull(((VenueSelfAccountResponse) response).equipmentAvailable().get(1).quantity());
+        assertEquals(List.of("FILL_OPEN_DATES"),
+                ((VenueSelfAccountResponse) response).connectionGoals());
     }
 
     @Test
@@ -132,6 +148,7 @@ class SelfAccountServiceTest {
         promoter.setAdditionalMarkets(LocationListCodec.encode(List.of(new LocationDto(
                 "Austin, TX", null, null, "Austin", "TX", null, "US",
                 30.2672, -97.7431, null, "place-austin"))));
+        promoter.setConnectionGoals(List.of("FIND_ARTISTS", "FIND_VENUES"));
         when(personaProvider.current()).thenReturn(new AuthenticatedPersona("promoter-1", PersonaType.PROMOTER));
         when(promoterRepository.findById("promoter-1")).thenReturn(Optional.of(promoter));
 
@@ -142,5 +159,7 @@ class SelfAccountServiceTest {
         assertEquals("Night Signal Presents", ((PromoterSelfAccountResponse) response).displayName());
         assertEquals("Austin", ((PromoterSelfAccountResponse) response)
                 .additionalMarkets().getFirst().city());
+        assertEquals(List.of("FIND_ARTISTS", "FIND_VENUES"),
+                ((PromoterSelfAccountResponse) response).connectionGoals());
     }
 }

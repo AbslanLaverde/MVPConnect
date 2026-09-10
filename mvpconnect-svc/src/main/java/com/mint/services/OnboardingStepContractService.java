@@ -20,6 +20,8 @@ import com.mint.dto.onboarding.promoter.PromoterMediaStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterSpecialtiesStepRequest;
 import com.mint.dto.onboarding.shared.EntityReferenceDto;
+import com.mint.dto.onboarding.shared.ArtistIdentityReferenceDto;
+import com.mint.dto.onboarding.shared.ExternalConnectionReferenceDto;
 import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.onboarding.shared.MediaReferenceDto;
 import com.mint.dto.onboarding.shared.PerformanceMediaReferenceDto;
@@ -41,6 +43,11 @@ import com.mint.onboarding.PersonaType;
 import com.mint.onboarding.ValidatedOnboardingStep;
 import com.mint.onboarding.taxonomy.EntityType;
 import com.mint.repositories.OnboardingStepRepository;
+import com.mint.repositories.ExternalArtistRepository;
+import com.mint.repositories.ExternalConnectionRepository;
+import com.mint.externalconnection.ExternalConnectionMethod;
+import com.mint.externalconnection.ExternalConnectionStatus;
+import com.mint.externalconnection.ExternalProvider;
 import com.mint.security.AuthenticatedPersona;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -64,6 +71,8 @@ public class OnboardingStepContractService {
     private final OnboardingStepRegistry stepRegistry;
     private final OnboardingStepRepository stepRepository;
     private final MediaService mediaService;
+    private final ExternalConnectionRepository externalConnectionRepository;
+    private final ExternalArtistRepository externalArtistRepository;
     private final Validator validator;
     private final ObjectMapper strictObjectMapper;
 
@@ -71,11 +80,15 @@ public class OnboardingStepContractService {
             OnboardingStepRegistry stepRegistry,
             OnboardingStepRepository stepRepository,
             MediaService mediaService,
+            ExternalConnectionRepository externalConnectionRepository,
+            ExternalArtistRepository externalArtistRepository,
             Validator validator,
             ObjectMapper objectMapper) {
         this.stepRegistry = stepRegistry;
         this.stepRepository = stepRepository;
         this.mediaService = mediaService;
+        this.externalConnectionRepository = externalConnectionRepository;
+        this.externalArtistRepository = externalArtistRepository;
         this.validator = validator;
         this.strictObjectMapper = objectMapper.copy()
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -244,7 +257,21 @@ public class OnboardingStepContractService {
         } else if (data instanceof ArtistMediaStepRequest request) {
             validateMedia("bannerImage.mediaId", request.bannerImage(), MediaType.BANNER_IMAGE,
                     owner, step, errors);
+            duplicatesBy("showcaseImages", request.showcaseImages(), MediaReferenceDto::mediaId, errors);
+            mediaList("showcaseImages", request.showcaseImages(), MediaType.GALLERY_IMAGE,
+                    owner, step, errors);
             url("websiteUrl", request.websiteUrl(), errors);
+            connection("bandcampConnection", request.bandcampConnection(), ExternalProvider.BANDCAMP,
+                    owner, errors);
+            connection("instagramConnection", request.instagramConnection(), ExternalProvider.INSTAGRAM,
+                    owner, errors);
+            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
+                    owner, errors);
+            connection("youtubeConnection", request.youtubeConnection(), ExternalProvider.YOUTUBE,
+                    owner, errors);
+            connection("soundCloudConnection", request.soundCloudConnection(), ExternalProvider.SOUNDCLOUD,
+                    owner, errors);
+            artistIdentity("spotifyArtistIdentity", request.spotifyArtistIdentity(), owner, errors);
         } else if (data instanceof ArtistGoalsStepRequest request) {
             duplicates("connectionGoals", request.connectionGoals(), errors);
         } else if (data instanceof VenueRoomStepRequest request) {
@@ -271,6 +298,12 @@ public class OnboardingStepContractService {
             duplicatesBy("galleryImages", request.galleryImages(), MediaReferenceDto::mediaId, errors);
             mediaList("galleryImages", request.galleryImages(), MediaType.GALLERY_IMAGE,
                     owner, step, errors);
+            connection("instagramConnection", request.instagramConnection(), ExternalProvider.INSTAGRAM,
+                    owner, errors);
+            connection("facebookConnection", request.facebookConnection(), ExternalProvider.FACEBOOK,
+                    owner, errors);
+            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
+                    owner, errors);
         } else if (data instanceof VenueGoalsStepRequest request) {
             duplicates("connectionGoals", request.connectionGoals(), errors);
         } else if (data instanceof PromoterBusinessStepRequest request) {
@@ -293,6 +326,15 @@ public class OnboardingStepContractService {
         } else if (data instanceof PromoterMediaStepRequest request) {
             validateMedia("bannerImage.mediaId", request.bannerImage(), MediaType.BANNER_IMAGE,
                     owner, step, errors);
+            duplicatesBy("galleryImages", request.galleryImages(), MediaReferenceDto::mediaId, errors);
+            mediaList("galleryImages", request.galleryImages(), MediaType.GALLERY_IMAGE,
+                    owner, step, errors);
+            connection("instagramConnection", request.instagramConnection(), ExternalProvider.INSTAGRAM,
+                    owner, errors);
+            connection("facebookConnection", request.facebookConnection(), ExternalProvider.FACEBOOK,
+                    owner, errors);
+            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
+                    owner, errors);
         } else if (data instanceof PromoterGoalsStepRequest request) {
             duplicates("connectionGoals", request.connectionGoals(), errors);
         }
@@ -381,6 +423,50 @@ public class OnboardingStepContractService {
             }
         } catch (IllegalArgumentException exception) {
             errors.add(new OnboardingFieldError(field, "INVALID_FORMAT"));
+        }
+    }
+
+    private void connection(
+            String field,
+            ExternalConnectionReferenceDto reference,
+            ExternalProvider expectedProvider,
+            AuthenticatedPersona owner,
+            List<OnboardingFieldError> errors) {
+        if (reference == null || reference.connectionId() == null || reference.provider() == null) return;
+        if (reference.provider() != expectedProvider) {
+            errors.add(new OnboardingFieldError(field + ".provider", "INVALID"));
+            return;
+        }
+        ExternalConnectionMethod expectedMethod = switch (expectedProvider) {
+            case YOUTUBE, SOUNDCLOUD -> ExternalConnectionMethod.OAUTH;
+            case INSTAGRAM, TIKTOK, BANDCAMP, FACEBOOK -> ExternalConnectionMethod.PROFILE_URL;
+            case SPOTIFY -> ExternalConnectionMethod.PROVIDER_SEARCH;
+        };
+        boolean valid = externalConnectionRepository.findById(reference.connectionId())
+                .filter(connection -> owner.userId().equals(connection.getOwnerId()))
+                .filter(connection -> owner.persona() == connection.getOwnerPersona())
+                .filter(connection -> connection.getProvider() == expectedProvider)
+                .filter(connection -> connection.getConnectionMethod() == expectedMethod)
+                .filter(connection -> connection.getStatus() == ExternalConnectionStatus.CONNECTED
+                        || (expectedMethod == ExternalConnectionMethod.PROFILE_URL
+                            && connection.getStatus() == ExternalConnectionStatus.UNVERIFIED))
+                .isPresent();
+        if (!valid) {
+            errors.add(new OnboardingFieldError(field + ".connectionId", "INVALID"));
+        }
+    }
+
+    private void artistIdentity(
+            String field,
+            ArtistIdentityReferenceDto reference,
+            AuthenticatedPersona owner,
+            List<OnboardingFieldError> errors) {
+        if (reference == null || reference.externalArtistId() == null) return;
+        boolean attached = externalArtistRepository.findArtistIdentity(owner.userId())
+                .map(identity -> identity.getId().equals(reference.externalArtistId()))
+                .orElse(false);
+        if (!attached) {
+            errors.add(new OnboardingFieldError(field + ".externalArtistId", "INVALID"));
         }
     }
 

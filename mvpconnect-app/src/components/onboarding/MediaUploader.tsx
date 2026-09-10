@@ -61,6 +61,8 @@ export interface MediaUploaderProps {
   emptyCopy?: string;
   fieldContainerStyle?: StyleProp<ViewStyle>;
   error?: string;
+  removeAccessibilityLabel?: string;
+  replaceAccessibilityLabel?: string;
 }
 
 export const EMPTY_MEDIA_STATE: MediaUploaderState = { status: 'EMPTY' };
@@ -90,6 +92,7 @@ const MODE_LABELS: Record<MediaUploadMode, string> = {
 
 const previewUriFor = (state: MediaUploaderState): string | undefined => {
   if (state.status === 'UPLOADED') return state.media.url;
+  if (state.status === 'REMOVING') return undefined;
   if ('file' in state) return state.file?.uri;
   if (state.status === 'ERROR') return state.media?.url;
   return undefined;
@@ -118,6 +121,8 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   emptyCopy,
   fieldContainerStyle,
   error,
+  removeAccessibilityLabel = 'Remove image',
+  replaceAccessibilityLabel,
 }) => {
   const [internalState, setInternalState] = useState<MediaUploaderState>(defaultState);
   const currentState = state ?? internalState;
@@ -129,7 +134,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     onStateChange?.(nextState);
   };
 
-  const upload = async (file: MediaFile) => {
+  const upload = async (file: MediaFile, previousMedia?: UploadedMedia) => {
     if (!adapter) return;
     commit({ status: 'UPLOADING', file, progress: 0 });
     try {
@@ -141,6 +146,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       commit({
         status: 'ERROR',
         file,
+        media: previousMedia,
         error: "We couldn't save this image.",
       });
     }
@@ -156,8 +162,13 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         commit({ status: 'ERROR', error: validationError });
         return;
       }
+      const previousMedia = currentState.status === 'UPLOADED'
+        ? currentState.media
+        : currentState.status === 'ERROR'
+          ? currentState.media
+          : undefined;
       commit({ status: 'SELECTED_LOCAL', file });
-      await upload(file);
+      await upload(file, previousMedia);
     } catch {
       commit({ status: 'ERROR', error: 'Image selection failed. Please try again.' });
     }
@@ -189,7 +200,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 
   const retryUpload = async () => {
     if (disabled || !adapter || currentState.status !== 'ERROR' || !currentState.file) return;
-    await upload(currentState.file);
+    await upload(currentState.file, currentState.media);
   };
 
   const statusCopy = (() => {
@@ -296,7 +307,9 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
             onPress={() => void selectImage()}
             disabled={!pickerAvailable || disabled || uploading || removing}
             accessibilityRole="button"
-            accessibilityLabel={previewUri ? 'Replace image' : 'Select image'}
+            accessibilityLabel={previewUri
+              ? replaceAccessibilityLabel ?? 'Replace image'
+              : 'Select image'}
             accessibilityHint={!pickerAvailable
               ? 'A native image picker has not been connected.'
               : undefined}
@@ -315,7 +328,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
               onPress={() => void removeImage()}
               disabled={disabled || uploading}
               accessibilityRole="button"
-              accessibilityLabel="Remove image"
+              accessibilityLabel={removeAccessibilityLabel}
               accessibilityState={{ disabled: disabled || uploading }}
             >
               <Text style={[fieldStyles.textActionLabel, fieldStyles.removeActionLabel]}>REMOVE</Text>

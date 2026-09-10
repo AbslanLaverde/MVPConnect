@@ -273,6 +273,20 @@ class MediaServiceTest {
     }
 
     @Test
+    void canonicalValidationRejectsAStoredInvalidTypeContextPair() {
+        MediaAsset asset = asset(MediaType.PROFILE_IMAGE, MediaStatus.READY, owner);
+        asset.setMediaContext(MediaContext.EVENT);
+        when(mediaAssetRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
+
+        MediaException exception = assertThrows(
+                MediaException.class,
+                () -> mediaService.validateOwnedReadyMedia(
+                        owner, asset.getId(), MediaType.PROFILE_IMAGE));
+
+        assertEquals(MediaException.INVALID_MEDIA_TYPE_CONTEXT, exception.getCode());
+    }
+
+    @Test
     void validationRejectsPendingMedia() {
         MediaAsset asset = asset(MediaType.PROFILE_IMAGE, MediaStatus.PENDING, owner);
         when(mediaAssetRepository.findById(asset.getId())).thenReturn(Optional.of(asset));
@@ -283,6 +297,21 @@ class MediaServiceTest {
         );
 
         assertEquals(MediaException.MEDIA_NOT_READY, exception.getCode());
+    }
+
+    @Test
+    void uploadTypeAndContextMustMatchTheCanonicalMatrix() {
+        when(authenticatedPersonaProvider.current()).thenReturn(owner);
+        CreateMediaUploadRequest request = new CreateMediaUploadRequest(
+                "PROFILE_IMAGE", "EVENT", "wrong.jpg", "image/jpeg", 100L,
+                100, 100, null);
+
+        MediaException exception = assertThrows(
+                MediaException.class,
+                () -> mediaService.initializeUpload(request));
+
+        assertEquals(MediaException.INVALID_MEDIA_TYPE_CONTEXT, exception.getCode());
+        verify(mediaAssetRepository, never()).save(any());
     }
 
     @Test

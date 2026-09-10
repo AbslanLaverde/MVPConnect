@@ -95,4 +95,27 @@ public interface ExternalArtistRepository extends Neo4jRepository<ExternalArtist
             MERGE (owner)-[:HAS_ON_ROSTER]->(artist)
             """)
     void linkHasOnRoster(String ownerId, String artistId);
+
+    @Query("""
+            MATCH (:Musician {id: $ownerId})-[:HAS_ARTIST_IDENTITY]->(artist:ExternalArtist)
+            RETURN artist
+            LIMIT 1
+            """)
+    Optional<ExternalArtist> findArtistIdentity(String ownerId);
+
+    @Query("""
+            MATCH (owner:Musician {id: $ownerId})
+            MATCH (artist:ExternalArtist {id: $artistId})
+            OPTIONAL MATCH (owner)-[existing:HAS_ARTIST_IDENTITY]->(:ExternalArtist)
+            WITH owner, artist, collect(existing) AS relationships
+            FOREACH (relationship IN relationships | DELETE relationship)
+            MERGE (owner)-[:HAS_ARTIST_IDENTITY]->(artist)
+            """)
+    void replaceArtistIdentity(String ownerId, String artistId);
+
+    @Query("""
+            MATCH (:Musician {id: $ownerId})-[relationship:HAS_ARTIST_IDENTITY]->(:ExternalArtist)
+            DELETE relationship
+            """)
+    void disconnectArtistIdentity(String ownerId);
 }
