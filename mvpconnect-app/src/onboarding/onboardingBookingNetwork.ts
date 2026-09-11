@@ -147,7 +147,6 @@ export const emptyPromoterNetworkData = (): PromoterNetworkFormData => ({
   rosterArtists: [],
   venues: [],
   additionalMarkets: [],
-  pastShows: [],
 });
 
 export const hydrateBookingNetworkData = (
@@ -165,7 +164,7 @@ export const hydrateBookingNetworkData = (
       bookingEmail: typeof data.bookingEmail === 'string' ? data.bookingEmail : '',
     };
   }
-  return {
+  const hydrated = {
     acceptingStatus: enumValue<PromoterAcceptingStatus>(data.acceptingStatus, ACCEPTING_STATUSES),
     rosterSize: enumValue<RosterSizeRange>(data.rosterSize, ROSTER_SIZES),
     rosterArtists: references(data.rosterArtists, 'ARTIST'),
@@ -173,8 +172,10 @@ export const hydrateBookingNetworkData = (
     additionalMarkets: Array.isArray(data.additionalMarkets)
       ? data.additionalMarkets.map(hydrateOnboardingLocation)
       : [],
-    pastShows: performanceReferences(data.pastShows),
   };
+  return Array.isArray(data.pastShows)
+    ? { ...hydrated, pastShows: performanceReferences(data.pastShows) }
+    : hydrated;
 };
 
 export const normalizeVenueBookingForPayload = (
@@ -202,7 +203,7 @@ export const normalizePromoterNetworkForPayload = (
     venues: normalizedReferences(data.venues),
     additionalMarkets: data.additionalMarkets.map((location) =>
       normalizeLocationForPayload(location, false)),
-    pastShows: [...data.pastShows],
+    ...(data.pastShows ? { pastShows: [...data.pastShows] } : {}),
   };
 };
 

@@ -68,6 +68,24 @@ export const externalArtistProvider: ArtistReferenceProvider = {
   },
 };
 
+export const artistIdentityService = {
+  current: async (): Promise<ExternalArtistResult | null> => {
+    const response = await getApi().get<ExternalArtistResult>('/me/artist-identity', {
+      validateStatus: (status) => status === 200 || status === 204,
+    });
+    return response.status === 204 ? null : response.data;
+  },
+  attach: async (externalArtistId: string): Promise<ExternalArtistResult> => {
+    const response = await getApi().put<ExternalArtistResult>('/me/artist-identity', {
+      externalArtistId,
+    });
+    return response.data;
+  },
+  disconnect: async (): Promise<void> => {
+    await getApi().delete('/me/artist-identity');
+  },
+};
+
 export const isSpotifyUnavailableError = (error: unknown): boolean =>
   axios.isAxiosError(error)
   && error.response?.data?.code === 'SPOTIFY_UNAVAILABLE';

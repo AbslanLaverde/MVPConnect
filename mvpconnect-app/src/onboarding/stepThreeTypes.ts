@@ -53,7 +53,7 @@ export interface ArtistLiveStepRequest {
   setLengthMinutes: number | null;
   equipmentBrought: EquipmentItemDto[];
   venuesPlayed: VenueEntityReferenceDto[];
-  performanceImages: PerformanceMediaReferenceDto[];
+  performanceImages?: PerformanceMediaReferenceDto[];
 }
 
 export interface VenueStageStepRequest {
@@ -73,6 +73,8 @@ export interface ArtistLiveFormData {
   setLengthMinutes: ArtistSetLengthMinutes | null;
   equipmentBrought: EquipmentItemDto[];
   venuesPlayed: VenueEntityReferenceDto[];
+  /** Deprecated compatibility state; the real Playing Live UI does not edit this field. */
+  performanceImages?: PerformanceMediaReferenceDto[];
 }
 
 export interface VenueStageFormData {

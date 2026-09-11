@@ -2,6 +2,8 @@ package com.mint.dto.response.account;
 
 import com.mint.dto.onboarding.shared.EquipmentItemDto;
 import com.mint.dto.response.profile.PublicProfileMediaResponse;
+import com.mint.dto.response.externalartist.ExternalArtistResponse;
+import com.mint.dto.response.externalconnection.SelfExternalConnectionResponse;
 import com.mint.onboarding.PersonaOnboardingStatus;
 import com.mint.onboarding.PersonaType;
 import com.mint.onboarding.taxonomy.ArtistBookingStatus;
@@ -34,5 +36,9 @@ public record MusicianSelfAccountResponse(
         PersonaOnboardingStatus onboardingStatus,
         LocalDateTime onboardingCompletedAt,
         Integer onboardingVersion,
-        PublicProfileMediaResponse profileImage) implements SelfAccountResponse {
+        PublicProfileMediaResponse profileImage,
+        PublicProfileMediaResponse bannerImage,
+        List<PublicProfileMediaResponse> galleryImages,
+        List<SelfExternalConnectionResponse> externalConnections,
+        ExternalArtistResponse spotifyArtistIdentity) implements SelfAccountResponse {
 }

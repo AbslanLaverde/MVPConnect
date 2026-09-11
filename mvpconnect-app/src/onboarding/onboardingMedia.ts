@@ -5,6 +5,7 @@ import type {
   MediaUploadAdapter,
   UploadedMedia,
 } from '../components/onboarding/MediaUploader';
+import type { OnboardingPersona } from './onboardingTypes';
 
 export interface MediaUploadInitialization {
   mediaId: string;
@@ -27,6 +28,25 @@ export interface OwnedMediaResponse {
   url?: string;
 }
 
+export type MediaType = OwnedMediaResponse['mediaType'];
+export type MediaContext = OwnedMediaResponse['mediaContext'];
+
+export const onboardingMediaContexts = (persona: OnboardingPersona): {
+  banner: MediaContext;
+  gallery: MediaContext;
+} => {
+  if (persona === 'venue') return { banner: 'VENUE', gallery: 'VENUE' };
+  if (persona === 'promoter') return { banner: 'EVENT', gallery: 'EVENT' };
+  return { banner: 'PROFILE', gallery: 'PERFORMANCE' };
+};
+
+export interface OnboardingMediaUploadOptions {
+  stepKey: string;
+  mediaType: MediaType;
+  mediaContext: MediaContext;
+  sortOrder?: number;
+}
+
 const blobFor = async (file: MediaFile): Promise<Blob> => {
   if (file.blob) return file.blob;
   const response = await fetch(file.uri);
@@ -34,7 +54,7 @@ const blobFor = async (file: MediaFile): Promise<Blob> => {
   return response.blob();
 };
 
-export const pickOnboardingProfileImage = async (): Promise<MediaFile | undefined> => {
+export const pickOnboardingImage = async (): Promise<MediaFile | undefined> => {
   const ImagePicker = require('expo-image-picker') as typeof import('expo-image-picker');
   if (Platform.OS !== 'web') {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -61,7 +81,7 @@ export const pickOnboardingProfileImage = async (): Promise<MediaFile | undefine
   const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
   return {
     uri: asset.uri,
-    name: asset.fileName ?? `profile-image-${Date.now()}.${extension}`,
+    name: asset.fileName ?? `onboarding-image-${Date.now()}.${extension}`,
     type: mimeType,
     size: asset.fileSize ?? blob.size,
     width: asset.width,
@@ -70,21 +90,21 @@ export const pickOnboardingProfileImage = async (): Promise<MediaFile | undefine
   };
 };
 
-export const uploadOnboardingProfileImage = async (
-  stepKey: string,
+export const uploadOnboardingMedia = async (
+  options: OnboardingMediaUploadOptions,
   file: MediaFile,
   onProgress?: (progress: number) => void,
 ): Promise<UploadedMedia> => {
   onProgress?.(0.08);
   const initialized = await api.post<MediaUploadInitialization>('/media/uploads', {
-    mediaType: 'PROFILE_IMAGE',
-    mediaContext: 'PROFILE',
+    mediaType: options.mediaType,
+    mediaContext: options.mediaContext,
     fileName: file.name,
     mimeType: file.type,
     sizeBytes: file.size,
     width: file.width ?? null,
     height: file.height ?? null,
-    sortOrder: 0,
+    sortOrder: options.sortOrder ?? null,
   });
 
   const { mediaId, uploadUrl, requiredHeaders } = initialized.data;
@@ -105,7 +125,7 @@ export const uploadOnboardingProfileImage = async (
   if (completed.data.status !== 'READY') throw new Error('The image did not become ready.');
   onProgress?.(0.9);
 
-  await api.post(`/onboarding/steps/${stepKey}/media/${mediaId}`);
+  await api.post(`/onboarding/steps/${options.stepKey}/media/${mediaId}`);
   onProgress?.(1);
 
   return {
@@ -118,9 +138,59 @@ export const uploadOnboardingProfileImage = async (
   };
 };
 
-export const createOnboardingMediaAdapter = (stepKey: string): MediaUploadAdapter => ({
-  upload: (file, onProgress) => uploadOnboardingProfileImage(stepKey, file, onProgress),
+// Kept for Step 1 compatibility. Media screens use the generic name because the
+// same picker now feeds profile, banner, and gallery uploads.
+export const pickOnboardingProfileImage = pickOnboardingImage;
+
+export const fetchOwnedMedia = async (mediaId: string): Promise<OwnedMediaResponse> => {
+  const response = await api.get<OwnedMediaResponse>(`/media/${mediaId}`);
+  return response.data;
+};
+
+export const uploadOnboardingProfileImage = async (
+  stepKey: string,
+  file: MediaFile,
+  onProgress?: (progress: number) => void,
+): Promise<UploadedMedia> => uploadOnboardingMedia({
+  stepKey,
+  mediaType: 'PROFILE_IMAGE',
+  mediaContext: 'PROFILE',
+  sortOrder: 0,
+}, file, onProgress);
+
+export const createOnboardingMediaAdapter = (
+  stepKey: string,
+  configuration: Omit<OnboardingMediaUploadOptions, 'stepKey'> = {
+    mediaType: 'PROFILE_IMAGE',
+    mediaContext: 'PROFILE',
+    sortOrder: 0,
+  },
+): MediaUploadAdapter => ({
+  upload: (file, onProgress) => uploadOnboardingMedia(
+    { stepKey, ...configuration },
+    file,
+    onProgress,
+  ),
   remove: async (mediaId) => {
     await api.delete(`/media/${mediaId}`);
   },
+});
+
+export const createOnboardingBannerAdapter = (
+  stepKey: string,
+  mediaContext: MediaContext = 'PROFILE',
+): MediaUploadAdapter => createOnboardingMediaAdapter(stepKey, {
+  mediaType: 'BANNER_IMAGE',
+  mediaContext,
+  sortOrder: 0,
+});
+
+export const createOnboardingGalleryAdapter = (
+  stepKey: string,
+  mediaContext: MediaContext = 'PROFILE',
+  sortOrder?: number,
+): MediaUploadAdapter => createOnboardingMediaAdapter(stepKey, {
+  mediaType: 'GALLERY_IMAGE',
+  mediaContext,
+  sortOrder,
 });

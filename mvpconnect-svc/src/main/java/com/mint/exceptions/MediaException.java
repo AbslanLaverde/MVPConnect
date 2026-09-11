@@ -6,6 +6,7 @@ public class MediaException extends RuntimeException {
 
     public static final String INVALID_MEDIA_TYPE = "INVALID_MEDIA_TYPE";
     public static final String INVALID_MEDIA_CONTEXT = "INVALID_MEDIA_CONTEXT";
+    public static final String INVALID_MEDIA_TYPE_CONTEXT = "INVALID_MEDIA_TYPE_CONTEXT";
     public static final String INVALID_MEDIA_FILE = "INVALID_MEDIA_FILE";
     public static final String MEDIA_TOO_LARGE = "MEDIA_TOO_LARGE";
     public static final String MEDIA_NOT_FOUND = "MEDIA_NOT_FOUND";
@@ -37,6 +38,14 @@ public class MediaException extends RuntimeException {
                 INVALID_MEDIA_CONTEXT,
                 HttpStatus.BAD_REQUEST,
                 "Media context must be PROFILE, PERFORMANCE, VENUE, or EVENT."
+        );
+    }
+
+    public static MediaException invalidTypeContext(String mediaType, String mediaContext) {
+        return new MediaException(
+                INVALID_MEDIA_TYPE_CONTEXT,
+                HttpStatus.BAD_REQUEST,
+                "Media type " + mediaType + " cannot be uploaded with context " + mediaContext + "."
         );
     }
 

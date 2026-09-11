@@ -14,6 +14,7 @@ import com.mint.dto.onboarding.promoter.PromoterMediaStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterNetworkStepRequest;
 import com.mint.dto.onboarding.promoter.PromoterSpecialtiesStepRequest;
 import com.mint.dto.onboarding.shared.LocationDto;
+import com.mint.dto.onboarding.shared.MediaReferenceDto;
 import com.mint.dto.onboarding.venue.VenueBookingStepRequest;
 import com.mint.dto.onboarding.venue.VenueGoalsStepRequest;
 import com.mint.dto.onboarding.venue.VenueMediaStepRequest;
@@ -278,14 +279,28 @@ public class OnboardingService {
                 context.identity().persona(), validatedSteps);
         CanonicalVenueReferences venueReferences = venueIdentityRelationshipService.validate(
                 context.identity().persona(), validatedSteps);
-        String profileMediaId = promote(context, validatedSteps);
+        CanonicalMediaSelection canonicalMedia = promote(context, validatedSteps);
 
         LocalDateTime now = LocalDateTime.now();
         mediaAssetRepository.replaceCanonicalProfileMedia(
                 context.identity().userId(),
                 context.identity().persona().name(),
-                profileMediaId
+                canonicalMedia.profileMediaId()
         );
+        if (canonicalMedia.bannerMediaId() != null) {
+            mediaAssetRepository.replaceCanonicalBannerMedia(
+                    context.identity().userId(),
+                    context.identity().persona().name(),
+                    canonicalMedia.bannerMediaId()
+            );
+        }
+        if (canonicalMedia.replaceGallery()) {
+            mediaAssetRepository.replaceCanonicalGalleryMedia(
+                    context.identity().userId(),
+                    context.identity().persona().name(),
+                    galleryMemberships(canonicalMedia.galleryMediaIds())
+            );
+        }
         context.owner().setOnboardingStatus(PersonaOnboardingStatus.COMPLETE);
         context.owner().setOnboardingCompletedAt(now);
         context.owner().setOnboardingVersion(OnboardingStepRegistry.CURRENT_VERSION);
@@ -340,7 +355,7 @@ public class OnboardingService {
         return validated;
     }
 
-    private String promote(WorkflowContext context, Map<String, Object> steps) {
+    private CanonicalMediaSelection promote(WorkflowContext context, Map<String, Object> steps) {
         return switch (context.identity().persona()) {
             case MUSICIAN -> promoteMusician((Musician) context.owner(), steps);
             case VENUE -> promoteVenue((Venue) context.owner(), steps);
@@ -348,7 +363,7 @@ public class OnboardingService {
         };
     }
 
-    private String promoteMusician(Musician musician, Map<String, Object> steps) {
+    private CanonicalMediaSelection promoteMusician(Musician musician, Map<String, Object> steps) {
         ArtistBasicsStepRequest basics = requiredStep(steps, "basics", ArtistBasicsStepRequest.class);
         ArtistSoundStepRequest sound = requiredStep(steps, "sound", ArtistSoundStepRequest.class);
         ArtistLiveStepRequest live = requiredStep(steps, "live", ArtistLiveStepRequest.class);
@@ -367,11 +382,16 @@ public class OnboardingService {
         musician.setSetLengthMinutes(live.setLengthMinutes());
         musician.setEquipmentBrought(EquipmentItemCodec.encode(live.equipmentBrought()));
         musician.setConnectionGoals(codes(goals.connectionGoals()));
-        if (media != null) musician.setWebsiteUrl(media.websiteUrl());
-        return basics.profileImage().mediaId();
+        if (media != null && media.websiteUrl() != null) musician.setWebsiteUrl(media.websiteUrl());
+        return canonicalMedia(
+                basics.profileImage().mediaId(),
+                media == null ? null : media.bannerImage(),
+                media == null ? List.of() : media.showcaseImages(),
+                media != null
+        );
     }
 
-    private String promoteVenue(Venue venue, Map<String, Object> steps) {
+    private CanonicalMediaSelection promoteVenue(Venue venue, Map<String, Object> steps) {
         VenueRoomStepRequest room = requiredStep(steps, "room", VenueRoomStepRequest.class);
         VenueMusicStepRequest music = requiredStep(steps, "music", VenueMusicStepRequest.class);
         VenueStageStepRequest stage = requiredStep(steps, "stage", VenueStageStepRequest.class);
@@ -397,11 +417,16 @@ public class OnboardingService {
         venue.setDesiredArtistDraw(booking.desiredArtistDraw());
         venue.setBookingEmail(booking.bookingEmail());
         venue.setConnectionGoals(codes(goals.connectionGoals()));
-        if (media != null) venue.setWebsiteUrl(media.websiteUrl());
-        return room.profileImage().mediaId();
+        if (media != null && media.websiteUrl() != null) venue.setWebsiteUrl(media.websiteUrl());
+        return canonicalMedia(
+                room.profileImage().mediaId(),
+                media == null ? null : media.bannerImage(),
+                media == null ? List.of() : media.galleryImages(),
+                media != null
+        );
     }
 
-    private String promotePromoter(Promoter promoter, Map<String, Object> steps) {
+    private CanonicalMediaSelection promotePromoter(Promoter promoter, Map<String, Object> steps) {
         PromoterBusinessStepRequest business = requiredStep(
                 steps, "business", PromoterBusinessStepRequest.class);
         PromoterSpecialtiesStepRequest specialties = requiredStep(
@@ -410,6 +435,7 @@ public class OnboardingService {
                 steps, "network", PromoterNetworkStepRequest.class);
         PromoterGoalsStepRequest goals = requiredStep(
                 steps, "goals", PromoterGoalsStepRequest.class);
+        PromoterMediaStepRequest media = optionalStep(steps, "media", PromoterMediaStepRequest.class);
 
         promoter.setBio(business.bio());
         promoter.setWebsiteUrl(business.websiteUrl());
@@ -422,7 +448,33 @@ public class OnboardingService {
         promoter.setRosterSizeRange(network.rosterSize());
         promoter.setAdditionalMarkets(LocationListCodec.encode(network.additionalMarkets()));
         promoter.setConnectionGoals(codes(goals.connectionGoals()));
-        return business.profileImage().mediaId();
+        return canonicalMedia(
+                business.profileImage().mediaId(),
+                media == null ? null : media.bannerImage(),
+                media == null ? List.of() : media.galleryImages(),
+                media != null
+        );
+    }
+
+    private CanonicalMediaSelection canonicalMedia(
+            String profileMediaId,
+            MediaReferenceDto banner,
+            List<MediaReferenceDto> gallery,
+            boolean replaceGallery) {
+        return new CanonicalMediaSelection(
+                profileMediaId,
+                banner == null ? null : banner.mediaId(),
+                gallery.stream().map(MediaReferenceDto::mediaId).toList(),
+                replaceGallery
+        );
+    }
+
+    private List<Map<String, Object>> galleryMemberships(List<String> mediaIds) {
+        List<Map<String, Object>> memberships = new ArrayList<>();
+        for (int index = 0; index < mediaIds.size(); index++) {
+            memberships.add(Map.of("mediaId", mediaIds.get(index), "sortOrder", index));
+        }
+        return memberships;
     }
 
     private void applyLocation(StructuredLocationOwner owner, LocationDto location) {
@@ -727,5 +779,12 @@ public class OnboardingService {
     }
 
     private record WorkflowContext(AuthenticatedPersona identity, OnboardingOwner owner) {
+    }
+
+    private record CanonicalMediaSelection(
+            String profileMediaId,
+            String bannerMediaId,
+            List<String> galleryMediaIds,
+            boolean replaceGallery) {
     }
 }

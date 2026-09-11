@@ -637,9 +637,23 @@ export const fieldStyles = StyleSheet.create({
   galleryList: {
     gap: theme.spacing.md,
   },
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
+  },
+  galleryTile: {
+    flexGrow: 1,
+    flexBasis: 220,
+    minWidth: 210,
+    maxWidth: 340,
+    marginBottom: 0,
+  },
   galleryOrderActions: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
   },
   suggestionPanel: {
     borderLeftWidth: 3,

@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -37,6 +38,18 @@ public class MediaService {
             "image/jpeg", "jpg",
             "image/png", "png",
             "image/webp", "webp"
+    );
+
+    /**
+     * Context is an operational upload classification. Canonical profile meaning is
+     * derived from owner persona, media type, and onboarding step. PERFORMANCE remains
+     * valid only for the deprecated Step 3 compatibility fields.
+     */
+    private static final Map<MediaType, Set<MediaContext>> ALLOWED_CONTEXTS = Map.of(
+            MediaType.PROFILE_IMAGE, Set.of(MediaContext.PROFILE),
+            MediaType.BANNER_IMAGE, Set.of(MediaContext.PROFILE, MediaContext.VENUE, MediaContext.EVENT),
+            MediaType.GALLERY_IMAGE, Set.of(
+                    MediaContext.PROFILE, MediaContext.PERFORMANCE, MediaContext.VENUE, MediaContext.EVENT)
     );
 
     private final AuthenticatedPersonaProvider authenticatedPersonaProvider;
@@ -60,6 +73,7 @@ public class MediaService {
         AuthenticatedPersona owner = authenticatedPersonaProvider.current();
         MediaType mediaType = parseMediaType(request.mediaType());
         MediaContext mediaContext = parseMediaContext(request.mediaContext());
+        validateTypeContext(mediaType, mediaContext);
         String mimeType = normalizeAndValidateMimeType(request.mimeType());
         validateFileSize(request.sizeBytes());
         String originalFileName = normalizeFileName(request.fileName());
@@ -197,6 +211,7 @@ public class MediaService {
         if (expectedMediaType != null && asset.getMediaType() != expectedMediaType) {
             throw MediaException.wrongType(expectedMediaType.name());
         }
+        validateTypeContext(asset.getMediaType(), asset.getMediaContext());
         return asset;
     }
 
@@ -257,6 +272,14 @@ public class MediaService {
             return MediaContext.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (RuntimeException exception) {
             throw MediaException.invalidMediaContext();
+        }
+    }
+
+    private void validateTypeContext(MediaType mediaType, MediaContext mediaContext) {
+        if (!ALLOWED_CONTEXTS.getOrDefault(mediaType, Set.of()).contains(mediaContext)) {
+            throw MediaException.invalidTypeContext(
+                    mediaType == null ? "UNKNOWN" : mediaType.name(),
+                    mediaContext == null ? "UNKNOWN" : mediaContext.name());
         }
     }
 

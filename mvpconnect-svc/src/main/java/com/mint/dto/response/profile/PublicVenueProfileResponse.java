@@ -1,6 +1,7 @@
 package com.mint.dto.response.profile;
 
 import com.mint.dto.onboarding.shared.EquipmentItemDto;
+import com.mint.dto.response.externalconnection.PublicExternalConnectionResponse;
 import com.mint.onboarding.taxonomy.BookingMethod;
 import com.mint.onboarding.taxonomy.DrawRangeCode;
 import com.mint.onboarding.taxonomy.PaAvailability;
@@ -29,7 +30,9 @@ public record PublicVenueProfileResponse(
         VenueBookingStatus bookingStatus,
         BookingMethod bookingMethod,
         DrawRangeCode desiredArtistDraw,
-        List<String> connectionGoals,
         String websiteUrl,
-        PublicProfileMediaResponse profileImage) {
+        PublicProfileMediaResponse profileImage,
+        PublicProfileMediaResponse bannerImage,
+        List<PublicProfileMediaResponse> galleryImages,
+        List<PublicExternalConnectionResponse> externalConnections) {
 }

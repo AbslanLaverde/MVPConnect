@@ -105,3 +105,48 @@ infrastructure, not application startup.
 | `media.storage.access-url-expiration` | `MEDIA_ACCESS_URL_EXPIRATION` | `15m` |
 
 Only `image/jpeg`, `image/png`, and `image/webp` are accepted in this pass.
+
+## Canonical profile media
+
+Canonical media uses the existing relationship:
+
+```text
+(:Musician|Venue|Promoter)-[:HAS_MEDIA {sortOrder}]->(:MediaAsset)
+```
+
+- `PROFILE_IMAGE` and `BANNER_IMAGE` are singleton-by-type relationships.
+- `GALLERY_IMAGE` membership is an ordered list. `HAS_MEDIA.sortOrder` is
+  zero-based and contiguous; the relationship value is authoritative.
+- For older relationships without `sortOrder`, reads fall back to the asset's
+  legacy `sortOrder`, then `createdAt`/`updatedAt` and ID for deterministic output.
+- Artist galleries allow 8 items. Venue and Promoter galleries allow 10.
+- The complete gallery is ownership/status/type/step-association validated before
+  the transactional relationship replacement runs.
+- Replacing membership unlinks prior relationships but never deletes the old
+  `MediaAsset` or object. Explicit `DELETE /media/{id}` owns object deletion.
+- Skipping Media preserves prior canonical media. Completing Media with an empty
+  ordered gallery replaces canonical gallery membership with an empty list.
+
+The accepted type/context matrix is:
+
+| Media type | Accepted contexts |
+| --- | --- |
+| `PROFILE_IMAGE` | `PROFILE` |
+| `BANNER_IMAGE` | `PROFILE`, `VENUE`, `EVENT` |
+| `GALLERY_IMAGE` | `PROFILE`, `PERFORMANCE`, `VENUE`, `EVENT` |
+
+Both upload initialization and canonical-reference validation enforce this
+matrix. Public profile and `/me` reads make one canonical-media graph query per
+persona, generate fresh short-lived read URLs, and never expose bucket/object
+keys.
+
+## Orphan policy
+
+`MediaCleanupService.findStaleCandidates` is an internal, read-only planning
+primitive for stale `PENDING`/`FAILED` assets and unattached `READY` assets. It is
+bounded to 1,000 candidates and requires a positive minimum age. No scheduler or
+automatic deletion is enabled in Pass 1.
+
+A future guarded sweeper must delete the object first, delete graph metadata only
+after storage succeeds, retain attached assets, and make retries safe. Canonical
+replacement itself must never trigger storage deletion.

@@ -32,10 +32,16 @@ OPTIONAL MATCH (owner)-[:HAS_ONBOARDING_DRAFT]->(draft:OnboardingDraft)
 OPTIONAL MATCH (draft)-[:HAS_STEP]->(step:OnboardingStep)
 OPTIONAL MATCH (media:MediaAsset)
 WHERE media.ownerId = owner.id
+OPTIONAL MATCH (connection:ExternalConnection)
+WHERE connection.ownerId = owner.id
+OPTIONAL MATCH (attempt:OAuthConnectionAttempt)
+WHERE attempt.ownerId = owner.id
 WITH collect(DISTINCT owner)
      + collect(DISTINCT draft)
      + collect(DISTINCT step)
-     + collect(DISTINCT media) AS nodes
+     + collect(DISTINCT media)
+     + collect(DISTINCT connection)
+     + collect(DISTINCT attempt) AS nodes
 UNWIND nodes AS node
 WITH DISTINCT node
 WHERE node IS NOT NULL

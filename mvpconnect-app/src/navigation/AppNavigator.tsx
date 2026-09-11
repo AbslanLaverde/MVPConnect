@@ -8,6 +8,8 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { OnboardingShell } from '../onboarding/OnboardingShell';
 import type { OnboardingPersona } from '../onboarding/onboardingTypes';
 import { theme } from '../theme/theme';
+import { OAuthResultScreen } from '../screens/OAuthResultScreen';
+import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -16,6 +18,8 @@ export type RootStackParamList = {
   SignupVenue: undefined;
   SignupPromoter: undefined;
   Onboarding: { persona: OnboardingPersona; step: string };
+  OAuthResult: { attemptId?: string; provider?: string; status?: string } | undefined;
+  Welcome: undefined;
   MusicianHome: { userId: string; userName: string; userType: string };
   Profile: { userId: string; userName?: string };
 };
@@ -23,7 +27,7 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [],
+  prefixes: ['mvpconnect://'],
   config: {
     screens: {
       Login: 'login',
@@ -32,6 +36,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       SignupVenue: 'signup/venue',
       SignupPromoter: 'signup/promoter',
       Onboarding: 'onboarding/:persona/:step',
+      OAuthResult: 'oauth/result',
+      Welcome: 'welcome',
     },
   },
 };
@@ -84,6 +90,16 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen
           name="Onboarding"
           component={OnboardingShell}
+          options={{ headerShown: false, animationEnabled: false }}
+        />
+        <Stack.Screen
+          name="OAuthResult"
+          component={OAuthResultScreen}
+          options={{ headerShown: false, animationEnabled: false }}
+        />
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
           options={{ headerShown: false, animationEnabled: false }}
         />
         <Stack.Screen

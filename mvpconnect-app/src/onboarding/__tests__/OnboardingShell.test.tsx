@@ -59,7 +59,7 @@ describe('OnboardingShell persistent identity', () => {
     });
   });
 
-  it('shows the completed Step 1 identity on Step 2 while keeping placeholder bypass enabled', () => {
+  it('shows the completed Step 1 identity on Step 2 with backend-confirmed navigation', () => {
     const navigation = { replace: jest.fn(), push: jest.fn() } as any;
     const screen = render(
       <SafeAreaProvider
@@ -79,7 +79,7 @@ describe('OnboardingShell persistent identity', () => {
     expect(screen.getByText('Glass Houses')).toBeTruthy();
     expect(screen.getByLabelText('Glass Houses profile image').props.source.uri)
       .toBe('http://127.0.0.1:9000/fresh-step-image');
-    expect(screen.getByText('STEP 2 PLACEHOLDER / BYPASS true')).toBeTruthy();
+    expect(screen.getByText('STEP 2 PLACEHOLDER / BYPASS false')).toBeTruthy();
     expect(screen.getByTestId('onboarding-scroll-view').props.scrollEnabled).toBe(true);
     expect(screen.getByTestId('onboarding-scroll-view').props.showsVerticalScrollIndicator).toBe(true);
     expect(navigation.replace).not.toHaveBeenCalled();

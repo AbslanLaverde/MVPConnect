@@ -3,6 +3,7 @@ package com.mint.config;
 import com.mint.dto.response.ErrorResponse;
 import com.mint.exceptions.DuplicateEmailException;
 import com.mint.exceptions.ExternalArtistException;
+import com.mint.exceptions.ExternalConnectionException;
 import com.mint.exceptions.MediaException;
 import com.mint.exceptions.LocationLookupException;
 import com.mint.exceptions.OnboardingException;
@@ -293,5 +294,14 @@ public class GlobalExceptionHandler {
             );
         }
     }
-}
 
+    @ExceptionHandler(ExternalConnectionException.class)
+    public ResponseEntity<ErrorResponse> handleExternalConnectionException(
+            ExternalConnectionException ex,
+            HttpServletRequest request) {
+        logHandled(ex.getStatus().value(), ex.getCode(), request, ex);
+        return ResponseEntity.status(ex.getStatus()).body(new ErrorResponse(
+                ex.getStatus().value(), ex.getStatus().getReasonPhrase(), ex.getCode(),
+                ex.getMessage(), request.getRequestURI()));
+    }
+}

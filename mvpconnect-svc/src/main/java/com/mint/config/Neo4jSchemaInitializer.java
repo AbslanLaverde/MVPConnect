@@ -27,6 +27,14 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
             "CREATE CONSTRAINT onboarding_draft_id_unique IF NOT EXISTS FOR (node:OnboardingDraft) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT onboarding_step_id_unique IF NOT EXISTS FOR (node:OnboardingStep) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT media_asset_id_unique IF NOT EXISTS FOR (node:MediaAsset) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT external_connection_id_unique IF NOT EXISTS "
+                    + "FOR (node:ExternalConnection) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT external_connection_owner_provider_unique IF NOT EXISTS "
+                    + "FOR (node:ExternalConnection) REQUIRE node.ownerProviderKey IS UNIQUE",
+            "CREATE CONSTRAINT oauth_connection_attempt_id_unique IF NOT EXISTS "
+                    + "FOR (node:OAuthConnectionAttempt) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT oauth_connection_attempt_state_unique IF NOT EXISTS "
+                    + "FOR (node:OAuthConnectionAttempt) REQUIRE node.stateHash IS UNIQUE",
             "CREATE CONSTRAINT onboarding_draft_owner_version_unique IF NOT EXISTS "
                     + "FOR (node:OnboardingDraft) REQUIRE node.ownerVersionKey IS UNIQUE",
             "CREATE CONSTRAINT external_artist_id_unique IF NOT EXISTS "

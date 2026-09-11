@@ -48,4 +48,32 @@ describe('OnboardingFooter', () => {
     expect(screen.getByLabelText('Go back to the previous onboarding step')).toBeTruthy();
     expect(screen.getByLabelText('Skip this optional step for now')).toBeTruthy();
   });
+
+  it('supports the final-step Finish label and accessible name', () => {
+    const screen = render(
+      <OnboardingFooter
+        {...defaultProps}
+        continueLabel="FINISH →"
+        continueAccessibilityLabel="Finish onboarding"
+      />,
+    );
+    expect(screen.getByLabelText('Finish onboarding')).toBeTruthy();
+    expect(screen.getByText('FINISH →')).toBeTruthy();
+  });
+
+  it('supports final-step busy copy and accessible state', () => {
+    const screen = render(
+      <OnboardingFooter
+        {...defaultProps}
+        busy
+        continueLabel="FINISH →"
+        savingLabel="FINISHING…"
+        continueAccessibilityLabel="Finish onboarding"
+        savingAccessibilityLabel="Completing onboarding"
+      />,
+    );
+    const button = screen.getByLabelText('Completing onboarding');
+    expect(button.props.accessibilityState).toEqual({ disabled: true, busy: true });
+    expect(screen.getByText('FINISHING…')).toBeTruthy();
+  });
 });

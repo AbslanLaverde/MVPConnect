@@ -80,6 +80,15 @@ describe('Venue Booking and Promoter Network contracts', () => {
     });
   });
 
+  it('does not manufacture legacy pastShows when the saved draft never contained them', () => {
+    const hydrated = hydrateBookingNetworkData('promoter', {
+      acceptingStatus: 'ACTIVELY_ACCEPTING',
+    });
+
+    expect(normalizeBookingNetworkForPayload('promoter', hydrated))
+      .not.toHaveProperty('pastShows');
+  });
+
   it('detects duplicate markets by placeId or normalized city/state/country', () => {
     const austin = market('Austin', 'TX', 'US', 'place-austin');
     expect(marketIdentity(austin)).toBe('place:place-austin');

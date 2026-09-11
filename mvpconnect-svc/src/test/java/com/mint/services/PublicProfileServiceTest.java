@@ -43,6 +43,8 @@ class PublicProfileServiceTest {
 
     @Mock
     private PublicProfileMediaService mediaService;
+    @Mock private ExternalConnectionService externalConnectionService;
+    @Mock private ArtistIdentityService artistIdentityService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PublicProfileMediaResponse profileImage = new PublicProfileMediaResponse(
@@ -57,7 +59,9 @@ class PublicProfileServiceTest {
                 venueRepository,
                 promoterRepository,
                 mediaService,
-                new ProfileLocationMapper()
+                new ProfileLocationMapper(),
+                externalConnectionService,
+                artistIdentityService
         );
     }
 
@@ -76,11 +80,13 @@ class PublicProfileServiceTest {
         musician.setLocationCountry("US");
         musician.setGenres(List.of("INDIE"));
         musician.setEquipmentBrought(List.of("GUITAR_AMP:2", "MICROPHONES"));
+        musician.setConnectionGoals(List.of("BOOK_SHOWS"));
         musician.setMinimumFee("$500");
         musician.setProfileImageUrl("https://legacy.example/image.jpg");
         when(musicianRepository.findById("musician-1")).thenReturn(Optional.of(musician));
-        when(mediaService.findProfileImage("musician-1", PersonaType.MUSICIAN))
-                .thenReturn(profileImage);
+        when(mediaService.findCanonicalMedia("musician-1", PersonaType.MUSICIAN))
+                .thenReturn(new PublicProfileMediaService.CanonicalMediaBundle(
+                        profileImage, null, List.of()));
 
         PublicMusicianProfileResponse response = publicProfileService
                 .findMusician("musician-1")
@@ -99,9 +105,10 @@ class PublicProfileServiceTest {
         assertFalse(json.has("minimumFee"));
         assertFalse(json.has("profileImageUrl"));
         assertFalse(json.has("onboardingStatus"));
+        assertFalse(json.has("connectionGoals"));
         assertFalse(json.path("location").has("addressLine1"));
         assertFalse(json.path("profileImage").has("objectKey"));
-        verify(mediaService).findProfileImage("musician-1", PersonaType.MUSICIAN);
+        verify(mediaService).findCanonicalMedia("musician-1", PersonaType.MUSICIAN);
     }
 
     @Test
@@ -118,10 +125,13 @@ class PublicProfileServiceTest {
         venue.setLocationState("NY");
         venue.setSoundcheckAvailability(SoundcheckAvailability.FULL_SOUNDCHECK);
         venue.setEquipmentAvailable(List.of("STAGE_MONITORS:4", "DRUM_KIT"));
+        venue.setConnectionGoals(List.of("FILL_OPEN_DATES"));
         venue.setTypicalBudget("$1,000");
         venue.setLogoUrl("https://legacy.example/logo.jpg");
         when(venueRepository.findById("venue-1")).thenReturn(Optional.of(venue));
-        when(mediaService.findProfileImage("venue-1", PersonaType.VENUE)).thenReturn(profileImage);
+        when(mediaService.findCanonicalMedia("venue-1", PersonaType.VENUE))
+                .thenReturn(new PublicProfileMediaService.CanonicalMediaBundle(
+                        profileImage, null, List.of()));
 
         PublicVenueProfileResponse response = publicProfileService.findVenue("venue-1").orElseThrow();
         JsonNode json = objectMapper.valueToTree(response);
@@ -137,6 +147,7 @@ class PublicProfileServiceTest {
         assertFalse(json.has("typicalBudget"));
         assertFalse(json.has("logoUrl"));
         assertFalse(json.has("onboardingVersion"));
+        assertFalse(json.has("connectionGoals"));
         assertFalse(json.path("profileImage").has("objectKey"));
     }
 
@@ -156,10 +167,12 @@ class PublicProfileServiceTest {
         promoter.setLocationState("NY");
         promoter.setGenreSpecialties(List.of("INDIE"));
         promoter.setCurrentRosterSize(77);
+        promoter.setConnectionGoals(List.of("FIND_ARTISTS"));
         promoter.setLogoUrl("https://legacy.example/logo.jpg");
         when(promoterRepository.findById("promoter-1")).thenReturn(Optional.of(promoter));
-        when(mediaService.findProfileImage("promoter-1", PersonaType.PROMOTER))
-                .thenReturn(profileImage);
+        when(mediaService.findCanonicalMedia("promoter-1", PersonaType.PROMOTER))
+                .thenReturn(new PublicProfileMediaService.CanonicalMediaBundle(
+                        profileImage, null, List.of()));
 
         PublicPromoterProfileResponse response = publicProfileService
                 .findPromoter("promoter-1")
@@ -175,6 +188,7 @@ class PublicProfileServiceTest {
         assertFalse(json.has("currentRosterSize"));
         assertFalse(json.has("logoUrl"));
         assertFalse(json.has("onboardingCompletedAt"));
+        assertFalse(json.has("connectionGoals"));
         assertFalse(json.path("location").has("addressLine1"));
         assertFalse(json.path("profileImage").has("objectKey"));
     }

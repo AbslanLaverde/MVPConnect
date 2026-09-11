@@ -157,6 +157,19 @@ function getMedia(name, token, mediaIdVariable, expectedType = 'PROFILE_IMAGE') 
   });
 }
 
+function upsertUrlConnection(name, token, provider, profile, connectionIdVariable) {
+  return item(name, 'PUT', '{{baseUrl}}/external-connections/url', {
+    token,
+    json: { provider, profile, displayName: null },
+    tests: [
+      ...status(200),
+      'const json = pm.response.json();',
+      `pm.test('${provider} URL connection is canonical', () => { pm.expect(json.provider).to.eql('${provider}'); pm.expect(json.connectionId).to.be.a('string').and.not.empty; pm.expect(json.profileUrl).to.match(/^https:\\/\\//); });`,
+      `pm.environment.set('${connectionIdVariable}', json.connectionId);`,
+    ],
+  });
+}
+
 function associateMedia(name, token, stepKey, mediaIdVariable) {
   return item(name, 'POST', `{{baseUrl}}/onboarding/steps/${stepKey}/media/{{${mediaIdVariable}}}`, {
     token,
@@ -229,8 +242,8 @@ const artistSound = {
   eventTypes: ['CONCERT', 'SHOWCASE'],
   soundsLikeArtists: [{
     entityType: 'ARTIST',
-    entityId: null,
-    displayName: 'Fontaines D.C.',
+    entityId: '{{externalArtistRefId}}',
+    displayName: 'E2E Shared Artist Reference',
     external: true,
   }],
 };
@@ -248,9 +261,9 @@ const artistLive = {
   ],
   venuesPlayed: [{
     entityType: 'VENUE',
-    entityId: '{{venueId}}',
-    displayName: 'E2E Marlowe Room',
-    external: false,
+    entityId: '{{venueIdentityRefId}}',
+    displayName: 'E2E Shared Venue Reference',
+    external: true,
   }],
   performanceImages: [],
 };
@@ -280,9 +293,9 @@ const venueMusic = {
   eventTypes: ['CONCERT', 'SHOWCASE'],
   artistsBooked: [{
     entityType: 'ARTIST',
-    entityId: '{{artistId}}',
-    displayName: 'E2E Glass Houses',
-    external: false,
+    entityId: '{{externalArtistRefId}}',
+    displayName: 'E2E Shared Artist Reference',
+    external: true,
   }],
 };
 
@@ -333,26 +346,26 @@ const promoterSpecialties = {
   vibes: ['RAW', 'ENERGETIC'],
   artistsWorkedWith: [{
     entityType: 'ARTIST',
-    entityId: '{{artistId}}',
-    displayName: 'E2E Glass Houses',
-    external: false,
+    entityId: '{{externalArtistRefId}}',
+    displayName: 'E2E Shared Artist Reference',
+    external: true,
   }],
 };
 
 const promoterNetwork = {
   acceptingStatus: 'ACTIVELY_ACCEPTING',
   rosterSize: 'ONE_TO_FIVE',
-  artists: [{
+  rosterArtists: [{
     entityType: 'ARTIST',
-    entityId: '{{artistId}}',
-    displayName: 'E2E Glass Houses',
-    external: false,
+    entityId: '{{externalArtistRefId}}',
+    displayName: 'E2E Shared Artist Reference',
+    external: true,
   }],
   venues: [{
     entityType: 'VENUE',
-    entityId: '{{venueId}}',
-    displayName: 'E2E Marlowe Room',
-    external: false,
+    entityId: '{{venueIdentityRefId}}',
+    displayName: 'E2E Shared Venue Reference',
+    external: true,
   }],
   additionalMarkets: [{
     displayName: 'Philadelphia, PA',
@@ -380,7 +393,10 @@ const initializeRun = item('Initialize run and check backend health', 'GET', '{{
     "pm.environment.set('resumeArtistEmail', `e2e-resume-${e2eRunId}@example.local`);",
     "['artistJwt','venueJwt','promoterJwt','resumeArtistJwt','artistId','venueId','promoterId','resumeArtistId',",
     " 'artistProfileMediaId','venueProfileMediaId','promoterProfileMediaId','artistBannerMediaId',",
-    " 'venueBannerMediaId','venueGalleryMediaId','promoterBannerMediaId','artistUnassociatedProfileMediaId','artistPendingMediaId'].forEach(key => pm.environment.unset(key));",
+    " 'artistGalleryMediaId1','artistGalleryMediaId2','venueBannerMediaId','venueGalleryMediaId','promoterBannerMediaId','promoterGalleryMediaId',",
+    " 'artistBandcampConnectionId','artistInstagramConnectionId','artistTiktokConnectionId','venueInstagramConnectionId','venueFacebookConnectionId','venueTiktokConnectionId',",
+    " 'promoterInstagramConnectionId','promoterFacebookConnectionId','promoterTiktokConnectionId','externalArtistRefId','venueIdentityRefId',",
+    " 'artistUnassociatedProfileMediaId','artistPendingMediaId'].forEach(key => pm.environment.unset(key));",
   ],
   tests: [
     ...status(200),
@@ -455,6 +471,51 @@ const authFolder = folder('01 - Auth', [
     json: { email: '{{promoterEmail}}', password: '{{testPassword}}' },
     tests: loginCapture('PROMOTER', 'promoterJwt', 'promoterId'),
   }),
+  item('Create disposable ExternalArtist reference', 'POST', '{{baseUrl}}/external-artists/free-form', {
+    token: 'artistJwt',
+    json: {
+      displayName: 'E2E Shared Artist Reference',
+      spotifyAttemptStatus: 'NO_MATCH',
+    },
+    tests: [
+      ...status(200),
+      'const json = pm.response.json();',
+      "pm.test('ExternalArtist reference has a stable ID', () => pm.expect(json.id).to.be.a('string').and.not.empty);",
+      "pm.environment.set('externalArtistRefId', json.id);",
+    ],
+  }),
+  item('Create disposable VenueIdentity reference', 'POST', '{{baseUrl}}/venue-identities/free-form', {
+    token: 'artistJwt',
+    json: {
+      displayName: 'E2E Shared Venue Reference',
+      googleAttemptStatus: 'NO_MATCH',
+      location: null,
+    },
+    tests: [
+      ...status(200),
+      'const json = pm.response.json();',
+      "pm.test('VenueIdentity reference has a stable ID', () => pm.expect(json.id).to.be.a('string').and.not.empty);",
+      "pm.environment.set('venueIdentityRefId', json.id);",
+    ],
+  }),
+  upsertUrlConnection('Artist - Add Bandcamp connection', 'artistJwt', 'BANDCAMP',
+    'https://e2e-glass-houses.bandcamp.com', 'artistBandcampConnectionId'),
+  upsertUrlConnection('Artist - Add Instagram connection', 'artistJwt', 'INSTAGRAM',
+    'https://instagram.com/e2eglasshouses', 'artistInstagramConnectionId'),
+  upsertUrlConnection('Artist - Add TikTok connection', 'artistJwt', 'TIKTOK',
+    'https://tiktok.com/@e2eglasshouses', 'artistTiktokConnectionId'),
+  upsertUrlConnection('Venue - Add Instagram connection', 'venueJwt', 'INSTAGRAM',
+    'https://instagram.com/e2emarloweroom', 'venueInstagramConnectionId'),
+  upsertUrlConnection('Venue - Add Facebook connection', 'venueJwt', 'FACEBOOK',
+    'https://facebook.com/e2emarloweroom', 'venueFacebookConnectionId'),
+  upsertUrlConnection('Venue - Add TikTok connection', 'venueJwt', 'TIKTOK',
+    'https://tiktok.com/@e2emarloweroom', 'venueTiktokConnectionId'),
+  upsertUrlConnection('Promoter - Add Instagram connection', 'promoterJwt', 'INSTAGRAM',
+    'https://instagram.com/e2enightsignal', 'promoterInstagramConnectionId'),
+  upsertUrlConnection('Promoter - Add Facebook connection', 'promoterJwt', 'FACEBOOK',
+    'https://facebook.com/e2enightsignal', 'promoterFacebookConnectionId'),
+  upsertUrlConnection('Promoter - Add TikTok connection', 'promoterJwt', 'TIKTOK',
+    'https://tiktok.com/@e2enightsignal', 'promoterTiktokConnectionId'),
 ]);
 
 const mediaFolderItems = [
@@ -485,6 +546,18 @@ const mediaFolderItems = [
     'artistJwt', 'basics', 'artistBannerMediaId'),
   associateMedia('Artist banner - Associate with optional media step',
     'artistJwt', 'media', 'artistBannerMediaId'),
+  initMedia('Artist gallery 1 - Initialize', 'artistJwt',
+    'artistGalleryMediaId1', 'artistGalleryUploadUrl1', 'GALLERY_IMAGE', 'PERFORMANCE', 0),
+  uploadMedia('Artist gallery 1 - Upload', 'artistGalleryUploadUrl1'),
+  completeMedia('Artist gallery 1 - Complete', 'artistJwt', 'artistGalleryMediaId1'),
+  associateMedia('Artist gallery 1 - Associate with optional media step',
+    'artistJwt', 'media', 'artistGalleryMediaId1'),
+  initMedia('Artist gallery 2 - Initialize', 'artistJwt',
+    'artistGalleryMediaId2', 'artistGalleryUploadUrl2', 'GALLERY_IMAGE', 'PERFORMANCE', 1),
+  uploadMedia('Artist gallery 2 - Upload', 'artistGalleryUploadUrl2'),
+  completeMedia('Artist gallery 2 - Complete', 'artistJwt', 'artistGalleryMediaId2'),
+  associateMedia('Artist gallery 2 - Associate with optional media step',
+    'artistJwt', 'media', 'artistGalleryMediaId2'),
   initMedia('Venue banner - Initialize', 'venueJwt',
     'venueBannerMediaId', 'venueBannerUploadUrl', 'BANNER_IMAGE', 'VENUE'),
   uploadMedia('Venue banner - Upload', 'venueBannerUploadUrl'),
@@ -503,6 +576,12 @@ const mediaFolderItems = [
   completeMedia('Promoter banner - Complete', 'promoterJwt', 'promoterBannerMediaId'),
   associateMedia('Promoter banner - Associate with optional media step',
     'promoterJwt', 'media', 'promoterBannerMediaId'),
+  initMedia('Promoter gallery - Initialize', 'promoterJwt',
+    'promoterGalleryMediaId', 'promoterGalleryUploadUrl', 'GALLERY_IMAGE', 'EVENT'),
+  uploadMedia('Promoter gallery - Upload', 'promoterGalleryUploadUrl'),
+  completeMedia('Promoter gallery - Complete', 'promoterJwt', 'promoterGalleryMediaId'),
+  associateMedia('Promoter gallery - Associate with optional media step',
+    'promoterJwt', 'media', 'promoterGalleryMediaId'),
   initMedia('Artist pending image - Initialize only', 'artistJwt',
     'artistPendingMediaId', 'artistPendingUploadUrl'),
   item('Complete before object exists', 'POST', '{{baseUrl}}/media/{{artistPendingMediaId}}/complete', {
@@ -575,7 +654,14 @@ const artistFolder = folder('03 - Artist Onboarding', [
   }),
   completeStep('Complete Artist optional media', 'artistJwt', 'media', {
     bannerImage: { mediaId: '{{artistBannerMediaId}}' },
+    showcaseImages: [
+      { mediaId: '{{artistGalleryMediaId2}}' },
+      { mediaId: '{{artistGalleryMediaId1}}' },
+    ],
     websiteUrl: 'https://glasshouses.example',
+    bandcampConnection: { connectionId: '{{artistBandcampConnectionId}}', provider: 'BANDCAMP' },
+    instagramConnection: { connectionId: '{{artistInstagramConnectionId}}', provider: 'INSTAGRAM' },
+    tiktokConnection: { connectionId: '{{artistTiktokConnectionId}}', provider: 'TIKTOK' },
   }),
   completeStep('Complete Artist goals', 'artistJwt', 'goals', {
     connectionGoals: ['BOOK_SHOWS', 'FIND_PROMOTERS', 'START_OR_JOIN_BAND'],
@@ -608,6 +694,9 @@ const venueFolder = folder('04 - Venue Onboarding', [
     bannerImage: { mediaId: '{{venueBannerMediaId}}' },
     websiteUrl: 'https://marloweroom.example',
     galleryImages: [{ mediaId: '{{venueGalleryMediaId}}' }],
+    instagramConnection: { connectionId: '{{venueInstagramConnectionId}}', provider: 'INSTAGRAM' },
+    facebookConnection: { connectionId: '{{venueFacebookConnectionId}}', provider: 'FACEBOOK' },
+    tiktokConnection: { connectionId: '{{venueTiktokConnectionId}}', provider: 'TIKTOK' },
   }),
   completeStep('Complete Venue goals', 'venueJwt', 'goals', {
     connectionGoals: ['FIND_ARTISTS', 'FILL_OPEN_DATES'],
@@ -637,6 +726,10 @@ const promoterFolder = folder('05 - Promoter Onboarding', [
   }),
   completeStep('Complete Promoter optional media', 'promoterJwt', 'media', {
     bannerImage: { mediaId: '{{promoterBannerMediaId}}' },
+    galleryImages: [{ mediaId: '{{promoterGalleryMediaId}}' }],
+    instagramConnection: { connectionId: '{{promoterInstagramConnectionId}}', provider: 'INSTAGRAM' },
+    facebookConnection: { connectionId: '{{promoterFacebookConnectionId}}', provider: 'FACEBOOK' },
+    tiktokConnection: { connectionId: '{{promoterTiktokConnectionId}}', provider: 'TIKTOK' },
   }),
   completeStep('Complete Promoter goals', 'promoterJwt', 'goals', {
     connectionGoals: ['FIND_ARTISTS', 'FIND_VENUES', 'BUILD_MY_ROSTER'],
@@ -843,6 +936,16 @@ function completionRequests(label, token, persona, timestampVariable) {
 }
 
 function selfAccountRequest(label, token, persona, idVariable, emailVariable, mediaIdVariable) {
+  const expectedGoals = label === 'Artist'
+    ? ['BOOK_SHOWS', 'FIND_PROMOTERS', 'START_OR_JOIN_BAND']
+    : label === 'Venue'
+      ? ['FIND_ARTISTS', 'FILL_OPEN_DATES']
+      : ['FIND_ARTISTS', 'FIND_VENUES', 'BUILD_MY_ROSTER'];
+  const mediaPassTwoAssertions = label === 'Artist'
+    ? "pm.test('Artist self Media Pass 2 state is canonical', () => { pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('artistBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('artistGalleryMediaId2'), pm.environment.get('artistGalleryMediaId1')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['BANDCAMP','INSTAGRAM','TIKTOK']); });"
+    : label === 'Venue'
+      ? "pm.test('Venue self Media Pass 2 state is canonical', () => { pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('venueBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('venueGalleryMediaId')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['FACEBOOK','INSTAGRAM','TIKTOK']); });"
+      : "pm.test('Promoter self Media Pass 2 state is canonical', () => { pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('promoterBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('promoterGalleryMediaId')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['FACEBOOK','INSTAGRAM','TIKTOK']); });";
   return item(`${label} - GET authenticated self account`, 'GET', '{{baseUrl}}/me', {
     token,
     tests: [
@@ -851,7 +954,9 @@ function selfAccountRequest(label, token, persona, idVariable, emailVariable, me
       `pm.test('Self persona is ${persona}', () => pm.expect(json.persona).to.eql('${persona}'));`,
       `pm.test('Self identity is canonical', () => { pm.expect(json.id).to.eql(pm.environment.get('${idVariable}')); pm.expect(json.email).to.eql(pm.environment.get('${emailVariable}')); pm.expect(json.displayName).to.be.a('string').and.not.empty; });`,
       `pm.test('Self onboarding state is complete', () => { pm.expect(json.onboardingStatus).to.eql('COMPLETE'); pm.expect(json.onboardingCompletedAt).to.be.a('string'); pm.expect(json.onboardingVersion).to.eql(2); });`,
+      `pm.test('Self goals are canonical and private to the account contract', () => pm.expect(json.connectionGoals).to.eql(${JSON.stringify(expectedGoals)}));`,
       `pm.test('Self canonical media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('${mediaIdVariable}')); pm.expect(json.profileImage.url).to.match(/^http/); pm.expect(json.profileImage).not.to.have.property('objectKey'); pm.expect(json.profileImage).not.to.have.property('ownerId'); });`,
+      mediaPassTwoAssertions,
       "pm.test('Self contract omits credentials and drafts', () => { ['password','onboardingDrafts','dataJson','profileImageUrl','logoUrl'].forEach(field => pm.expect(json).not.to.have.property(field)); });",
     ],
   });
@@ -893,8 +998,8 @@ const completionFolder = folder('09 - Completion / Idempotency', [
       ...status(200),
       'const json = pm.response.json();',
       "pm.test('Artist canonical fields promoted', () => { pm.expect(json.bio).to.eql('Brooklyn post-punk band.'); pm.expect(json.location.displayName).to.eql('Brooklyn, NY'); pm.expect(json.genres).to.eql(['INDIE','PUNK']); pm.expect(json.vibes).to.eql(['RAW','ENERGETIC']); pm.expect(json.eventTypes).to.eql(['CONCERT','SHOWCASE']); });",
-      "pm.test('Artist public profile is private-by-default', () => { ['email','password','minimumFee','willingToTravel','profileImageUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); pm.expect(json.location).not.to.have.property('addressLine1'); });",
-      "pm.test('Artist canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('artistProfileMediaId')); pm.expect(json.profileImage.url).to.match(/^http/); pm.expect(json.profileImage.mimeType).to.eql('image/jpeg'); pm.expect(json.profileImage).not.to.have.property('objectKey'); pm.expect(json.profileImage).not.to.have.property('ownerId'); });",
+      "pm.test('Artist public profile is private-by-default', () => { ['email','password','minimumFee','willingToTravel','connectionGoals','profileImageUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); pm.expect(json.location).not.to.have.property('addressLine1'); });",
+      "pm.test('Artist canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('artistProfileMediaId')); pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('artistBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('artistGalleryMediaId2'), pm.environment.get('artistGalleryMediaId1')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['BANDCAMP','INSTAGRAM','TIKTOK']); [json.profileImage,json.bannerImage,...json.galleryImages].forEach(item => { pm.expect(item.url).to.match(/^http/); pm.expect(item).not.to.have.property('objectKey'); pm.expect(item).not.to.have.property('ownerId'); }); });",
     ],
   }),
   item('Verify safe public Venue profile and canonical media', 'GET', '{{baseUrl}}/venues/{{venueId}}', {
@@ -902,8 +1007,8 @@ const completionFolder = folder('09 - Completion / Idempotency', [
       ...status(200),
       'const json = pm.response.json();',
       "pm.test('Venue canonical fields promoted', () => { pm.expect(json.description).to.eql('Independent live room in Brooklyn.'); pm.expect(json.location.displayName).to.eql('123 Bedford Ave, Brooklyn, NY'); pm.expect(json.location.addressLine1).to.eql('123 Bedford Ave'); pm.expect(json.capacity).to.eql(250); pm.expect(json.genrePreferences).to.eql(['INDIE','ROCK']); pm.expect(json.ambience).to.eql(['INTIMATE','RAW']); });",
-      "pm.test('Venue public profile is private-by-default', () => { ['email','password','bookingEmail','typicalBudget','liveMusic','logoUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); });",
-      "pm.test('Venue canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('venueProfileMediaId')); pm.expect(json.profileImage.url).to.match(/^http/); pm.expect(json.profileImage).not.to.have.property('objectKey'); pm.expect(json.profileImage).not.to.have.property('ownerId'); });",
+      "pm.test('Venue public profile is private-by-default', () => { ['email','password','bookingEmail','typicalBudget','liveMusic','connectionGoals','logoUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); });",
+      "pm.test('Venue canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('venueProfileMediaId')); pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('venueBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('venueGalleryMediaId')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['FACEBOOK','INSTAGRAM','TIKTOK']); [json.profileImage,json.bannerImage,...json.galleryImages].forEach(item => { pm.expect(item.url).to.match(/^http/); pm.expect(item).not.to.have.property('objectKey'); pm.expect(item).not.to.have.property('ownerId'); }); });",
     ],
   }),
   item('Verify safe public Promoter profile', 'GET', '{{baseUrl}}/promoters/{{promoterId}}', {
@@ -911,8 +1016,8 @@ const completionFolder = folder('09 - Completion / Idempotency', [
       ...status(200),
       'const json = pm.response.json();',
       "pm.test('Promoter canonical fields promoted', () => { pm.expect(json.businessName).to.eql('E2E Night Signal Presents'); pm.expect(json.bio).to.eql('Independent NYC show promoter.'); pm.expect(json.location.displayName).to.eql('New York, NY'); pm.expect(json.genreSpecialties).to.eql(['INDIE','PUNK']); pm.expect(json.vibePreferences).to.eql(['RAW','ENERGETIC']); });",
-      "pm.test('Promoter public profile is private-by-default', () => { ['email','phone','password','acceptingNewArtists','currentRosterSize','logoUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); pm.expect(json.location).not.to.have.property('addressLine1'); });",
-      "pm.test('Promoter canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('promoterProfileMediaId')); pm.expect(json.profileImage.url).to.match(/^http/); pm.expect(json.profileImage).not.to.have.property('objectKey'); pm.expect(json.profileImage).not.to.have.property('ownerId'); });",
+      "pm.test('Promoter public profile is private-by-default', () => { ['email','phone','password','acceptingNewArtists','currentRosterSize','connectionGoals','logoUrl','onboardingStatus','onboardingVersion','onboardingCompletedAt','createdAt','updatedAt'].forEach(field => pm.expect(json).not.to.have.property(field)); pm.expect(json.location).not.to.have.property('addressLine1'); });",
+      "pm.test('Promoter canonical public media returned', () => { pm.expect(json.profileImage.mediaId).to.eql(pm.environment.get('promoterProfileMediaId')); pm.expect(json.bannerImage.mediaId).to.eql(pm.environment.get('promoterBannerMediaId')); pm.expect(json.galleryImages.map(item => item.mediaId)).to.eql([pm.environment.get('promoterGalleryMediaId')]); pm.expect(json.externalConnections.map(item => item.provider).sort()).to.eql(['FACEBOOK','INSTAGRAM','TIKTOK']); [json.profileImage,json.bannerImage,...json.galleryImages].forEach(item => { pm.expect(item.url).to.match(/^http/); pm.expect(item).not.to.have.property('objectKey'); pm.expect(item).not.to.have.property('ownerId'); }); });",
     ],
   }),
 ], 'Completes each READY persona twice, verifies stable timestamps, safe public profile allowlists, and canonical public media. Full graph verification is documented in folder 10 and BACKEND_E2E_TESTING.md.');
@@ -969,13 +1074,19 @@ const environmentValues = [
   ['artistEmail', ''], ['venueEmail', ''], ['promoterEmail', ''], ['resumeArtistEmail', ''],
   ['artistProfileMediaId', ''], ['venueProfileMediaId', ''], ['promoterProfileMediaId', ''],
   ['artistBannerMediaId', ''], ['venueBannerMediaId', ''], ['venueGalleryMediaId', ''], ['promoterBannerMediaId', ''],
+  ['artistGalleryMediaId1', ''], ['artistGalleryMediaId2', ''], ['promoterGalleryMediaId', ''],
   ['artistUnassociatedProfileMediaId', ''], ['artistPendingMediaId', ''],
   ['resumeArtistProfileMediaId', ''],
   ['artistProfileUploadUrl', ''], ['venueProfileUploadUrl', ''], ['promoterProfileUploadUrl', ''],
   ['artistBannerUploadUrl', ''], ['venueBannerUploadUrl', ''], ['venueGalleryUploadUrl', ''],
+  ['artistGalleryUploadUrl1', ''], ['artistGalleryUploadUrl2', ''], ['promoterGalleryUploadUrl', ''],
   ['promoterBannerUploadUrl', ''], ['artistUnassociatedProfileUploadUrl', ''],
   ['artistPendingUploadUrl', ''], ['resumeArtistProfileUploadUrl', ''],
   ['artistCompletedAt', ''], ['venueCompletedAt', ''], ['promoterCompletedAt', ''],
+  ['externalArtistRefId', ''], ['venueIdentityRefId', ''],
+  ['artistBandcampConnectionId', ''], ['artistInstagramConnectionId', ''], ['artistTiktokConnectionId', ''],
+  ['venueInstagramConnectionId', ''], ['venueFacebookConnectionId', ''], ['venueTiktokConnectionId', ''],
+  ['promoterInstagramConnectionId', ''], ['promoterFacebookConnectionId', ''], ['promoterTiktokConnectionId', ''],
 ].map(([key, value]) => ({ key, value, enabled: true, type: 'default' }));
 
 const environment = {

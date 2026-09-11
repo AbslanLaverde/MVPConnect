@@ -7,10 +7,16 @@ import com.mint.media.storage.ObjectStorageException;
 import com.mint.media.storage.ObjectStorageService;
 import com.mint.media.storage.PresignedAccess;
 import com.mint.nodes.MediaAsset;
+import com.mint.media.MediaType;
 import com.mint.onboarding.PersonaType;
+import com.mint.repositories.CanonicalMediaEntry;
 import com.mint.repositories.MediaAssetRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 public class PublicProfileMediaService {
@@ -30,9 +36,44 @@ public class PublicProfileMediaService {
 
     @Transactional(readOnly = true)
     public PublicProfileMediaResponse findProfileImage(String ownerId, PersonaType persona) {
-        return mediaAssetRepository.findCanonicalProfileMedia(ownerId, persona.name())
+        return findCanonicalMedia(ownerId, persona).profileImage();
+    }
+
+    @Transactional(readOnly = true)
+    public CanonicalMediaBundle findCanonicalMedia(String ownerId, PersonaType persona) {
+        List<CanonicalMediaEntry> entries = mediaAssetRepository.findCanonicalMedia(ownerId, persona.name());
+        PublicProfileMediaResponse profileImage = latest(entries, MediaType.PROFILE_IMAGE);
+        PublicProfileMediaResponse bannerImage = latest(entries, MediaType.BANNER_IMAGE);
+        List<PublicProfileMediaResponse> galleryImages = entries.stream()
+                .filter(entry -> entry.media().getMediaType() == MediaType.GALLERY_IMAGE)
+                .sorted(Comparator
+                        .comparingInt((CanonicalMediaEntry entry) -> effectiveSortOrder(entry))
+                        .thenComparing(entry -> timestamp(entry.media()))
+                        .thenComparing(entry -> entry.media().getId()))
+                .map(entry -> toPublicResponse(entry.media()))
+                .toList();
+        return new CanonicalMediaBundle(profileImage, bannerImage, galleryImages);
+    }
+
+    private PublicProfileMediaResponse latest(List<CanonicalMediaEntry> entries, MediaType type) {
+        return entries.stream()
+                .map(CanonicalMediaEntry::media)
+                .filter(media -> media.getMediaType() == type)
+                .max(Comparator.comparing(this::timestamp).thenComparing(MediaAsset::getId))
                 .map(this::toPublicResponse)
                 .orElse(null);
+    }
+
+    private int effectiveSortOrder(CanonicalMediaEntry entry) {
+        if (entry.relationshipSortOrder() != null) return entry.relationshipSortOrder();
+        if (entry.media().getSortOrder() != null) return entry.media().getSortOrder();
+        return Integer.MAX_VALUE;
+    }
+
+    private LocalDateTime timestamp(MediaAsset media) {
+        if (media.getUpdatedAt() != null) return media.getUpdatedAt();
+        if (media.getCreatedAt() != null) return media.getCreatedAt();
+        return LocalDateTime.MIN;
     }
 
     private PublicProfileMediaResponse toPublicResponse(MediaAsset media) {
@@ -52,5 +93,11 @@ public class PublicProfileMediaService {
                 media.getWidth(),
                 media.getHeight()
         );
+    }
+
+    public record CanonicalMediaBundle(
+            PublicProfileMediaResponse profileImage,
+            PublicProfileMediaResponse bannerImage,
+            List<PublicProfileMediaResponse> galleryImages) {
     }
 }

@@ -21,6 +21,7 @@ describe('ImageGalleryUploader', () => {
 
     expect(screen.getByText('GALLERY LIMIT REACHED (2).')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Move image 2 earlier'));
-    expect(onChange).toHaveBeenCalledWith([SECOND, FIRST]);
+    const update = onChange.mock.calls[0][0];
+    expect(update([FIRST, SECOND])).toEqual([SECOND, FIRST]);
   });
 });

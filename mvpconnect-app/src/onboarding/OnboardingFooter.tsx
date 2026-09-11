@@ -15,6 +15,10 @@ interface OnboardingFooterProps {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  continueLabel?: string;
+  savingLabel?: string;
+  continueAccessibilityLabel?: string;
+  savingAccessibilityLabel?: string;
 }
 
 const ContinueButton = ({
@@ -23,12 +27,20 @@ const ContinueButton = ({
   saving,
   fullWidth = false,
   onPress,
+  label = 'CONTINUE →',
+  savingLabel = 'SAVING…',
+  accessibilityLabel = 'Continue to the next onboarding step',
+  savingAccessibilityLabel = 'Saving onboarding step',
 }: {
   config: OnboardingPersonaConfig;
   disabled: boolean;
   saving: boolean;
   fullWidth?: boolean;
   onPress: () => void;
+  label?: string;
+  savingLabel?: string;
+  accessibilityLabel?: string;
+  savingAccessibilityLabel?: string;
 }) => (
   <TouchableOpacity
     style={[
@@ -39,11 +51,11 @@ const ContinueButton = ({
     onPress={onPress}
     disabled={disabled}
     accessibilityRole="button"
-    accessibilityLabel={saving ? 'Saving onboarding step' : 'Continue to the next onboarding step'}
+    accessibilityLabel={saving ? savingAccessibilityLabel : accessibilityLabel}
     accessibilityState={{ disabled, busy: saving }}
   >
     <OnboardingAccentFill config={config} style={styles.accentFill} />
-    <Text style={styles.continueButtonText}>{saving ? 'SAVING…' : 'CONTINUE →'}</Text>
+    <Text style={styles.continueButtonText}>{saving ? savingLabel : label}</Text>
   </TouchableOpacity>
 );
 
@@ -58,6 +70,10 @@ export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
   onBack,
   onContinue,
   onSkip,
+  continueLabel,
+  savingLabel,
+  continueAccessibilityLabel,
+  savingAccessibilityLabel,
 }) => {
   const secondaryActions = (
     <View style={[styles.secondaryActions, !mobile && styles.secondaryActionsDesktop]}>
@@ -99,6 +115,10 @@ export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
           saving={busy}
           fullWidth
           onPress={onContinue}
+          label={continueLabel}
+          savingLabel={savingLabel}
+          accessibilityLabel={continueAccessibilityLabel}
+          savingAccessibilityLabel={savingAccessibilityLabel}
         />
         {secondaryActions}
       </View>
@@ -108,7 +128,16 @@ export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
   return (
     <View style={styles.footerDesktop}>
       {secondaryActions}
-      <ContinueButton config={config} disabled={!canContinue || busy} saving={busy} onPress={onContinue} />
+      <ContinueButton
+        config={config}
+        disabled={!canContinue || busy}
+        saving={busy}
+        onPress={onContinue}
+        label={continueLabel}
+        savingLabel={savingLabel}
+        accessibilityLabel={continueAccessibilityLabel}
+        savingAccessibilityLabel={savingAccessibilityLabel}
+      />
     </View>
   );
 };
