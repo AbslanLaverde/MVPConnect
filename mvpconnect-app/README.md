@@ -1,6 +1,6 @@
 # MVPConnect client
 
-Expo / React Native client for musician, venue, and promoter accounts. Start with the [project overview](../README.md), [local setup](../docs/LOCAL_DEVELOPMENT.md), and [environment reference](../docs/ENVIRONMENT.md).
+Expo / React Native client for Artist, Venue, and Promoter accounts. Artist maps to `MUSICIAN` in the backend; code/API identifiers retain their existing names. Start with the [project overview](../README.md), [local setup](../docs/LOCAL_DEVELOPMENT.md), and [environment reference](../docs/ENVIRONMENT.md).
 
 ## Run and check
 

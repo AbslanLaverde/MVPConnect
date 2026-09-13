@@ -29,6 +29,10 @@ Compose provides MinIO locally. Neo4j and both application processes run separat
 
 ## Onboarding and graph data
 
+The intentional modeling rule is: **intrinsic attributes remain persona properties; independently meaningful identities/resources become nodes; real associations become relationships**. Genres, vibes, and goals do not require their own nodes merely for normalization. Media and external identities have independent lifecycles. This supports the future network while keeping ordinary profile attributes straightforward.
+
+Verified examples in [ExternalArtistRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/ExternalArtistRepository.java) include `SOUNDS_LIKE`, `HAS_WORKED_WITH`, `HAS_ON_ROSTER`, and `HAS_ARTIST_IDENTITY`; [VenueIdentityRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/VenueIdentityRepository.java) includes `WORKS_WITH`. Those stored associations do not imply operational roster dashboards or completed booking workflows.
+
 [OnboardingStepRegistry](../mvpconnect-svc/src/main/java/com/mint/onboarding/OnboardingStepRegistry.java) defines schema version 2, persona-specific step order, and request types. [OnboardingService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingService.java) coordinates drafts, validation, transitions, and completion. [OnboardingStepContractService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingStepContractService.java) validates typed payloads and applies them to canonical profiles.
 
 Account nodes (`Musician`, `Venue`, `Promoter`) link through `HAS_ONBOARDING_DRAFT` to `OnboardingDraft`, then `HAS_STEP` to `OnboardingStep`; steps can link media through `HAS_MEDIA`. Other identity/reference relationships use repository Cypher. The graph also includes `ExternalArtist`, `VenueIdentity`, `MediaAsset`, `ExternalConnection`, and `OAuthConnectionAttempt` nodes. Referenced artists and venue identities need not be registered accounts.
@@ -37,13 +41,21 @@ Account nodes (`Musician`, `Venue`, `Promoter`) link through `HAS_ONBOARDING_DRA
 
 [onboardingConfig](../mvpconnect-app/src/onboarding/onboardingConfig.ts) maps client presentation to backend personas (`artist` maps to `MUSICIAN`) and sets `ONBOARDING_PLACEHOLDER_SAVE_BYPASS = false`. Backend-confirmed state controls navigation. Saved draft answers are not equivalent to a completed profile.
 
+The final goals flow saves `/onboarding/steps/goals`, completes that step, then calls `POST /onboarding/complete`. The service revalidates persisted steps/references, promotes canonical data and media membership, and records completion/version metadata. A repeated completion for the current version returns existing completion metadata. Welcome is a separate graduation screen, not another form or a second canonical-promotion operation.
+
+Goals describe future intent, not current professional status. The typed [goal requests](../mvpconnect-svc/src/main/java/com/mint/dto/onboarding) require nonempty persona-specific selections. Canonical `connectionGoals` appear in authenticated account DTOs but not public profile DTOs; venue `bookingEmail` follows the same self/public boundary. Goal collection does not drive the current genre matcher. Post-onboarding goal editing and goals-based ranking remain deferred.
+
 ## Media and provider connections
 
 [MediaService](../mvpconnect-svc/src/main/java/com/mint/services/MediaService.java) creates an owned pending media record and presigned upload URL. The client PUTs bytes directly to storage, then calls completion. The backend checks stored content length and MIME metadata before marking the asset ready. Onboarding attaches media to draft steps; public media is projected through [PublicProfileMediaService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileMediaService.java).
 
 JPEG, PNG, and WebP are allowed, with a default 10MB limit and 15-minute upload/access URLs. Metadata verification is not malware scanning or full image-content inspection. Graph transactions and object-store operations cross systems; cleanup/failure handling does not create a distributed transaction. See [media storage](../mvpconnect-svc/MEDIA_STORAGE.md).
 
+[MediaAssetRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/MediaAssetRepository.java) represents canonical profile/banner/gallery membership with `HAS_MEDIA` and gallery ordering with relationship `sortOrder`. Replacing membership removes edges, not necessarily the underlying asset or object. Provider avatar metadata is separate from uploaded media; presenting a provider image does not make it a MinIO upload.
+
 Spotify uses backend Client Credentials for artist lookup. Google Places enriches locations and venue identities. YouTube/SoundCloud use backend-owned OAuth attempts; [TokenEncryptionService](../mvpconnect-svc/src/main/java/com/mint/security/TokenEncryptionService.java) encrypts stored provider credentials with AES-GCM. Connections do not replace MVPConnect login. See [environment configuration](ENVIRONMENT.md) for credentials, encryption keys, and return allowlists.
+
+[OAuthConnectionService](../mvpconnect-svc/src/main/java/com/mint/services/OAuthConnectionService.java) owns state validation, one-time attempt consumption, and token exchange. Both provider clients send S256 PKCE challenges. Return allowlisting and replay/error behavior have focused service tests. The supplied product brief reports earlier live YouTube/SoundCloud verification; this documentation branch did not repeat it. See [testing provenance](TESTING.md).
 
 ## Discovery and limits
 

@@ -39,6 +39,8 @@ Initial sandbox attempts could not use the default Maven/npm caches. Validation 
 
 ## Live integration checks
 
+The supplied product brief reports earlier live YouTube/SoundCloud end-to-end verification, including replayed-state rejection, invalid-return-target rejection, and no observed secret leakage in that run's logs. This is historical master-agent verification context, not a new run or a blanket security guarantee. Raw reports were not supplied with the brief. Current code and focused OAuth tests support the described state/PKCE/allowlist/encryption design; live integration should be rechecked when provider configuration or the flow changes.
+
 [BACKEND_E2E_TESTING.md](../BACKEND_E2E_TESTING.md) documents Postman/Newman, upload fixtures, persistence assertions, and guarded cleanup. Its recorded September 9 totals are historical results, not results from this documentation pass. Treat `postman/build-collection.js` as the source when intentionally regenerating its JSON outputs.
 
 Full-stack startup, a fresh Neo4j setup, browser/device flows, live provider OAuth, and live Postman/Newman were not run during this audit. Existing Compose uses a shared project name and ports; no shared services or data were changed to validate documentation. Follow [local setup](LOCAL_DEVELOPMENT.md), then run the integration guide on isolated infrastructure before calling a deployment/demo ready.

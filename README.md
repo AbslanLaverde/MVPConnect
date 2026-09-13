@@ -2,34 +2,45 @@
 
 <img src="mvpconnect-app/assets/branding/mvpconnect-logo.svg" alt="MVPConnect" width="304">
 
-MVPConnect connects musicians, venues, and promoters through structured profiles, music-industry relationships, and venue discovery. This repository contains an Expo / React Native client, a Spring Boot API, and a Neo4j graph model.
+MVPConnect is a three-sided professional network for **Artists, Venues, and Promoters** in the live/local music ecosystem. It brings fragmented identity, discovery, and relationship information into a structured network designed to support collaboration and booking opportunities.
 
-The current implementation focuses on account creation, resumable persona-specific onboarding, profile media, external identities, and basic musician-to-venue matching. It is an evolving MVP; it does not yet provide a complete booking marketplace.
+Artists need relevant rooms and collaborators; venues need artists suited to their space; promoters connect talent with places and opportunities. The product thesis is that structured profiles, external identities, and meaningful relationships can improve discovery across that network.
+
+The current implementation provides account creation, resumable persona-specific onboarding, profile media, external identities, and basic Artist-to-Venue matching. It is an evolving MVP, not yet a complete booking marketplace. The client uses **Artist** terminology; backend persona values, routes, and legacy screens retain `MUSICIAN` / `Musician` names.
 
 ## What is implemented
 
 | Area | Repository-backed capability | Boundary |
 | --- | --- | --- |
-| Accounts | Musician, venue, and promoter signup; JWT login; authenticated self-account reads | Password reset remains a UI placeholder |
+| Accounts | Artist, Venue, and Promoter signup; JWT login; authenticated self-account reads | Password reset remains a UI placeholder |
 | Onboarding | Typed steps, server validation, saved drafts, resume, completion, and sign-out handling | Backend-confirmed state controls navigation; the placeholder save bypass is disabled |
+| Goals | Required persona-specific selections, saved canonically and returned to the owner | Private intent signals; goals-driven ranking and dedicated post-onboarding editing remain deferred |
 | Media | Private JPEG, PNG, and WebP uploads, profile/banner/gallery references, expiring access URLs | Image storage, not general video hosting |
 | External context | Spotify artist identities; Google Places locations and venue identities; free-form references | Provider lookup needs backend credentials; a referenced entity is not necessarily a registered account |
-| External connections | Persona-specific URL connections; YouTube/SoundCloud OAuth for musicians | Provider configuration is required; this is not social login |
-| Discovery | Public profile APIs, musician/venue search, musician home and profile editing, venue matches | Matching counts shared genres among live-music venues; no learned recommendation model |
+| External connections | Persona-specific URL connections; YouTube/SoundCloud OAuth for Artists | Provider configuration is required; this is not social login |
+| Discovery | Public profile APIs, Artist/Venue search, legacy Artist home and profile editing, venue matches | Matching counts shared genres among live-music venues; no learned recommendation model |
 
 The welcome screen currently sends every persona to `MusicianHome`, which calls musician APIs. Dedicated venue/promoter dashboards are not implemented. Messaging, payments, booking transactions, push notifications, and token refresh are not presented as shipped capabilities.
 
 ## Engineering highlights
 
 - **Draft-to-profile lifecycle:** versioned onboarding contracts separate incomplete answers from canonical profile data, with ownership checks and completion validation on the server.
-- **Graph-backed identity:** external artists and venue identities can be referenced without creating login accounts; provider identifiers and normalized names support resolution.
+- **Purposeful graph modeling:** intrinsic attributes stay on persona nodes; independent identities/resources become nodes; meaningful associations become relationships. External artists and venue identities can be referenced without creating login accounts.
 - **Private media delivery:** metadata lives in Neo4j while image bytes move directly to S3-compatible storage through presigned URLs.
-- **Explicit public projections:** public profile/discovery DTOs are separate from authenticated account data and provider credentials.
+- **Explicit public projections:** goals, venue booking email, and provider credentials stay outside public profile/discovery projections.
 - **Operational visibility:** request logging and distinct liveness/readiness probes make dependency failures easier to diagnose.
 
 See [architecture](docs/ARCHITECTURE.md) for implementation evidence and tradeoffs, and [the portfolio case study](docs/PORTFOLIO.md) for a reusable presentation and maintenance checklist.
 
+## Product direction
+
+Planned work includes richer persona-specific home/profile experiences, broader discovery, and goals-aware matching. Longer-term direction includes messaging, venue availability, roster/network workflows, and opportunities connecting a promoter's artist with a suitable venue open date. Provider connections and graph references are foundations for that work, not evidence of an AI classification or recommendation pipeline.
+
+The MVP prioritizes identity, introductions, and discovery before payments, contracts, or complete booking transactions. See [portfolio direction and tradeoffs](docs/PORTFOLIO.md).
+
 ## Run locally
+
+The application uses an Expo / React Native client, a Spring Boot API, and Neo4j, with S3-compatible media storage.
 
 Use the [local setup guide](docs/LOCAL_DEVELOPMENT.md) for prerequisites, Neo4j configuration, MinIO startup, and separate backend/frontend terminals. Compose starts MinIO only; it does not start Neo4j or the application.
 

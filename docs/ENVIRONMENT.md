@@ -13,6 +13,8 @@ Authoritative defaults live in [application.properties](../mvpconnect-svc/src/ma
 
 Real credentials, tokens, presigned URLs, database exports, and OAuth callback captures belong outside tracked documentation. `.env` and `.env.local` are ignored; arbitrary filenames containing secrets may not be. Check `git status` and the staged diff before committing. The checked-in database, JWT, and MinIO defaults are development values, not deployment secrets.
 
+Use development credentials for local work; production credentials should not be needed to review the project. Central distribution of shared development secrets is planned, but no secrets-management vendor is part of the implemented architecture. A secret injected into a developer-controlled process is accessible to that developer; credentials that must remain inaccessible need to stay behind a controlled remote service.
+
 ## Backend and infrastructure
 
 | Variables | Purpose / default | Required when |
