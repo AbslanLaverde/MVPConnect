@@ -28,6 +28,7 @@ import type {
   OnboardingStepData,
 } from './onboardingTypes';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 
 type FailedOperation = 'autosave' | 'save' | 'complete' | 'reopen';
 
@@ -131,11 +132,37 @@ export const OnboardingRealStepThreeSession: React.FC<OnboardingRealStepThreeSes
     }
   }, [busy, isDirty, isValid, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, workingSignature]);
 
+  const flushValidDraft = useCallback(async () => {
+    if (!isValid) return false;
+    if (stepStillComplete && !(await requestReopen())) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [isValid, payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: isValid,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
+
   useEffect(() => {
-    if (!isValid || !isDirty || busy || stepStillComplete) return;
+    if (!isValid || !isDirty || busy || signOut.signingOut || stepStillComplete) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, isValid, persistDraft, stepStillComplete, workingSignature]);
+  }, [busy, isDirty, isValid, persistDraft, signOut.signingOut, stepStillComplete, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -157,6 +184,7 @@ export const OnboardingRealStepThreeSession: React.FC<OnboardingRealStepThreeSes
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(workingSignature);
+      if (signOut.isSignOutPending()) return;
     } catch {
       setFailedOperation('save');
       setSaveStatus('failed');
@@ -166,12 +194,13 @@ export const OnboardingRealStepThreeSession: React.FC<OnboardingRealStepThreeSes
     try {
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
     }
-  }, [busy, completeStep, isValid, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, workingSignature]);
+  }, [busy, completeStep, isValid, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, workingSignature]);
 
   const handleBack = () => {
     if (!previousStep || busy) return;
@@ -191,7 +220,7 @@ export const OnboardingRealStepThreeSession: React.FC<OnboardingRealStepThreeSes
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <OnboardingStepThreeForm
         config={config}
         mobile={mobile}
@@ -233,6 +262,7 @@ export const OnboardingRealStepThreeSession: React.FC<OnboardingRealStepThreeSes
         onBack={handleBack}
         onContinue={() => void handleContinue()}
         onSkip={() => undefined}
+        signOut={signOut}
       />
     </View>
   );

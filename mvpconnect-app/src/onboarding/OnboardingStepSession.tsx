@@ -44,6 +44,7 @@ import { isRealMediaStep } from './onboardingMediaStep';
 import { OnboardingRealMediaSession } from './OnboardingRealMediaSession';
 import { isRealGoalsStep } from './onboardingGoals';
 import { OnboardingRealGoalsSession } from './OnboardingRealGoalsSession';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 
 type OperationKind = 'autosave' | 'complete' | 'skip' | 'reopen';
 
@@ -189,19 +190,48 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
     }
   }, [isDirty, isValid, requestReopen, saveBypass, step.status, workingSignature]);
 
+  const flushValidDraft = useCallback(async () => {
+    if (saveBypass) return true;
+    if (!isValid) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    try {
+      if (step.status === 'COMPLETE' || step.status === 'SKIPPED') {
+        await reopenStep(step.key).unwrap();
+      }
+      const savedStep = await saveStep({ stepKey: step.key, data: workingData }).unwrap();
+      setPersistedSignature(signatureFor(savedStep.data));
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [isValid, reopenStep, saveBypass, saveStep, showSavedBriefly, step.key, step.status, workingData]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: isValid,
+    persistenceBusy: !saveBypass && busy,
+    flushValidDraft,
+  });
+
   useEffect(() => {
     const canAutosave =
       !saveBypass &&
       isValid &&
       isDirty &&
       !busy &&
+      !signOut.signingOut &&
       step.status !== 'SKIPPED' &&
       failedOperation !== 'reopen';
     if (!canAutosave) return;
 
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, failedOperation, isDirty, isValid, persistDraft, saveBypass, step.status, workingSignature]);
+  }, [busy, failedOperation, isDirty, isValid, persistDraft, saveBypass, signOut.signingOut, step.status, workingSignature]);
 
   const handleChange = (nextConfirmed: boolean) => {
     setValidationAttempted(true);
@@ -231,6 +261,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
       const nextState = await completeStep({ stepKey: step.key, data: workingData }).unwrap();
       setPersistedSignature(workingSignature);
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
@@ -244,6 +275,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
     navigation,
     saveBypass,
     showSavedBriefly,
+    signOut,
     step.key,
     state,
     workingData,
@@ -266,6 +298,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
     try {
       const nextState = await skipStep(step.key).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('skip');
@@ -278,6 +311,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
     navigation,
     saveBypass,
     showSavedBriefly,
+    signOut,
     skipStep,
     step.key,
     step.required,
@@ -310,7 +344,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <Text style={[styles.stepMeta, { color: config.accentEnd ?? config.accentStart }]}>
         {`${config.label} / ${step.required ? 'REQUIRED STEP' : 'OPTIONAL STEP'}`}
       </Text>
@@ -366,6 +400,7 @@ const OnboardingPlaceholderStepSession: React.FC<OnboardingStepSessionProps> = (
         onBack={handleBack}
         onContinue={() => void handleContinue()}
         onSkip={() => void handleSkip()}
+        signOut={signOut}
       />
     </View>
   );

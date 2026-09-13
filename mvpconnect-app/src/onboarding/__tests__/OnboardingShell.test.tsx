@@ -6,7 +6,7 @@ import {
   useGetOwnedMediaQuery,
   useGetSelfAccountQuery,
 } from '../onboardingApi';
-import { OnboardingShell } from '../OnboardingShell';
+import { OnboardingShell, onboardingBottomPadding } from '../OnboardingShell';
 
 jest.mock('../onboardingApi', () => ({
   useGetOnboardingQuery: jest.fn(),
@@ -83,5 +83,11 @@ describe('OnboardingShell persistent identity', () => {
     expect(screen.getByTestId('onboarding-scroll-view').props.scrollEnabled).toBe(true);
     expect(screen.getByTestId('onboarding-scroll-view').props.showsVerticalScrollIndicator).toBe(true);
     expect(navigation.replace).not.toHaveBeenCalled();
+  });
+
+  it('adds the mobile bottom safe-area inset without shrinking the existing footer spacing', () => {
+    expect(onboardingBottomPadding(true, 0)).toBe(32);
+    expect(onboardingBottomPadding(true, 34)).toBe(50);
+    expect(onboardingBottomPadding(false, 34)).toBe(48);
   });
 });
