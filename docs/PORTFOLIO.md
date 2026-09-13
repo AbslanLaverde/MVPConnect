@@ -58,9 +58,23 @@ No public deployment, adoption numbers, performance benchmark, completed booking
 
 ## Assets and screenshots
 
-The root README reuses the existing brand-owner SVG. [Brand asset guidance](../mvpconnect-app/assets/branding/BRAND_ASSETS.md) identifies the canonical logo and `npm run brand:generate` command. Welcome backgrounds and match imagery are application assets, not screenshots of verified flows.
+The README uses five user-supplied images, preserved byte-for-byte under `docs/assets/screenshots`. The hero is a **promotional composite**; the other four were supplied as **application runtime screenshots**. They were not captured or live-verified by this documentation branch. Image content does not establish that marketing promises, provider behavior, or every visible workflow is currently implemented.
 
-No new screenshots are included in this pass. Future captures should show the actual running revision using synthetic accounts: persona selection, typed onboarding, media upload/completion, and musician venue matches. Record commit SHA, date, platform, viewport, setup/seed assumptions, and caption beside each asset. Exclude credentials, account emails, tokens, provider-console details, and presigned URLs. Check image rights before publishing and label mockups as mockups.
+| Asset / caption | Kind and purpose | Platform / image dimensions | Capture provenance | Visible account data |
+| --- | --- | --- | --- | --- |
+| [mvpconnect-hero.png](assets/screenshots/mvpconnect-hero.png) — Product experience across desktop and mobile | Promotional composite; main README hero | Desktop/mobile presentation, 1536 × 1024 | Date and creation revision unknown; user-supplied artwork | Illustrative profiles and placeholder sign-in text, not customer evidence |
+| [artist-onboarding-desktop.png](assets/screenshots/artist-onboarding-desktop.png) — Artist onboarding: The Basics | Runtime screenshot; profile identity and onboarding progression | Web/desktop, 1517 × 934 | Source filename indicates September 4, 2026, 16:55:02; capture timezone and commit/branch unknown | `TESTBAND20`, synthetic/test data |
+| [venue-onboarding-desktop.png](assets/screenshots/venue-onboarding-desktop.png) — Venue onboarding: The Room | Runtime screenshot; room identity and venue-specific progression | Web/desktop, 1917 × 955 | Source filename indicates September 4, 2026, 16:56:50; capture timezone and commit/branch unknown | `VENUE1`, synthetic/test data |
+| [promoter-onboarding-desktop.png](assets/screenshots/promoter-onboarding-desktop.png) — Promoter onboarding: The Business | Runtime screenshot; business/scene identity | Web/desktop, 1915 × 984 | Source filename indicates September 4, 2026, 16:56:07; capture timezone and commit/branch unknown | `TESTPROMOTER20`, synthetic/test data |
+| [welcome-desktop.png](assets/screenshots/welcome-desktop.png) — Onboarding completion and Welcome | Supplied runtime screenshot; graduation moment after the persona sequence | Web/desktop, 1725 × 912 | Date and commit/branch unknown | No account-specific identity visible |
+
+Dimensions describe image pixels, not verified browser viewport sizes. The onboarding date comes from filenames, not independently verified capture metadata. The supplied Venue/Promoter screenshots use labels such as “The Music” and “Specialties”; this checkout's configuration uses “Your Music” and “Your Lane”. The supplied Welcome title/layout also differs from current `WelcomeScreen`. Preserve these as supplied captures, not pixel-exact evidence of this branch. No visible real private account information or credentials were identified; test names have not been altered to fabricate customers.
+
+Original files total approximately 4.30 MiB. No resizing, cropping, color changes, or lossy compression was applied. Onboarding screenshots are stacked at normal README content width and link to the full-resolution files through this ledger. Each image appears once in the root README, with meaningful alt text.
+
+[Brand asset guidance](../mvpconnect-app/assets/branding/BRAND_ASSETS.md) still identifies the canonical application logo and `npm run brand:generate` command. The supplied composite does not replace those application assets.
+
+For future captures, record commit SHA, date, platform, viewport, setup/seed assumptions, and caption. Exclude credentials, account emails, tokens, provider-console details, and presigned URLs. Check image rights before publishing and label mockups as mockups. Refresh images when relevant screens change rather than silently assigning a newer revision to older captures.
 
 ## Maintenance mechanism
 
@@ -82,6 +96,6 @@ This is a manual review mechanism, not an automated CI gate. No scheduled job or
 | Providers | Spotify/Google/OAuth clients, properties, connection tests | Implemented; live credentials/provider acceptance unverified here |
 | Matching | MusicianController and musician home | Genre heuristic implemented; no ML/performance claims |
 | Setup/testing | pom.xml, package.json/lockfile, Compose, properties | Commands audited; validation status in TESTING.md |
-| Visuals | Canonical SVG, actual screen captures | Existing logo reused; no new screenshots |
+| Visuals | Canonical brand guidance and image provenance ledger above | One promotional composite and four supplied runtime screenshots; capture revisions unknown |
 
 Baseline evidence revision: `439eb614eee48fb7c813719f9410820059d11cb8`. Update it when re-auditing application behavior, not for prose-only edits.

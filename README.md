@@ -1,8 +1,10 @@
 # MVPConnect
 
-<img src="mvpconnect-app/assets/branding/mvpconnect-logo.svg" alt="MVPConnect" width="304">
-
 MVPConnect is a three-sided professional network for **Artists, Venues, and Promoters** in the live/local music ecosystem. It brings fragmented identity, discovery, and relationship information into a structured network designed to support collaboration and booking opportunities.
+
+![MVPConnect — live music network for Artists, Venues, and Promoters](docs/assets/screenshots/mvpconnect-hero.png)
+
+*Promotional composite presenting the product across desktop and mobile, not a literal runtime screenshot. The capability descriptions below distinguish implemented workflows from product direction.*
 
 Artists need relevant rooms and collaborators; venues need artists suited to their space; promoters connect talent with places and opportunities. The product thesis is that structured profiles, external identities, and meaningful relationships can improve discovery across that network.
 
@@ -21,6 +23,34 @@ The current implementation provides account creation, resumable persona-specific
 | Discovery | Public profile APIs, Artist/Venue search, legacy Artist home and profile editing, venue matches | Matching counts shared genres among live-music venues; no learned recommendation model |
 
 The welcome screen currently sends every persona to `MusicianHome`, which calls musician APIs. Dedicated venue/promoter dashboards are not implemented. Messaging, payments, booking transactions, push notifications, and token refresh are not presented as shipped capabilities.
+
+## Three-persona onboarding
+
+Shared onboarding infrastructure supports distinct identities, data, and workflows. These supplied desktop screenshots show the first step for each persona, followed by the Welcome experience. They include synthetic/test accounts; capture revisions are unknown, and some labels or styling differ from this checkout. See [image provenance](docs/PORTFOLIO.md#assets-and-screenshots).
+
+### Artist
+
+The Basics introduces the Artist's profile identity, image, and location within an Artist-specific progression.
+
+![Artist onboarding — The Basics](docs/assets/screenshots/artist-onboarding-desktop.png)
+
+### Venue
+
+The Room collects the space's identity, description, and address, with a progression tailored to music, production, and booking needs.
+
+![Venue onboarding — The Room](docs/assets/screenshots/venue-onboarding-desktop.png)
+
+### Promoter
+
+The Business introduces the Promoter's identity and place in the scene, leading into specialties and network information.
+
+![Promoter onboarding — The Business](docs/assets/screenshots/promoter-onboarding-desktop.png)
+
+### Completion and Welcome
+
+The backend revalidates persisted onboarding data, promotes canonical profile/network state, and records completion before Welcome becomes eligible. This graduation moment is separate from the onboarding forms; the current ENTER destination remains the legacy `MusicianHome` described above.
+
+![MVPConnect onboarding completion and Welcome experience](docs/assets/screenshots/welcome-desktop.png)
 
 ## Engineering highlights
 
