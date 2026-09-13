@@ -25,6 +25,7 @@ import {
 import { previousResolvedStep, resumeStepFromState } from './onboardingRoutes';
 import { OnboardingSaveStatus } from './OnboardingSaveStatus';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 import type {
   OnboardingSaveStatus as SaveStatus,
   OnboardingState,
@@ -138,11 +139,37 @@ export const OnboardingRealBookingNetworkSession: React.FC<OnboardingRealBooking
     }
   }, [busy, isDirty, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
 
+  const flushValidDraft = useCallback(async () => {
+    if (!validation.valid) return false;
+    if (stepStillComplete && !(await requestReopen())) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: validation.valid,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
+
   useEffect(() => {
-    if (!validation.valid || !isDirty || busy || stepStillComplete) return;
+    if (!validation.valid || !isDirty || busy || signOut.signingOut || stepStillComplete) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, persistDraft, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, isDirty, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -164,6 +191,7 @@ export const OnboardingRealBookingNetworkSession: React.FC<OnboardingRealBooking
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(workingSignature);
+      if (signOut.isSignOutPending()) return;
     } catch {
       setFailedOperation('save');
       setSaveStatus('failed');
@@ -172,12 +200,13 @@ export const OnboardingRealBookingNetworkSession: React.FC<OnboardingRealBooking
     try {
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
     }
-  }, [busy, completeStep, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, completeStep, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const handleBack = () => {
     if (!previousStep || busy) return;
@@ -222,7 +251,7 @@ export const OnboardingRealBookingNetworkSession: React.FC<OnboardingRealBooking
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <OnboardingBookingNetworkForm
         config={config}
         mobile={mobile}
@@ -267,6 +296,7 @@ export const OnboardingRealBookingNetworkSession: React.FC<OnboardingRealBooking
         onBack={handleBack}
         onContinue={() => void handleContinue()}
         onSkip={() => undefined}
+        signOut={signOut}
       />
     </View>
   );

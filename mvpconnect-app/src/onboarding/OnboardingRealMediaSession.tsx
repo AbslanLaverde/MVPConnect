@@ -57,6 +57,7 @@ import type {
   OnboardingStep,
 } from './onboardingTypes';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 
 type FailedOperation = 'hydrate' | 'autosave' | 'save' | 'complete' | 'skip' | 'reopen';
 
@@ -319,11 +320,37 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
     }
   }, [busy, hydrated, isDirty, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
 
+  const flushValidDraft = useCallback(async () => {
+    if (!hydrated || !validation.valid) return false;
+    if (stepStillComplete && !(await requestReopen())) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [hydrated, payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: hydrated && validation.valid && !mediaBusy,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
+
   useEffect(() => {
-    if (!hydrated || !validation.valid || !isDirty || busy || stepStillComplete) return;
+    if (!hydrated || !validation.valid || !isDirty || busy || signOut.signingOut || stepStillComplete) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, hydrated, isDirty, persistDraft, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, hydrated, isDirty, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -343,6 +370,7 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(workingSignature);
+      if (signOut.isSignOutPending()) return;
     } catch {
       setFailedOperation('save');
       setSaveStatus('failed');
@@ -351,12 +379,13 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
     try {
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
     }
-  }, [busy, completeStep, hydrated, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, completeStep, hydrated, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const handleSkip = useCallback(async () => {
     if (step.required || busy) return;
@@ -365,12 +394,13 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
     try {
       const nextState = await skipStep(step.key).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('skip');
       setSaveStatus('failed');
     }
-  }, [busy, navigateFromState, showSavedBriefly, skipStep, step.key, step.required]);
+  }, [busy, navigateFromState, showSavedBriefly, signOut, skipStep, step.key, step.required]);
 
   const handleBack = () => {
     if (!previousStep || busy) return;
@@ -500,7 +530,7 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       {hydrated ? (
         <OnboardingMediaForm
           config={config}
@@ -513,7 +543,7 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
           galleryStates={galleryStates}
           connections={connections}
           artistIdentity={artistIdentity}
-          interactionBusy={providerBusy}
+          interactionBusy={providerBusy || signOut.signingOut}
           errors={validation.errors}
           bannerAdapter={bannerAdapter}
           galleryAdapter={galleryAdapter}
@@ -558,6 +588,7 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
         onBack={handleBack}
         onContinue={() => void handleContinue()}
         onSkip={() => void handleSkip()}
+        signOut={signOut}
       />
     </View>
   );

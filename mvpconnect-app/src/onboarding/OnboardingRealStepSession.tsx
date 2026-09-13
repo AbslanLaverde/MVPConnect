@@ -33,6 +33,7 @@ import type {
   OnboardingStep,
 } from './onboardingTypes';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 import {
   addressLocationProvider,
   cityLocationProvider,
@@ -153,6 +154,11 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
     void requestReopen();
   }, [isDirty, locationSuggestionsActive, requestReopen, stepStillComplete, workingSignature]);
 
+  const payload = useCallback(
+    () => normalizeStepOneDataForPayload(config.persona, workingData),
+    [config.persona, workingData],
+  );
+
   const persistDraft = useCallback(async () => {
     if (
       locationSuggestionsActive
@@ -164,7 +170,7 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
     setFailedOperation(undefined);
     setSaveStatus('saving');
     const submittedSignature = workingSignature;
-    const payloadData = normalizeStepOneDataForPayload(config.persona, workingData);
+    const payloadData = payload();
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(submittedSignature);
@@ -175,7 +181,33 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
       setSaveStatus('failed');
       return false;
     }
-  }, [busy, config.persona, isDirty, locationSuggestionsActive, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingData, workingSignature]);
+  }, [busy, isDirty, locationSuggestionsActive, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const flushValidDraft = useCallback(async () => {
+    if (!validation.valid) return false;
+    if (stepStillComplete && !(await requestReopen())) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: validation.valid,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
 
   useEffect(() => {
     if (
@@ -183,11 +215,12 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
       || !validation.valid
       || !isDirty
       || busy
+      || signOut.signingOut
       || stepStillComplete
     ) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, locationSuggestionsActive, persistDraft, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, isDirty, locationSuggestionsActive, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -205,10 +238,11 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
     if (stepStillComplete && !(await requestReopen())) return;
     setFailedOperation(undefined);
     setSaveStatus('saving');
-    const payloadData = normalizeStepOneDataForPayload(config.persona, workingData);
+    const payloadData = payload();
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(workingSignature);
+      if (signOut.isSignOutPending()) return;
     } catch {
       setFailedOperation('save');
       setSaveStatus('failed');
@@ -218,12 +252,13 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
     try {
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
     }
-  }, [busy, completeStep, config.persona, navigateFromState, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingData, workingSignature]);
+  }, [busy, completeStep, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const handleMediaStateChange = (nextState: MediaUploaderState) => {
     setValidationAttempted(true);
@@ -254,7 +289,7 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <OnboardingStepOneForm
         config={config}
         mobile={mobile}
@@ -299,6 +334,7 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
         onBack={() => undefined}
         onContinue={() => void handleContinue()}
         onSkip={() => undefined}
+        signOut={signOut}
       />
     </View>
   );

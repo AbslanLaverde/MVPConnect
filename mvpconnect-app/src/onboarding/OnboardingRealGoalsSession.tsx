@@ -22,6 +22,7 @@ import {
 import { previousResolvedStep } from './onboardingRoutes';
 import { OnboardingSaveStatus } from './OnboardingSaveStatus';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 import type {
   OnboardingSaveStatus as SaveStatus,
   OnboardingState,
@@ -144,11 +145,38 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
     }
   }, [busy, isDirty, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
 
+  const flushValidDraft = useCallback(async () => {
+    if (!validation.valid) return false;
+    if (stepStillComplete && !(await requestReopen(graduationStepComplete.current))) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      setFinishCheckpoint('save');
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: validation.valid,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
+
   useEffect(() => {
-    if (!validation.valid || !isDirty || busy || stepStillComplete) return;
+    if (!validation.valid || !isDirty || busy || signOut.signingOut || stepStillComplete) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, persistDraft, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, isDirty, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const handleFinish = useCallback(async () => {
     setValidationAttempted(true);
@@ -166,6 +194,7 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
         setPersistedSignature(workingSignature);
         checkpoint = 'step';
         setFinishCheckpoint('step');
+        if (signOut.isSignOutPending()) return;
       } catch {
         setFailedOperation('save');
         setSaveStatus('failed');
@@ -179,6 +208,7 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
         graduationStepComplete.current = true;
         checkpoint = 'onboarding';
         setFinishCheckpoint('onboarding');
+        if (signOut.isSignOutPending()) return;
       } catch {
         setFailedOperation('stepComplete');
         setSaveStatus('failed');
@@ -188,12 +218,13 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
 
     try {
       await completeOnboarding().unwrap();
+      if (signOut.isSignOutPending()) return;
       navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
     } catch {
       setFailedOperation('onboardingComplete');
       setSaveStatus('failed');
     }
-  }, [busy, completeOnboarding, completeStep, finishCheckpoint, navigation, payload, requestReopen, saveStep, step.key, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, completeOnboarding, completeStep, finishCheckpoint, navigation, payload, requestReopen, saveStep, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const persistCompletedEdit = useCallback(async (nextData: GoalsStepRequest, forceReopen: boolean) => {
     const editVersion = completedEditVersion.current + 1;
@@ -247,7 +278,7 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <OnboardingGoalsForm
         config={config}
         mobile={mobile}
@@ -257,7 +288,7 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
         data={workingData}
         error={validation.error}
         showError={validationAttempted}
-        disabled={busy}
+        disabled={busy || signOut.signingOut}
         onChange={handleChange}
       />
 
@@ -287,6 +318,7 @@ export const OnboardingRealGoalsSession: React.FC<OnboardingRealGoalsSessionProp
         savingLabel="FINISHING…"
         continueAccessibilityLabel="Finish onboarding"
         savingAccessibilityLabel="Completing onboarding"
+        signOut={signOut}
       />
     </View>
   );

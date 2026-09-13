@@ -368,6 +368,13 @@ export const styles = StyleSheet.create({
     marginTop: 24,
     paddingTop: 24,
   },
+  footerDesktopSecondaryArea: {
+    flex: 1,
+    maxWidth: 600,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
   footerMobile: {
     borderTopWidth: 1,
     borderTopColor: theme.colors.panelDivider,
@@ -384,8 +391,24 @@ export const styles = StyleSheet.create({
   },
   secondaryActionsDesktop: {
     flex: 1,
-    maxWidth: 440,
+    maxWidth: 360,
     marginTop: 0,
+  },
+  signOutAction: {
+    minWidth: 112,
+    minHeight: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  signOutActionMobile: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  signOutActionText: {
+    color: theme.colors.secondaryText,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
   },
   secondaryAction: {
     minWidth: 112,
@@ -417,6 +440,67 @@ export const styles = StyleSheet.create({
   },
   actionDisabled: {
     opacity: 0.38,
+  },
+  signOutDialogBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    padding: 24,
+  },
+  signOutDialog: {
+    width: '100%',
+    maxWidth: 460,
+    borderWidth: 1,
+    borderColor: theme.colors.strongBorder,
+    backgroundColor: theme.colors.overlaySurface,
+    padding: 24,
+  },
+  signOutDialogTitle: {
+    color: theme.colors.warmWhite,
+    fontFamily: theme.typography.fontFamily.displayBold,
+    fontSize: 24,
+    letterSpacing: 0.8,
+  },
+  signOutDialogBody: {
+    color: theme.colors.secondaryText,
+    fontFamily: theme.typography.fontFamily.bodyRegular,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 10,
+  },
+  signOutDialogActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 24,
+  },
+  signOutDialogPrimaryAction: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.strongBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  signOutDialogSecondaryAction: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  signOutDialogPrimaryText: {
+    color: theme.colors.primaryText,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+  },
+  signOutDialogSecondaryText: {
+    color: theme.colors.secondaryText,
+    fontFamily: theme.typography.fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
   },
   readyBanner: {
     borderWidth: 1,

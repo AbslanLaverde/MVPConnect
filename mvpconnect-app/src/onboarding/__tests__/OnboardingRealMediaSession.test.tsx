@@ -8,6 +8,7 @@ import type { OnboardingPersona, OnboardingState, OnboardingStep } from '../onbo
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
+  storageHelpers: { clearAuthData: jest.fn() },
   default: { get: jest.fn(), put: jest.fn(), post: jest.fn(), delete: jest.fn() },
 }));
 
@@ -32,8 +33,15 @@ const mockSaveStep = jest.fn();
 const mockCompleteStep = jest.fn();
 const mockSkipStep = jest.fn();
 const mockReopenStep = jest.fn();
+const mockDispatch = jest.fn();
+const mockResetApiState = jest.fn(() => ({ type: 'onboardingApi/resetApiState' }));
+
+jest.mock('react-redux', () => ({
+  useDispatch: () => mockDispatch,
+}));
 
 jest.mock('../onboardingApi', () => ({
+  onboardingApi: { util: { resetApiState: mockResetApiState } },
   useSaveOnboardingStepMutation: () => [mockSaveStep, { isLoading: false }],
   useCompleteOnboardingStepMutation: () => [mockCompleteStep, { isLoading: false }],
   useSkipOnboardingStepMutation: () => [mockSkipStep, { isLoading: false }],
@@ -97,7 +105,7 @@ const mockHydration = () => {
 
 const renderSession = (persona: OnboardingPersona, step = makeStep(persona)) => {
   const state = makeState(persona, step);
-  const navigation = { push: jest.fn() } as any;
+  const navigation = { push: jest.fn(), reset: jest.fn() } as any;
   const screen = render(
     <OnboardingRealMediaSession
       state={state}
@@ -263,4 +271,5 @@ describe('OnboardingRealMediaSession', () => {
     }));
     expect(mockReopenStep.mock.invocationCallOrder[0]).toBeLessThan(mockedApi.put.mock.invocationCallOrder[0]);
   });
+
 });

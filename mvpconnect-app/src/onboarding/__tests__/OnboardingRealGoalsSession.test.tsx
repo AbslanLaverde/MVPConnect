@@ -2,7 +2,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
-import api from '../../services/api';
+import api, { storageHelpers } from '../../services/api';
 import { onboardingApi } from '../onboardingApi';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingRealGoalsSession } from '../OnboardingRealGoalsSession';
@@ -10,10 +10,12 @@ import type { OnboardingPersona, OnboardingState, OnboardingStep } from '../onbo
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
+  storageHelpers: { clearAuthData: jest.fn() },
   default: { get: jest.fn(), put: jest.fn(), post: jest.fn(), delete: jest.fn() },
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
+const mockedStorage = storageHelpers as jest.Mocked<typeof storageHelpers>;
 const stores: ReturnType<typeof configureStore>[] = [];
 const PERSONA = {
   artist: { backend: 'MUSICIAN' as const, total: 5, previous: 'media', goals: ['BOOK_SHOWS'] },
@@ -73,6 +75,7 @@ describe('OnboardingRealGoalsSession', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockedStorage.clearAuthData.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -203,5 +206,27 @@ describe('OnboardingRealGoalsSession', () => {
     }));
     expect(mockedApi.put).not.toHaveBeenCalled();
     expect(mockedApi.post).toHaveBeenCalledWith('/onboarding/complete');
+  });
+
+  it('saves a dirty Goals draft before sign-out without finishing or reaching Welcome', async () => {
+    mockedApi.put.mockResolvedValue({ data: makeStep('artist') } as any);
+    const screen = renderSession('artist');
+
+    fireEvent.press(screen.getByLabelText('CONNECT WITH PROMOTERS'));
+    fireEvent.press(screen.getByLabelText('Sign out'));
+
+    await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith('/onboarding/steps/goals', {
+      data: { connectionGoals: ['BOOK_SHOWS', 'FIND_PROMOTERS'] },
+    }));
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    }));
+    expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1);
+    expect(mockedApi.post).not.toHaveBeenCalled();
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'Welcome' }],
+    });
   });
 });

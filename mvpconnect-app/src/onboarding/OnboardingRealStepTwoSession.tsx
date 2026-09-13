@@ -27,6 +27,7 @@ import type {
   OnboardingStep,
 } from './onboardingTypes';
 import { styles } from './OnboardingShell.styles';
+import { useOnboardingSignOut } from './useOnboardingSignOut';
 
 type FailedOperation = 'autosave' | 'save' | 'complete' | 'reopen';
 
@@ -106,12 +107,17 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
     void requestReopen();
   }, [isDirty, requestReopen, stepStillComplete, workingSignature]);
 
+  const payload = useCallback(
+    () => normalizeStepTwoDataForPayload(config.persona, workingData),
+    [config.persona, workingData],
+  );
+
   const persistDraft = useCallback(async () => {
     if (!validation.valid || !isDirty || busy || stepStillComplete) return false;
     setFailedOperation(undefined);
     setSaveStatus('saving');
     const submittedSignature = workingSignature;
-    const payloadData = normalizeStepTwoDataForPayload(config.persona, workingData);
+    const payloadData = payload();
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(submittedSignature);
@@ -122,13 +128,39 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
       setSaveStatus('failed');
       return false;
     }
-  }, [busy, config.persona, isDirty, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingData, workingSignature]);
+  }, [busy, isDirty, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const flushValidDraft = useCallback(async () => {
+    if (!validation.valid) return false;
+    if (stepStillComplete && !(await requestReopen())) return false;
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const submittedSignature = workingSignature;
+    try {
+      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
+      setPersistedSignature(submittedSignature);
+      showSavedBriefly();
+      return true;
+    } catch {
+      setFailedOperation('autosave');
+      setSaveStatus('failed');
+      return false;
+    }
+  }, [payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+
+  const signOut = useOnboardingSignOut({
+    navigation,
+    dirty: isDirty,
+    valid: validation.valid,
+    persistenceBusy: busy,
+    flushValidDraft,
+  });
 
   useEffect(() => {
-    if (!validation.valid || !isDirty || busy || stepStillComplete) return;
+    if (!validation.valid || !isDirty || busy || signOut.signingOut || stepStillComplete) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, persistDraft, stepStillComplete, validation.valid, workingSignature]);
+  }, [busy, isDirty, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -146,10 +178,11 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
     if (stepStillComplete && !(await requestReopen())) return;
     setFailedOperation(undefined);
     setSaveStatus('saving');
-    const payloadData = normalizeStepTwoDataForPayload(config.persona, workingData);
+    const payloadData = payload();
     try {
       await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
       setPersistedSignature(workingSignature);
+      if (signOut.isSignOutPending()) return;
     } catch {
       setFailedOperation('save');
       setSaveStatus('failed');
@@ -159,12 +192,13 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
     try {
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
+      if (signOut.isSignOutPending()) return;
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
     }
-  }, [busy, completeStep, config.persona, navigateFromState, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingData, workingSignature]);
+  }, [busy, completeStep, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const handleBack = () => {
     if (!previousStep || busy) return;
@@ -184,7 +218,7 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
   };
 
   return (
-    <View style={[styles.main, mobile && styles.mainMobile]}>
+    <View style={[styles.main, mobile && styles.mainMobile]} pointerEvents={signOut.signingOut ? 'none' : 'auto'}>
       <OnboardingStepTwoForm
         config={config}
         mobile={mobile}
@@ -225,6 +259,7 @@ export const OnboardingRealStepTwoSession: React.FC<OnboardingRealStepTwoSession
         onBack={handleBack}
         onContinue={() => void handleContinue()}
         onSkip={() => undefined}
+        signOut={signOut}
       />
     </View>
   );

@@ -41,6 +41,11 @@ const LoadingState = () => (
   </View>
 );
 
+export const onboardingBottomPadding = (mobile: boolean, bottomInset: number): number =>
+  mobile
+    ? Math.max(theme.spacing.xl, bottomInset + theme.spacing.md)
+    : theme.spacing.xxl;
+
 export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -134,7 +139,10 @@ export const OnboardingShell: React.FC<Props> = ({ navigation, route }) => {
         contentContainerStyle={[
           styles.scrollContent,
           mobile && styles.scrollContentMobile,
-          { paddingTop: Math.max(insets.top, theme.spacing.md) },
+          {
+            paddingTop: Math.max(insets.top, theme.spacing.md),
+            paddingBottom: onboardingBottomPadding(mobile, insets.bottom),
+          },
         ]}
         scrollEnabled
         keyboardShouldPersistTaps="handled"
