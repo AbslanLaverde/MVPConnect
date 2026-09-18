@@ -103,11 +103,17 @@ export const SelectChips = <Value extends string,>({
               accessibilityState={{ checked: selected, disabled: unavailable }}
             >
               {selected && accentConfig ? (
-                <OnboardingAccentFill
-                  config={accentConfig}
-                  style={fieldStyles.chipAccentFill}
-                  testID={`${label}-${option.value}-selected-accent`}
-                />
+                <View
+                  testID={`${label}-${option.value}-selected-background`}
+                  pointerEvents="none"
+                  style={fieldStyles.chipAccentHost}
+                >
+                  <OnboardingAccentFill
+                    config={accentConfig}
+                    style={fieldStyles.chipAccentFill}
+                    testID={`${label}-${option.value}-selected-accent`}
+                  />
+                </View>
               ) : null}
               <Text style={[fieldStyles.chipText, selected && fieldStyles.chipTextSelected]}>
                 {selected ? `${option.label} ×` : option.label}
