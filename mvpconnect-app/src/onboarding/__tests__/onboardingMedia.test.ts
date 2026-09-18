@@ -3,8 +3,20 @@ import {
   createOnboardingBannerAdapter,
   createOnboardingGalleryAdapter,
   onboardingMediaContexts,
+  pickOnboardingImage,
+  pickOnboardingImages,
+  pickOnboardingProfileImage,
   uploadOnboardingProfileImage,
 } from '../onboardingMedia';
+
+const mockRequestMediaLibraryPermissions = jest.fn();
+const mockLaunchImageLibrary = jest.fn();
+
+jest.mock('expo-image-picker', () => ({
+  MediaTypeOptions: { Images: 'Images' },
+  requestMediaLibraryPermissionsAsync: mockRequestMediaLibraryPermissions,
+  launchImageLibraryAsync: mockLaunchImageLibrary,
+}));
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
@@ -22,6 +34,71 @@ describe('onboarding media adapter', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    mockRequestMediaLibraryPermissions.mockResolvedValue({ granted: true });
+  });
+
+  it('keeps the Hero/Profile picker single-select', async () => {
+    mockLaunchImageLibrary.mockResolvedValue({
+      canceled: false,
+      assets: [{
+        uri: 'file:///hero.jpg',
+        fileName: 'hero.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 100,
+        width: 1500,
+        height: 500,
+        file: new Blob(['hero'], { type: 'image/jpeg' }),
+      }],
+    });
+
+    const selected = await pickOnboardingImage();
+
+    expect(selected?.name).toBe('hero.jpg');
+    expect(mockLaunchImageLibrary).toHaveBeenCalledWith(expect.objectContaining({
+      allowsEditing: false,
+      allowsMultipleSelection: false,
+    }));
+    expect(pickOnboardingProfileImage).toBe(pickOnboardingImage);
+  });
+
+  it('enables Gallery multi-select, preserves returned order, and clamps every platform result', async () => {
+    mockLaunchImageLibrary.mockResolvedValue({
+      canceled: false,
+      assets: ['one', 'two', 'ignored'].map((name) => ({
+        uri: `file:///${name}.jpg`,
+        fileName: `${name}.jpg`,
+        mimeType: 'image/jpeg',
+        fileSize: 100,
+        width: 1200,
+        height: 900,
+        file: new Blob([name], { type: 'image/jpeg' }),
+      })),
+    });
+
+    const selected = await pickOnboardingImages(2);
+
+    expect(selected.map((item) => item.name)).toEqual(['one.jpg', 'two.jpg']);
+    expect(new Set(selected.map((item) => item.localId)).size).toBe(2);
+    expect(mockLaunchImageLibrary).toHaveBeenCalledWith(expect.objectContaining({
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: 2,
+      orderedSelection: true,
+    }));
+  });
+
+  it('returns an empty Gallery selection on cancel and never opens a full picker', async () => {
+    mockLaunchImageLibrary.mockResolvedValue({ canceled: true, assets: [] });
+
+    await expect(pickOnboardingImages(4)).resolves.toEqual([]);
+    expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+    await expect(pickOnboardingImages(0)).resolves.toEqual([]);
+    expect(mockLaunchImageLibrary).not.toHaveBeenCalled();
   });
 
   it('initializes, uploads directly, completes, and associates without leaking JWT data', async () => {

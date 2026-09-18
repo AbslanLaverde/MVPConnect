@@ -54,6 +54,29 @@ const blobFor = async (file: MediaFile): Promise<Blob> => {
   return response.blob();
 };
 
+let gallerySelectionSequence = 0;
+
+const mediaFileFromAsset = (
+  asset: import('expo-image-picker').ImagePickerAsset,
+  localId?: string,
+  blobOverride?: Blob,
+): MediaFile => {
+  const browserFile = (asset as import('expo-image-picker').ImagePickerAsset & { file?: Blob }).file;
+  const blob = blobOverride ?? browserFile;
+  const mimeType = asset.mimeType ?? blob?.type ?? 'image/jpeg';
+  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+  return {
+    localId,
+    uri: asset.uri,
+    name: asset.fileName ?? `onboarding-image-${Date.now()}.${extension}`,
+    type: mimeType,
+    size: asset.fileSize ?? blob?.size ?? 0,
+    width: asset.width,
+    height: asset.height,
+    blob,
+  };
+};
+
 export const pickOnboardingImage = async (): Promise<MediaFile | undefined> => {
   const ImagePicker = require('expo-image-picker') as typeof import('expo-image-picker');
   if (Platform.OS !== 'web') {
@@ -64,6 +87,7 @@ export const pickOnboardingImage = async (): Promise<MediaFile | undefined> => {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsEditing: false,
+    allowsMultipleSelection: false,
     quality: 1,
   });
   if (result.canceled || !result.assets[0]) return undefined;
@@ -77,17 +101,31 @@ export const pickOnboardingImage = async (): Promise<MediaFile | undefined> => {
     blob = await response.blob();
   }
 
-  const mimeType = asset.mimeType ?? blob.type ?? 'image/jpeg';
-  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
-  return {
-    uri: asset.uri,
-    name: asset.fileName ?? `onboarding-image-${Date.now()}.${extension}`,
-    type: mimeType,
-    size: asset.fileSize ?? blob.size,
-    width: asset.width,
-    height: asset.height,
-    blob,
-  };
+  return mediaFileFromAsset(asset, undefined, blob);
+};
+
+export const pickOnboardingImages = async (maximum: number): Promise<MediaFile[]> => {
+  if (maximum <= 0) return [];
+  const ImagePicker = require('expo-image-picker') as typeof import('expo-image-picker');
+  if (Platform.OS !== 'web') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) throw new Error('Photo library access is required to choose images.');
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: false,
+    allowsMultipleSelection: true,
+    selectionLimit: maximum,
+    orderedSelection: true,
+    quality: 1,
+  });
+  if (result.canceled) return [];
+
+  return result.assets.slice(0, maximum).map((asset) => mediaFileFromAsset(
+    asset,
+    `gallery-selection-${++gallerySelectionSequence}`,
+  ));
 };
 
 export const uploadOnboardingMedia = async (

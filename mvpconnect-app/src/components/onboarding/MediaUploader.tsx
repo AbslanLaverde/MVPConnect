@@ -6,6 +6,7 @@ import { fieldStyles } from './OnboardingFields.styles';
 export type MediaUploadMode = 'PROFILE_IMAGE' | 'BANNER_IMAGE' | 'GALLERY_IMAGE';
 
 export interface MediaFile {
+  localId?: string;
   uri: string;
   name: string;
   type: string;
@@ -91,7 +92,7 @@ const MODE_LABELS: Record<MediaUploadMode, string> = {
   GALLERY_IMAGE: 'GALLERY IMAGE',
 };
 
-const previewUriFor = (state: MediaUploaderState): string | undefined => {
+export const mediaPreviewUriFor = (state: MediaUploaderState): string | undefined => {
   if (state.status === 'UPLOADED') return state.media.url;
   if (state.status === 'REMOVING') return undefined;
   if ('file' in state) return state.file?.uri;
@@ -128,7 +129,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 }) => {
   const [internalState, setInternalState] = useState<MediaUploaderState>(defaultState);
   const currentState = state ?? internalState;
-  const previewUri = previewUriFor(currentState);
+  const previewUri = mediaPreviewUriFor(currentState);
   const pickerAvailable = Boolean(onSelectRequest);
 
   const commit = (nextState: MediaUploaderState) => {
