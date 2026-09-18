@@ -76,7 +76,8 @@ export interface OnboardingMediaFormProps {
   errors: Record<string, string | undefined>;
   bannerAdapter: MediaUploadAdapter;
   galleryAdapter: MediaUploadAdapter;
-  onPickImage: (slotIndex?: number) => Promise<MediaFile | undefined>;
+  onPickImage: () => Promise<MediaFile | undefined>;
+  onPickGalleryImages: (remainingCapacity: number) => Promise<readonly MediaFile[]>;
   onBannerChange: (state: MediaUploaderState) => void;
   onGalleryChange: React.Dispatch<React.SetStateAction<MediaUploaderState[]>>;
   onWebsiteChange: (website: string | null) => void;
@@ -128,6 +129,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
   bannerAdapter,
   galleryAdapter,
   onPickImage,
+  onPickGalleryImages,
   onBannerChange,
   onGalleryChange,
   onWebsiteChange,
@@ -217,14 +219,13 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
               items={galleryStates}
               onChange={onGalleryChange}
               maxCount={MEDIA_GALLERY_LIMITS[config.persona]}
-              onSelectRequest={(slot) => onPickImage(slot)}
+              onSelectRequest={onPickGalleryImages}
               adapter={galleryAdapter}
               label=""
               disabled={interactionBusy}
               accentColor={accent}
-              aspectRatio={4 / 3}
-              cropHint="JPG, PNG OR WEBP · MAX 10 MB"
               error={errors.gallery}
+              mobile={mobile}
             />
           </View>
         </View>
