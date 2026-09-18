@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { render, within } from '@testing-library/react-native';
 import type { MediaUploadAdapter, MediaUploaderState } from '../../components/onboarding/MediaUploader';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingStepOneForm } from '../OnboardingStepOneForm';
@@ -25,7 +25,12 @@ const location = {
   placeId: null,
 };
 
-const renderForm = (persona: 'artist' | 'venue' | 'promoter', mobile = false) => {
+const renderForm = (
+  persona: 'artist' | 'venue' | 'promoter',
+  mobile = false,
+  mediaState: MediaUploaderState = emptyMedia,
+  profileImageError?: string,
+) => {
   const data: StepOneData = persona === 'venue'
     ? { description: null, location }
     : persona === 'promoter'
@@ -40,9 +45,9 @@ const renderForm = (persona: 'artist' | 'venue' | 'promoter', mobile = false) =>
       stepLabel={ONBOARDING_CONFIG[persona].stepPresentation[ONBOARDING_CONFIG[persona].entryStep].label}
       displayName="Example Account"
       data={data}
-      errors={{}}
-      showErrors={false}
-      mediaState={emptyMedia}
+      errors={profileImageError ? { profileImage: profileImageError } : {}}
+      showErrors={Boolean(profileImageError)}
+      mediaState={mediaState}
       onMediaStateChange={jest.fn()}
       onSelectImage={jest.fn()}
       mediaAdapter={adapter}
@@ -91,6 +96,38 @@ describe('Onboarding Step 1 forms', () => {
     expect(mobile.getByTestId('onboarding-identity-mobile')).toBeTruthy();
     expect(StyleSheet.flatten(mobile.getByTestId('onboarding-step-one-layout').props.style).flexDirection)
       .toBe('column');
+  });
+
+  it('keeps the empty uploader inside one card and renders validation outside it', () => {
+    const error = 'Add and finish uploading a profile image.';
+    const screen = renderForm('artist', true, emptyMedia, error);
+    const card = screen.getByTestId('onboarding-profile-image-card');
+    const cardQueries = within(card);
+
+    expect(cardQueries.getByText('ADD YOUR IMAGE')).toBeTruthy();
+    expect(cardQueries.getByText('JPG · PNG · WEBP\nMAX 10 MB')).toBeTruthy();
+    expect(cardQueries.getByText('SELECT AN IMAGE')).toBeTruthy();
+    expect(cardQueries.getByLabelText('Select image')).toBeTruthy();
+    expect(cardQueries.queryByText(error)).toBeNull();
+    expect(screen.getByText(error)).toBeTruthy();
+
+    expect(StyleSheet.flatten(card.props.style)).toEqual(expect.objectContaining({
+      width: '100%',
+      position: 'relative',
+    }));
+  });
+
+  it('keeps uploaded preview, status, and actions inside the same card', () => {
+    const screen = renderForm('artist', true, {
+      status: 'UPLOADED',
+      media: { id: 'media-1', url: 'https://example.com/profile.jpg' },
+    });
+    const cardQueries = within(screen.getByTestId('onboarding-profile-image-card'));
+
+    expect(cardQueries.getByLabelText('Selected profile image preview')).toBeTruthy();
+    expect(cardQueries.getByText('UPLOADED')).toBeTruthy();
+    expect(cardQueries.getByLabelText('Replace image')).toBeTruthy();
+    expect(cardQueries.getByLabelText('Remove image')).toBeTruthy();
   });
 });
 

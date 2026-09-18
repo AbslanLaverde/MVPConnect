@@ -89,11 +89,38 @@ export const stepOneStyles = StyleSheet.create({
     flexShrink: 0,
   },
   mediaAccentFrame: {
-    padding: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    position: 'relative',
+  },
+  mediaAccentHorizontalEdge: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    left: 0,
+    right: 0,
+    height: 1,
+    zIndex: 2,
     overflow: 'hidden',
   },
-  mediaInner: {
-    backgroundColor: theme.colors.pageBg,
+  mediaAccentTopEdge: {
+    top: 0,
+  },
+  mediaAccentBottomEdge: {
+    bottom: 0,
+  },
+  mediaAccentVerticalEdge: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    zIndex: 2,
+  },
+  mediaAccentLeftEdge: {
+    left: 0,
+  },
+  mediaAccentRightEdge: {
+    right: 0,
   },
   mediaField: {
     marginBottom: 0,

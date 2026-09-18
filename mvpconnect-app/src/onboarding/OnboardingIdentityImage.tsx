@@ -31,6 +31,28 @@ export const OnboardingIdentityImage: React.FC<OnboardingIdentityImageProps> = (
   adapter,
   error,
 }) => {
+  const wrapSurface = (surface: React.ReactElement) => (
+    <View testID="onboarding-profile-image-card" style={stepOneStyles.mediaAccentFrame}>
+      {surface}
+      <View style={[stepOneStyles.mediaAccentHorizontalEdge, stepOneStyles.mediaAccentTopEdge]}>
+        <OnboardingAccentFill config={config} style={stepOneStyles.accentFill} />
+      </View>
+      <View style={[stepOneStyles.mediaAccentHorizontalEdge, stepOneStyles.mediaAccentBottomEdge]}>
+        <OnboardingAccentFill config={config} style={stepOneStyles.accentFill} />
+      </View>
+      <View
+        style={[stepOneStyles.mediaAccentVerticalEdge, stepOneStyles.mediaAccentLeftEdge, { backgroundColor: config.accentStart }]}
+      />
+      <View
+        style={[
+          stepOneStyles.mediaAccentVerticalEdge,
+          stepOneStyles.mediaAccentRightEdge,
+          { backgroundColor: config.accentEnd ?? config.accentStart },
+        ]}
+      />
+    </View>
+  );
+
   const media = (
     <View style={mobile ? stepOneStyles.mediaMobile : stepOneStyles.mediaDesktop}>
       {!mobile ? (
@@ -38,28 +60,24 @@ export const OnboardingIdentityImage: React.FC<OnboardingIdentityImageProps> = (
           PROFILE IMAGE <Text style={stepOneStyles.required}>*</Text>
         </Text>
       ) : null}
-      <View style={stepOneStyles.mediaAccentFrame}>
-        <OnboardingAccentFill config={config} style={stepOneStyles.accentFill} />
-        <View style={stepOneStyles.mediaInner}>
-          <MediaUploader
-            mode="PROFILE_IMAGE"
-            label=""
-            required
-            state={state}
-            onStateChange={onStateChange}
-            onSelectRequest={onSelectRequest}
-            adapter={adapter}
-            compact={mobile}
-            aspectRatio={mobile ? 1 : 4 / 5}
-            emptyTitle="ADD YOUR IMAGE"
-            emptyCopy={'JPG · PNG · WEBP\nMAX 10 MB'}
-            accentColor={config.accentEnd ?? config.accentStart}
-            borderless
-            fieldContainerStyle={stepOneStyles.mediaField}
-            error={error}
-          />
-        </View>
-      </View>
+      <MediaUploader
+        mode="PROFILE_IMAGE"
+        label=""
+        required
+        state={state}
+        onStateChange={onStateChange}
+        onSelectRequest={onSelectRequest}
+        adapter={adapter}
+        compact={mobile}
+        aspectRatio={mobile ? 1 : 4 / 5}
+        emptyTitle="ADD YOUR IMAGE"
+        emptyCopy={'JPG · PNG · WEBP\nMAX 10 MB'}
+        accentColor={config.accentEnd ?? config.accentStart}
+        borderless
+        fieldContainerStyle={stepOneStyles.mediaField}
+        error={error}
+        surfaceWrapper={wrapSurface}
+      />
     </View>
   );
 

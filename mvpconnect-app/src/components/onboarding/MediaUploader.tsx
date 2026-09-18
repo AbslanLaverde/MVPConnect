@@ -63,6 +63,7 @@ export interface MediaUploaderProps {
   error?: string;
   removeAccessibilityLabel?: string;
   replaceAccessibilityLabel?: string;
+  surfaceWrapper?: (surface: React.ReactElement) => React.ReactNode;
 }
 
 export const EMPTY_MEDIA_STATE: MediaUploaderState = { status: 'EMPTY' };
@@ -123,6 +124,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   error,
   removeAccessibilityLabel = 'Remove image',
   replaceAccessibilityLabel,
+  surfaceWrapper,
 }) => {
   const [internalState, setInternalState] = useState<MediaUploaderState>(defaultState);
   const currentState = state ?? internalState;
@@ -224,6 +226,112 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const removing = currentState.status === 'REMOVING';
   const progress = currentState.status === 'UPLOADING' ? currentState.progress ?? 0 : 0;
 
+  const surface = (
+    <View
+      style={[
+        fieldStyles.uploader,
+        compact && fieldStyles.uploaderCompact,
+        accentColor ? { borderColor: accentColor } : undefined,
+        (currentState.status === 'ERROR' || Boolean(error)) && fieldStyles.uploaderError,
+        borderless && { borderColor: 'transparent' },
+      ]}
+      accessibilityLabel={`${MODE_LABELS[mode]} uploader, ${statusCopy}`}
+    >
+      {previewUri ? (
+        <Image
+          source={{ uri: previewUri }}
+          style={[
+            fieldStyles.preview,
+            compact && fieldStyles.previewCompact,
+            aspectRatio ? { aspectRatio } : undefined,
+          ]}
+          resizeMode="cover"
+          accessibilityLabel={`Selected ${MODE_LABELS[mode].toLowerCase()} preview`}
+        />
+      ) : (
+        <View style={[fieldStyles.uploaderEmpty, compact && fieldStyles.uploaderEmptyCompact]}>
+          <Text style={[fieldStyles.uploaderTitle, compact && fieldStyles.uploaderTitleCompact]}>
+            {emptyTitle ?? MODE_LABELS[mode]}
+          </Text>
+          <Text style={fieldStyles.uploaderCopy}>
+            {emptyCopy ?? cropHint ?? 'Image crop guidance will appear here when configured.'}
+          </Text>
+        </View>
+      )}
+      {uploading ? (
+        <View style={fieldStyles.progressTrack}>
+          <View
+            style={[
+              fieldStyles.progressFill,
+              accentColor ? { backgroundColor: accentColor } : undefined,
+              { width: `${progress * 100}%` },
+            ]}
+          />
+        </View>
+      ) : null}
+      <Text
+        style={[
+          currentState.status === 'ERROR' ? fieldStyles.error : fieldStyles.statusText,
+          fieldStyles.uploaderStatus,
+        ]}
+        accessibilityLiveRegion="polite"
+      >
+        {currentState.status === 'ERROR' ? 'UPLOAD FAILED' : statusCopy}
+      </Text>
+      <View style={fieldStyles.uploaderActions}>
+        {currentState.status === 'ERROR' && currentState.file && adapter ? (
+          <TouchableOpacity
+            style={[fieldStyles.textAction, disabled && fieldStyles.chipUnavailable]}
+            onPress={() => void retryUpload()}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel="Try image upload again"
+            accessibilityState={{ disabled }}
+          >
+            <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
+              TRY AGAIN →
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity
+          style={[
+            fieldStyles.textAction,
+            (!pickerAvailable || disabled || uploading || removing) && fieldStyles.chipUnavailable,
+          ]}
+          onPress={() => void selectImage()}
+          disabled={!pickerAvailable || disabled || uploading || removing}
+          accessibilityRole="button"
+          accessibilityLabel={previewUri
+            ? replaceAccessibilityLabel ?? 'Replace image'
+            : 'Select image'}
+          accessibilityHint={!pickerAvailable
+            ? 'A native image picker has not been connected.'
+            : undefined}
+          accessibilityState={{
+            disabled: !pickerAvailable || disabled || uploading || removing,
+            busy: uploading || removing,
+          }}
+        >
+          <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
+            {previewUri ? 'CHANGE IMAGE →' : 'ADD YOUR IMAGE →'}
+          </Text>
+        </TouchableOpacity>
+        {currentState.status !== 'EMPTY' && currentState.status !== 'REMOVING' ? (
+          <TouchableOpacity
+            style={[fieldStyles.textAction, (disabled || uploading) && fieldStyles.chipUnavailable]}
+            onPress={() => void removeImage()}
+            disabled={disabled || uploading}
+            accessibilityRole="button"
+            accessibilityLabel={removeAccessibilityLabel}
+            accessibilityState={{ disabled: disabled || uploading }}
+          >
+            <Text style={[fieldStyles.textActionLabel, fieldStyles.removeActionLabel]}>REMOVE</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
+
   return (
     <FieldFrame
       label={label ?? MODE_LABELS[mode]}
@@ -233,109 +341,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       error={currentState.status === 'ERROR' ? currentState.error : error}
       containerStyle={fieldContainerStyle}
     >
-      <View
-        style={[
-          fieldStyles.uploader,
-          compact && fieldStyles.uploaderCompact,
-          accentColor ? { borderColor: accentColor } : undefined,
-          borderless && { borderColor: 'transparent' },
-          (currentState.status === 'ERROR' || Boolean(error)) && fieldStyles.uploaderError,
-        ]}
-        accessibilityLabel={`${MODE_LABELS[mode]} uploader, ${statusCopy}`}
-      >
-        {previewUri ? (
-          <Image
-            source={{ uri: previewUri }}
-            style={[
-              fieldStyles.preview,
-              compact && fieldStyles.previewCompact,
-              aspectRatio ? { aspectRatio } : undefined,
-            ]}
-            resizeMode="cover"
-            accessibilityLabel={`Selected ${MODE_LABELS[mode].toLowerCase()} preview`}
-          />
-        ) : (
-          <View style={[fieldStyles.uploaderEmpty, compact && fieldStyles.uploaderEmptyCompact]}>
-            <Text style={[fieldStyles.uploaderTitle, compact && fieldStyles.uploaderTitleCompact]}>
-              {emptyTitle ?? MODE_LABELS[mode]}
-            </Text>
-            <Text style={fieldStyles.uploaderCopy}>
-              {emptyCopy ?? cropHint ?? 'Image crop guidance will appear here when configured.'}
-            </Text>
-          </View>
-        )}
-        {uploading ? (
-          <View style={fieldStyles.progressTrack}>
-            <View
-              style={[
-                fieldStyles.progressFill,
-                accentColor ? { backgroundColor: accentColor } : undefined,
-                { width: `${progress * 100}%` },
-              ]}
-            />
-          </View>
-        ) : null}
-        <Text
-          style={[
-            currentState.status === 'ERROR' ? fieldStyles.error : fieldStyles.statusText,
-            fieldStyles.uploaderStatus,
-          ]}
-          accessibilityLiveRegion="polite"
-        >
-          {currentState.status === 'ERROR' ? 'UPLOAD FAILED' : statusCopy}
-        </Text>
-        <View style={fieldStyles.uploaderActions}>
-          {currentState.status === 'ERROR' && currentState.file && adapter ? (
-            <TouchableOpacity
-              style={[fieldStyles.textAction, disabled && fieldStyles.chipUnavailable]}
-              onPress={() => void retryUpload()}
-              disabled={disabled}
-              accessibilityRole="button"
-              accessibilityLabel="Try image upload again"
-              accessibilityState={{ disabled }}
-            >
-              <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
-                TRY AGAIN →
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            style={[
-              fieldStyles.textAction,
-              (!pickerAvailable || disabled || uploading || removing) && fieldStyles.chipUnavailable,
-            ]}
-            onPress={() => void selectImage()}
-            disabled={!pickerAvailable || disabled || uploading || removing}
-            accessibilityRole="button"
-            accessibilityLabel={previewUri
-              ? replaceAccessibilityLabel ?? 'Replace image'
-              : 'Select image'}
-            accessibilityHint={!pickerAvailable
-              ? 'A native image picker has not been connected.'
-              : undefined}
-            accessibilityState={{
-              disabled: !pickerAvailable || disabled || uploading || removing,
-              busy: uploading || removing,
-            }}
-          >
-            <Text style={[fieldStyles.textActionLabel, accentColor ? { color: accentColor } : undefined]}>
-              {previewUri ? 'CHANGE IMAGE →' : 'ADD YOUR IMAGE →'}
-            </Text>
-          </TouchableOpacity>
-          {currentState.status !== 'EMPTY' && currentState.status !== 'REMOVING' ? (
-            <TouchableOpacity
-              style={[fieldStyles.textAction, (disabled || uploading) && fieldStyles.chipUnavailable]}
-              onPress={() => void removeImage()}
-              disabled={disabled || uploading}
-              accessibilityRole="button"
-              accessibilityLabel={removeAccessibilityLabel}
-              accessibilityState={{ disabled: disabled || uploading }}
-            >
-              <Text style={[fieldStyles.textActionLabel, fieldStyles.removeActionLabel]}>REMOVE</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+      {surfaceWrapper ? surfaceWrapper(surface) : surface}
     </FieldFrame>
   );
 };
