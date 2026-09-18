@@ -127,8 +127,12 @@ export const fieldStyles = StyleSheet.create({
   chipTextSelected: {
     color: theme.colors.warmWhite,
   },
-  chipAccentFill: {
+  chipAccentHost: {
     ...StyleSheet.absoluteFillObject,
+  },
+  chipAccentFill: {
+    width: '100%',
+    height: '100%',
   },
   limitText: {
     color: theme.colors.warning,
