@@ -33,9 +33,13 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Clear token on unauthorized
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userType');
+      // Only clear the token if one actually exists — prevents a race condition
+      // where a request fires before AsyncStorage loads from clearing a valid token.
+      const existing = await AsyncStorage.getItem('authToken');
+      if (existing) {
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('userType');
+      }
     }
     return Promise.reject(error);
   }

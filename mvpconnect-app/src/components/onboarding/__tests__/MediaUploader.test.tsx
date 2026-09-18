@@ -115,4 +115,31 @@ describe('MediaUploader', () => {
     await screen.findByText('SELECT AN IMAGE');
     expect(adapter.remove).toHaveBeenCalledWith('media-1');
   });
+
+  it('retains the uploaded preview and reports a removal-specific error when deletion fails', async () => {
+    const adapter: MediaUploadAdapter = {
+      upload: jest.fn(),
+      remove: jest.fn().mockRejectedValue(new Error('delete failed')),
+    };
+    const screen = render(
+      <MediaUploader
+        mode="PROFILE_IMAGE"
+        defaultState={{
+          status: 'UPLOADED',
+          media: { id: 'media-1', url: 'https://example.com/profile.jpg' },
+        }}
+        adapter={adapter}
+        onSelectRequest={async () => IMAGE}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Remove image'));
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByLabelText('Selected profile image preview')).toBeTruthy();
+    expect(screen.getByText('The uploaded image could not be removed. Please try again.')).toBeTruthy();
+    expect(screen.queryByText('SELECT AN IMAGE')).toBeNull();
+  });
 });

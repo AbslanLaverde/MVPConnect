@@ -73,8 +73,13 @@ const readyMedia = {
   url: 'http://127.0.0.1:9000/fresh-access-url',
 };
 
-const renderSession = (step = makeStep(), state = makeState(step)) => {
-  mockedApi.get.mockResolvedValue({ data: readyMedia } as any);
+const renderSession = (
+  step = makeStep(),
+  state = makeState(step),
+  mediaError?: unknown,
+) => {
+  if (mediaError) mockedApi.get.mockRejectedValue(mediaError);
+  else mockedApi.get.mockResolvedValue({ data: readyMedia } as any);
   const testStore = configureStore({
     reducer: { [onboardingApi.reducerPath]: onboardingApi.reducer },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(onboardingApi.middleware),
@@ -92,7 +97,7 @@ const renderSession = (step = makeStep(), state = makeState(step)) => {
       />
     </Provider>,
   );
-  return { ...screen, navigation };
+  return { ...screen, navigation, testStore };
 };
 
 describe('OnboardingRealStepSession', () => {
@@ -132,6 +137,49 @@ describe('OnboardingRealStepSession', () => {
     expect(screen.getByDisplayValue('Brooklyn')).toBeTruthy();
     await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith('/media/media-1'));
     expect(await screen.findByLabelText('Selected profile image preview')).toBeTruthy();
+  });
+
+  it('keeps a successfully deleted image empty even while its former query is active', async () => {
+    mockedApi.delete.mockResolvedValue({ data: undefined } as any);
+    const screen = renderSession();
+    expect(await screen.findByLabelText('Selected profile image preview')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Remove image'));
+
+    await waitFor(() => expect(mockedApi.delete).toHaveBeenCalledWith('/media/media-1'));
+    expect(await screen.findByText('ADD YOUR IMAGE')).toBeTruthy();
+    expect(screen.queryByLabelText('Selected profile image preview')).toBeNull();
+    expect(screen.getByText('Add and finish uploading a profile image.')).toBeTruthy();
+    expect(onboardingApi.endpoints.getOwnedMedia.select('media-1')(
+      screen.testStore.getState() as any,
+    ).data).toBeNull();
+
+    await act(async () => Promise.resolve());
+    expect(screen.queryByLabelText('Selected profile image preview')).toBeNull();
+  });
+
+  it('retains the uploaded image and profile validity when deletion fails', async () => {
+    mockedApi.delete.mockRejectedValue(new Error('delete failed'));
+    const screen = renderSession();
+    expect(await screen.findByLabelText('Selected profile image preview')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Remove image'));
+
+    expect(await screen.findByText('The uploaded image could not be removed. Please try again.')).toBeTruthy();
+    expect(screen.getByLabelText('Selected profile image preview')).toBeTruthy();
+    expect(screen.queryByText('Add and finish uploading a profile image.')).toBeNull();
+  });
+
+  it('treats a persisted media id that no longer exists as an empty required image', async () => {
+    const missingMedia = {
+      isAxiosError: true,
+      response: { status: 404, data: { message: 'Not found' } },
+    };
+    const screen = renderSession(makeStep(), makeState(), missingMedia);
+
+    expect(await screen.findByText('ADD YOUR IMAGE')).toBeTruthy();
+    expect(await screen.findByText('Add and finish uploading a profile image.')).toBeTruthy();
+    expect(screen.queryByLabelText('Selected profile image preview')).toBeNull();
   });
 
   it('enables Continue for valid data and waits for save plus completion before navigating', async () => {
@@ -211,6 +259,38 @@ describe('OnboardingRealStepSession', () => {
       expect.objectContaining({ data: expect.objectContaining({ bio: 'Updated artist bio' }) }),
     ), { timeout: 1800 });
     await screen.findByText('SAVED');
+  });
+
+  it('waits for an active autosave and completes from one Continue activation', async () => {
+    let finishAutosave: ((value: unknown) => void) | undefined;
+    const autosaveResponse = new Promise((resolve) => {
+      finishAutosave = resolve;
+    });
+    mockedApi.put.mockReturnValueOnce(autosaveResponse as any);
+    mockedApi.post.mockResolvedValue({
+      data: makeState(makeStep({ status: 'COMPLETE' }), 'sound'),
+    } as any);
+    const screen = renderSession();
+    await waitFor(() => expect(
+      screen.getByLabelText('Continue to the next onboarding step').props.accessibilityState.disabled,
+    ).toBe(false));
+
+    fireEvent.changeText(screen.getByLabelText('BIO, optional'), 'Updated during autosave');
+    await act(async () => jest.advanceTimersByTime(1100));
+    await waitFor(() => expect(mockedApi.put).toHaveBeenCalledTimes(1));
+
+    const continueButton = screen.getByLabelText('Continue to the next onboarding step');
+    expect(continueButton.props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(continueButton);
+    expect(mockedApi.post).not.toHaveBeenCalled();
+
+    await act(async () => finishAutosave?.({ data: makeStep() }));
+    await waitFor(() => expect(mockedApi.post).toHaveBeenCalledTimes(1));
+    expect(mockedApi.put).toHaveBeenCalledTimes(1);
+    expect(screen.navigation.push).toHaveBeenCalledWith('Onboarding', {
+      persona: 'artist',
+      step: 'sound',
+    });
   });
 
   it('pauses autosave while city suggestions are open and resumes after selection', async () => {

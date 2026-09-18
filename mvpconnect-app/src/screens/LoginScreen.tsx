@@ -69,8 +69,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     setLoading(true);
     let authenticated = false;
+    let response: Awaited<ReturnType<typeof authAPI.login>> | undefined;
     try {
-      const response = await authAPI.login({
+      response = await authAPI.login({
         email: email.toLowerCase().trim(),
         password,
       });
@@ -104,13 +105,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     } catch (error: any) {
       console.error(authenticated ? 'Post-login routing error:' : 'Login error:', error);
 
-      if (authenticated) {
-        await storageHelpers.clearAuthData();
-        store.dispatch(onboardingApi.util.resetApiState());
-        Alert.alert(
-          'Error',
-          "We couldn't load your onboarding progress. Please sign in again.",
-        );
+      if (authenticated && response) {
+        // Login succeeded — token is valid. Don't clear it. The onboarding
+        // shell will load state itself after navigation; a transient fetch
+        // failure here should not sign the user out.
+        navigation.replace('Onboarding', {
+          persona: response.userType === 'VENUE'
+            ? 'venue'
+            : response.userType === 'PROMOTER'
+              ? 'promoter'
+              : 'artist',
+          step: response.userType === 'VENUE'
+            ? 'room'
+            : response.userType === 'PROMOTER'
+              ? 'business'
+              : 'basics',
+        });
         return;
       }
 

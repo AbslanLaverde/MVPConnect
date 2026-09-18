@@ -1,4 +1,5 @@
 import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { BaseQueryApi } from '@reduxjs/toolkit/query';
 import axios from 'axios';
 import api from '../services/api';
 import type {
@@ -62,6 +63,20 @@ export const fetchOnboardingState = async (): Promise<OnboardingState> => {
   return response.data;
 };
 
+const synchronizeOnboardingState = async (
+  dispatch: BaseQueryApi['dispatch'],
+  state: OnboardingState,
+) => {
+  await dispatch(onboardingApi.util.upsertQueryData('getOnboarding', undefined, state));
+};
+
+const cacheDeletedOwnedMedia = async (
+  dispatch: BaseQueryApi['dispatch'],
+  mediaId: string,
+) => {
+  await dispatch(onboardingApi.util.upsertQueryData('getOwnedMedia', mediaId, null));
+};
+
 export const onboardingApi = createApi({
   reducerPath: 'onboardingApi',
   baseQuery: fakeBaseQuery<OnboardingApiError>(),
@@ -87,7 +102,7 @@ export const onboardingApi = createApi({
         }
       },
     }),
-    getOwnedMedia: builder.query<OwnedMediaResponse, string>({
+    getOwnedMedia: builder.query<OwnedMediaResponse | null, string>({
       queryFn: async (mediaId) => {
         try {
           const response = await api.get<OwnedMediaResponse>(`/media/${mediaId}`);
@@ -97,6 +112,17 @@ export const onboardingApi = createApi({
         }
       },
       keepUnusedDataFor: 0,
+    }),
+    deleteOwnedMedia: builder.mutation<string, string>({
+      queryFn: async (mediaId, { dispatch }) => {
+        try {
+          await api.delete(`/media/${mediaId}`);
+          await cacheDeletedOwnedMedia(dispatch, mediaId);
+          return { data: mediaId };
+        } catch (error) {
+          return { error: toApiError(error) };
+        }
+      },
     }),
     saveOnboardingStep: builder.mutation<OnboardingStep, SaveOnboardingStepRequest>({
       queryFn: async ({ stepKey, data }) => {
@@ -122,59 +148,38 @@ export const onboardingApi = createApi({
       },
     }),
     completeOnboardingStep: builder.mutation<OnboardingState, SaveOnboardingStepRequest>({
-      queryFn: async ({ stepKey, data }) => {
+      queryFn: async ({ stepKey, data }, { dispatch }) => {
         try {
           const response = await api.post<OnboardingState>(
             `/onboarding/steps/${stepKey}/complete`,
             { data },
           );
+          await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
           return { error: toApiError(error) };
-        }
-      },
-      async onQueryStarted(_request, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(onboardingApi.util.upsertQueryData('getOnboarding', undefined, data));
-        } catch {
-          // The calling UI owns error presentation and retry behavior.
         }
       },
     }),
     skipOnboardingStep: builder.mutation<OnboardingState, string>({
-      queryFn: async (stepKey) => {
+      queryFn: async (stepKey, { dispatch }) => {
         try {
           const response = await api.post<OnboardingState>(`/onboarding/steps/${stepKey}/skip`);
+          await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
           return { error: toApiError(error) };
-        }
-      },
-      async onQueryStarted(_request, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(onboardingApi.util.upsertQueryData('getOnboarding', undefined, data));
-        } catch {
-          // The calling UI owns error presentation and retry behavior.
         }
       },
     }),
     reopenOnboardingStep: builder.mutation<OnboardingState, string>({
-      queryFn: async (stepKey) => {
+      queryFn: async (stepKey, { dispatch }) => {
         try {
           const response = await api.post<OnboardingState>(`/onboarding/steps/${stepKey}/reopen`);
+          await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
           return { error: toApiError(error) };
-        }
-      },
-      async onQueryStarted(_request, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(onboardingApi.util.upsertQueryData('getOnboarding', undefined, data));
-        } catch {
-          // The calling UI owns error presentation and retry behavior.
         }
       },
     }),
@@ -207,6 +212,7 @@ export const {
   useGetOnboardingQuery,
   useGetSelfAccountQuery,
   useGetOwnedMediaQuery,
+  useDeleteOwnedMediaMutation,
   useSaveOnboardingStepMutation,
   useCompleteOnboardingStepMutation,
   useSkipOnboardingStepMutation,
