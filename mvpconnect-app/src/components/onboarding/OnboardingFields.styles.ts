@@ -459,8 +459,12 @@ export const fieldStyles = StyleSheet.create({
     borderColor: theme.colors.brandBlue,
     backgroundColor: 'rgba(14, 165, 233, 0.1)',
   },
-  choiceAccentFill: {
+  choiceAccentHost: {
     ...StyleSheet.absoluteFillObject,
+  },
+  choiceAccentFill: {
+    width: '100%',
+    height: '100%',
   },
   choiceLabel: {
     color: theme.colors.primaryText,
