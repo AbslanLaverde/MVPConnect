@@ -77,11 +77,17 @@ export const ChoiceCards: React.FC<ChoiceCardsProps> = ({
             accessibilityState={{ checked: selected, selected, disabled: unavailable }}
           >
             {selected && accentConfig ? (
-              <OnboardingAccentFill
-                config={accentConfig}
-                style={fieldStyles.choiceAccentFill}
-                testID={`${label}-${option.value}-selected-accent`}
-              />
+              <View
+                testID={`${label}-${option.value}-selected-background`}
+                pointerEvents="none"
+                style={fieldStyles.choiceAccentHost}
+              >
+                <OnboardingAccentFill
+                  config={accentConfig}
+                  style={fieldStyles.choiceAccentFill}
+                  testID={`${label}-${option.value}-selected-accent`}
+                />
+              </View>
             ) : null}
             <Text style={fieldStyles.choiceLabel}>
               {selected ? `✓ ${option.label}` : option.label}
