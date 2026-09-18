@@ -5,6 +5,7 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { MediaUploaderState } from '../components/onboarding/MediaUploader';
 import {
   useCompleteOnboardingStepMutation,
+  useDeleteOwnedMediaMutation,
   useGetOwnedMediaQuery,
   useReopenOnboardingStepMutation,
   useSaveOnboardingStepMutation,
@@ -67,6 +68,7 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
   const [workingData, setWorkingData] = useState<StepOneData>(initialData);
   const [persistedSignature, setPersistedSignature] = useState(() => signatureFor(initialData));
   const [mediaState, setMediaState] = useState<MediaUploaderState>({ status: 'EMPTY' });
+  const [continueInFlight, setContinueInFlight] = useState(false);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [failedOperation, setFailedOperation] = useState<FailedOperation>();
@@ -74,20 +76,40 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
   const [locationSuggestionsActive, setLocationSuggestionsActive] = useState(false);
   const reopenedSignature = useRef<string>();
   const savedStatusTimer = useRef<ReturnType<typeof setTimeout>>();
+  const persistedSignatureRef = useRef(persistedSignature);
+  const removedMediaIds = useRef(new Set<string>());
+  const activeSave = useRef<Promise<boolean>>();
+  const continuePending = useRef(false);
 
   const persistedMediaId = stepOneMediaId(workingData);
   const mediaQuery = useGetOwnedMediaQuery(persistedMediaId ?? '', { skip: !persistedMediaId });
-  const mediaAdapter = useMemo(() => createOnboardingMediaAdapter(step.key), [step.key]);
+  const baseMediaAdapter = useMemo(() => createOnboardingMediaAdapter(step.key), [step.key]);
   const [saveStep, saveMutation] = useSaveOnboardingStepMutation();
   const [completeStep, completeMutation] = useCompleteOnboardingStepMutation();
   const [reopenStep, reopenMutation] = useReopenOnboardingStepMutation();
+  const [deleteOwnedMedia, deleteMutation] = useDeleteOwnedMediaMutation();
+  const mediaAdapter = useMemo(() => ({
+    ...baseMediaAdapter,
+    remove: async (mediaId: string) => {
+      await deleteOwnedMedia(mediaId).unwrap();
+      removedMediaIds.current.add(mediaId);
+    },
+  }), [baseMediaAdapter, deleteOwnedMedia]);
 
   const workingSignature = useMemo(() => signatureFor(workingData), [workingData]);
   const isDirty = workingSignature !== persistedSignature;
   const mediaReady = mediaState.status === 'UPLOADED'
     && mediaState.media.id === persistedMediaId;
   const validation = validateStepOneData(config.persona, workingData, mediaReady);
-  const busy = saveMutation.isLoading || completeMutation.isLoading || reopenMutation.isLoading;
+  const persistenceBusy = saveMutation.isLoading
+    || completeMutation.isLoading
+    || reopenMutation.isLoading
+    || deleteMutation.isLoading
+    || continueInFlight;
+  const transitionBusy = completeMutation.isLoading
+    || reopenMutation.isLoading
+    || deleteMutation.isLoading
+    || continueInFlight;
   const stepStillComplete = step.status === 'COMPLETE' && !locallyReopened;
   const stepPresentation = configuredStepFor(config.persona, step.key);
 
@@ -96,7 +118,11 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
   }, []);
 
   useEffect(() => {
-    if (!persistedMediaId || !mediaQuery.data) return;
+    if (
+      !persistedMediaId
+      || !mediaQuery.data
+      || removedMediaIds.current.has(persistedMediaId)
+    ) return;
     const currentLocalUpload = mediaState.status === 'SELECTED_LOCAL'
       || mediaState.status === 'UPLOADING'
       || mediaState.status === 'REMOVING'
@@ -118,8 +144,19 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
 
   useEffect(() => {
     if (!persistedMediaId || !mediaQuery.isError || mediaState.status !== 'EMPTY') return;
+    if (mediaQuery.error && 'status' in mediaQuery.error && mediaQuery.error.status === 404) {
+      removedMediaIds.current.add(persistedMediaId);
+      setValidationAttempted(true);
+      setWorkingData((current) => {
+        if (stepOneMediaId(current) !== persistedMediaId) return current;
+        const next = { ...current };
+        delete next.profileImage;
+        return next;
+      });
+      return;
+    }
     setMediaState({ status: 'ERROR', error: "We couldn't load your saved image." });
-  }, [mediaQuery.isError, mediaState.status, persistedMediaId]);
+  }, [mediaQuery.error, mediaQuery.isError, mediaState.status, persistedMediaId]);
 
   const showSavedBriefly = useCallback(() => {
     if (savedStatusTimer.current) clearTimeout(savedStatusTimer.current);
@@ -159,53 +196,63 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
     [config.persona, workingData],
   );
 
+  const saveDraft = useCallback((
+    payloadData: StepOneData,
+    submittedSignature: string,
+    failure: 'autosave' | 'save',
+  ) => {
+    setFailedOperation(undefined);
+    setSaveStatus('saving');
+    const operation = saveStep({ stepKey: step.key, data: payloadData }).unwrap()
+      .then(() => {
+        persistedSignatureRef.current = submittedSignature;
+        setPersistedSignature(submittedSignature);
+        showSavedBriefly();
+        return true;
+      })
+      .catch(() => {
+        setFailedOperation(failure);
+        setSaveStatus('failed');
+        return false;
+      });
+    activeSave.current = operation;
+    void operation.finally(() => {
+      if (activeSave.current === operation) activeSave.current = undefined;
+    });
+    return operation;
+  }, [saveStep, showSavedBriefly, step.key]);
+
   const persistDraft = useCallback(async () => {
     if (
       locationSuggestionsActive
       || !validation.valid
       || !isDirty
-      || busy
+      || persistenceBusy
+      || continuePending.current
+      || activeSave.current
       || stepStillComplete
     ) return false;
-    setFailedOperation(undefined);
-    setSaveStatus('saving');
     const submittedSignature = workingSignature;
     const payloadData = payload();
-    try {
-      await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
-      setPersistedSignature(submittedSignature);
-      showSavedBriefly();
-      return true;
-    } catch {
-      setFailedOperation('autosave');
-      setSaveStatus('failed');
-      return false;
-    }
-  }, [busy, isDirty, locationSuggestionsActive, payload, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+    return saveDraft(payloadData, submittedSignature, 'autosave');
+  }, [isDirty, locationSuggestionsActive, payload, persistenceBusy, saveDraft, stepStillComplete, validation.valid, workingSignature]);
 
   const flushValidDraft = useCallback(async () => {
     if (!validation.valid) return false;
-    if (stepStillComplete && !(await requestReopen())) return false;
-    setFailedOperation(undefined);
-    setSaveStatus('saving');
-    const submittedSignature = workingSignature;
-    try {
-      await saveStep({ stepKey: step.key, data: payload() }).unwrap();
-      setPersistedSignature(submittedSignature);
-      showSavedBriefly();
-      return true;
-    } catch {
-      setFailedOperation('autosave');
-      setSaveStatus('failed');
-      return false;
+    if (activeSave.current) {
+      const saved = await activeSave.current;
+      if (saved && persistedSignatureRef.current === workingSignature) return true;
     }
-  }, [payload, requestReopen, saveStep, showSavedBriefly, step.key, stepStillComplete, validation.valid, workingSignature]);
+    if (stepStillComplete && !(await requestReopen())) return false;
+    const submittedSignature = workingSignature;
+    return saveDraft(payload(), submittedSignature, 'autosave');
+  }, [payload, requestReopen, saveDraft, stepStillComplete, validation.valid, workingSignature]);
 
   const signOut = useOnboardingSignOut({
     navigation,
     dirty: isDirty,
     valid: validation.valid,
-    persistenceBusy: busy,
+    persistenceBusy,
     flushValidDraft,
   });
 
@@ -214,13 +261,13 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
       locationSuggestionsActive
       || !validation.valid
       || !isDirty
-      || busy
+      || persistenceBusy
       || signOut.signingOut
       || stepStillComplete
     ) return;
     const timer = setTimeout(() => void persistDraft(), 1000);
     return () => clearTimeout(timer);
-  }, [busy, isDirty, locationSuggestionsActive, persistDraft, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
+  }, [isDirty, locationSuggestionsActive, persistDraft, persistenceBusy, signOut.signingOut, stepStillComplete, validation.valid, workingSignature]);
 
   const navigateFromState = useCallback((nextState: OnboardingState) => {
     const nextStep = resumeStepFromState(nextState);
@@ -233,37 +280,51 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
 
   const handleContinue = useCallback(async () => {
     setValidationAttempted(true);
-    if (!validation.valid || busy) return;
+    if (
+      !validation.valid
+      || continuePending.current
+      || completeMutation.isLoading
+      || reopenMutation.isLoading
+      || deleteMutation.isLoading
+    ) return;
 
-    if (stepStillComplete && !(await requestReopen())) return;
-    setFailedOperation(undefined);
-    setSaveStatus('saving');
-    const payloadData = payload();
+    continuePending.current = true;
+    setContinueInFlight(true);
     try {
-      await saveStep({ stepKey: step.key, data: payloadData }).unwrap();
-      setPersistedSignature(workingSignature);
+      let currentSaveSatisfied = false;
+      if (activeSave.current) {
+        const saved = await activeSave.current;
+        currentSaveSatisfied = saved && persistedSignatureRef.current === workingSignature;
+      }
       if (signOut.isSignOutPending()) return;
-    } catch {
-      setFailedOperation('save');
-      setSaveStatus('failed');
-      return;
-    }
 
-    try {
+      if (stepStillComplete && !(await requestReopen())) return;
+      const payloadData = payload();
+      if (!currentSaveSatisfied && !(await saveDraft(payloadData, workingSignature, 'save'))) return;
+      if (signOut.isSignOutPending()) return;
+
       const nextState = await completeStep({ stepKey: step.key, data: payloadData }).unwrap();
       showSavedBriefly();
       if (signOut.isSignOutPending()) return;
+      continuePending.current = false;
+      setContinueInFlight(false);
       navigateFromState(nextState);
     } catch {
       setFailedOperation('complete');
       setSaveStatus('failed');
+    } finally {
+      if (continuePending.current) {
+        continuePending.current = false;
+        setContinueInFlight(false);
+      }
     }
-  }, [busy, completeStep, navigateFromState, payload, requestReopen, saveStep, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
+  }, [completeMutation.isLoading, completeStep, deleteMutation.isLoading, navigateFromState, payload, reopenMutation.isLoading, requestReopen, saveDraft, showSavedBriefly, signOut, step.key, stepStillComplete, validation.valid, workingSignature]);
 
   const handleMediaStateChange = (nextState: MediaUploaderState) => {
     setValidationAttempted(true);
     setMediaState(nextState);
     if (nextState.status === 'UPLOADED') {
+      removedMediaIds.current.delete(nextState.media.id);
       setWorkingData((current) => ({
         ...current,
         profileImage: { mediaId: nextState.media.id },
@@ -327,8 +388,8 @@ export const OnboardingRealStepSession: React.FC<OnboardingRealStepSessionProps>
         config={config}
         mobile={mobile}
         canContinue={validation.valid}
-        busy={busy}
-        backDisabled={busy}
+        busy={transitionBusy}
+        backDisabled={persistenceBusy}
         showBack={false}
         showSkip={false}
         onBack={() => undefined}
