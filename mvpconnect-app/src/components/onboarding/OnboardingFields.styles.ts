@@ -569,6 +569,10 @@ export const fieldStyles = StyleSheet.create({
   uploaderCompact: {
     minHeight: 0,
   },
+  uploaderBanner: {
+    width: '100%',
+    maxWidth: '100%',
+  },
   uploaderError: {
     borderColor: theme.colors.error,
   },
@@ -579,6 +583,13 @@ export const fieldStyles = StyleSheet.create({
   },
   previewCompact: {
     minHeight: 0,
+  },
+  bannerMediaSurface: {
+    width: '100%',
+    maxWidth: '100%',
+    aspectRatio: 3,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   uploaderEmpty: {
     minHeight: 174,

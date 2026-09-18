@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { MediaUploadAdapter, MediaUploaderState } from '../../components/onboarding';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingMediaForm, type OnboardingMediaFormProps } from '../OnboardingMediaForm';
@@ -37,6 +38,28 @@ const baseProps = (persona: 'artist' | 'venue' | 'promoter'): OnboardingMediaFor
 });
 
 describe('OnboardingMediaForm', () => {
+  it.each(['artist', 'venue', 'promoter'] as const)(
+    'renders the shared 3:1 Hero guidance for %s',
+    (persona) => {
+      const screen = render(<OnboardingMediaForm {...baseProps(persona)} />);
+
+      expect(screen.getByText(/Recommended: 1500 × 500 px \(3:1\)\./)).toBeTruthy();
+      expect(StyleSheet.flatten(screen.getByTestId('banner-image-surface').props.style))
+        .toEqual(expect.objectContaining({ aspectRatio: 3, minHeight: 0 }));
+    },
+  );
+
+  it.each(['artist', 'venue'] as const)(
+    'stretches the mobile Website section for %s without changing URL behavior',
+    (persona) => {
+      const screen = render(<OnboardingMediaForm {...baseProps(persona)} mobile />);
+
+      expect(StyleSheet.flatten(screen.getByTestId('media-website-content').props.style))
+        .toEqual(expect.objectContaining({ width: '100%', alignSelf: 'stretch' }));
+      expect(screen.getByLabelText('Website URL, optional').props.keyboardType).toBe('url');
+    },
+  );
+
   it('renders the approved Artist content, providers, and eight-image limit', () => {
     const screen = render(<OnboardingMediaForm {...baseProps('artist')} />);
 
