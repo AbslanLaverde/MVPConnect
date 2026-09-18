@@ -225,12 +225,14 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const uploading = currentState.status === 'UPLOADING';
   const removing = currentState.status === 'REMOVING';
   const progress = currentState.status === 'UPLOADING' ? currentState.progress ?? 0 : 0;
+  const bannerSurface = mode === 'BANNER_IMAGE';
 
   const surface = (
     <View
       style={[
         fieldStyles.uploader,
         compact && fieldStyles.uploaderCompact,
+        bannerSurface && fieldStyles.uploaderBanner,
         accentColor ? { borderColor: accentColor } : undefined,
         (currentState.status === 'ERROR' || Boolean(error)) && fieldStyles.uploaderError,
         borderless && { borderColor: 'transparent' },
@@ -239,17 +241,27 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     >
       {previewUri ? (
         <Image
+          testID={`${mode.toLowerCase().replace(/_/g, '-')}-surface`}
           source={{ uri: previewUri }}
           style={[
             fieldStyles.preview,
             compact && fieldStyles.previewCompact,
+            bannerSurface && fieldStyles.bannerMediaSurface,
             aspectRatio ? { aspectRatio } : undefined,
           ]}
           resizeMode="cover"
           accessibilityLabel={`Selected ${MODE_LABELS[mode].toLowerCase()} preview`}
         />
       ) : (
-        <View style={[fieldStyles.uploaderEmpty, compact && fieldStyles.uploaderEmptyCompact]}>
+        <View
+          testID={`${mode.toLowerCase().replace(/_/g, '-')}-surface`}
+          style={[
+            fieldStyles.uploaderEmpty,
+            compact && fieldStyles.uploaderEmptyCompact,
+            bannerSurface && fieldStyles.bannerMediaSurface,
+            bannerSurface && aspectRatio ? { aspectRatio } : undefined,
+          ]}
+        >
           <Text style={[fieldStyles.uploaderTitle, compact && fieldStyles.uploaderTitleCompact]}>
             {emptyTitle ?? MODE_LABELS[mode]}
           </Text>

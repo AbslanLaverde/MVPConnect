@@ -88,10 +88,15 @@ export const mediaStepStyles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: theme.spacing.xl,
   },
-  sectionColumnsMobile: { flexDirection: 'column', gap: theme.spacing.lg },
+  sectionColumnsMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: theme.spacing.lg,
+  },
   sectionCopy: { width: 270, minWidth: 220 },
   sectionCopyMobile: { width: '100%' },
   sectionContent: { flex: 1, minWidth: 0 },
+  sectionContentMobile: { width: '100%', alignSelf: 'stretch' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
   sectionTitle: {
     color: theme.colors.warmWhite,
