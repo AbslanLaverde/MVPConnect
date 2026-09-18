@@ -86,6 +86,30 @@ describe('OnboardingStepThreeForm', () => {
     expect(screen.getByLabelText('60 Min').props.accessibilityState.checked).toBe(true);
   });
 
+  it('uses the corrected selected background host for every Artist single-choice section', () => {
+    const screen = render(<Harness persona="artist" initial={{
+      ...emptyArtistLiveData(),
+      bookingStatus: 'NOT_AVAILABLE',
+      typicalDraw: 'FROM_101_TO_250',
+      travelSelection: 'UP_TO_100',
+      setLengthMinutes: 60,
+    }} />);
+
+    [
+      ['BOOKING RIGHT NOW-NOT_AVAILABLE', 'Not Available'],
+      ["WHAT'S YOUR TYPICAL DRAW?-FROM_101_TO_250", '101–250'],
+      ['HOW FAR DO YOU PLAY?-UP_TO_100', 'Up to 100 Miles'],
+      ['TYPICAL SET LENGTH-60', '60 Min'],
+    ].forEach(([testIdPrefix, accessibilityLabel]) => {
+      expect(screen.getByTestId(`${testIdPrefix}-selected-background`)).toBeTruthy();
+      expect(screen.getByTestId(`${testIdPrefix}-selected-accent`)).toBeTruthy();
+      expect(screen.getByLabelText(accessibilityLabel).props.accessibilityState).toMatchObject({
+        checked: true,
+        selected: true,
+      });
+    });
+  });
+
   it('allows Artist to select all eleven equipment types and add optional quantities', () => {
     const screen = render(<Harness persona="artist" />);
 
