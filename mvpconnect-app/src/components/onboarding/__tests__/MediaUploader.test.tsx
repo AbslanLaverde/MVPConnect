@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import {
   DEFAULT_MAX_IMAGE_BYTES,
   MediaFile,
@@ -15,6 +16,20 @@ const IMAGE: MediaFile = {
 };
 
 describe('MediaUploader', () => {
+  it('uses a contained 3:1 banner surface without the generic preview minimum height', () => {
+    const screen = render(<MediaUploader mode="BANNER_IMAGE" aspectRatio={3} />);
+
+    expect(StyleSheet.flatten(screen.getByTestId('banner-image-surface').props.style)).toEqual(
+      expect.objectContaining({
+        width: '100%',
+        maxWidth: '100%',
+        aspectRatio: 3,
+        minHeight: 0,
+        overflow: 'hidden',
+      }),
+    );
+  });
+
   it('rejects unsupported file types', async () => {
     const screen = render(
       <MediaUploader

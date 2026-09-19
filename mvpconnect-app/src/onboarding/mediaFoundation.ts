@@ -15,6 +15,7 @@ export const mediaUploaderStateKey = (
   item: MediaUploaderState,
   fallbackIndex: number,
 ): string => {
+  if ('file' in item && item.file?.localId) return `file:${item.file.localId}`;
   if ('media' in item && item.media?.id) return `media:${item.media.id}`;
   if ('file' in item && item.file) return `file:${item.file.uri}:${item.file.name}`;
   return `slot:${fallbackIndex}`;
@@ -22,6 +23,7 @@ export const mediaUploaderStateKey = (
 
 const mediaUploaderStateIdentities = (item: MediaUploaderState): string[] => {
   const identities: string[] = [];
+  if ('file' in item && item.file?.localId) identities.push(`file:${item.file.localId}`);
   if ('media' in item && item.media?.id) identities.push(`media:${item.media.id}`);
   if ('file' in item && item.file) identities.push(`file:${item.file.uri}:${item.file.name}`);
   return identities;
