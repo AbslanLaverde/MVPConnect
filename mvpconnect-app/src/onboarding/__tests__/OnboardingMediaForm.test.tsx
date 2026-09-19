@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { MediaUploadAdapter, MediaUploaderState } from '../../components/onboarding';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingMediaForm, type OnboardingMediaFormProps } from '../OnboardingMediaForm';
@@ -26,6 +27,7 @@ const baseProps = (persona: 'artist' | 'venue' | 'promoter'): OnboardingMediaFor
   bannerAdapter: adapter,
   galleryAdapter: adapter,
   onPickImage: jest.fn().mockResolvedValue(undefined),
+  onPickGalleryImages: jest.fn().mockResolvedValue([]),
   onBannerChange: jest.fn(),
   onGalleryChange: jest.fn(),
   onWebsiteChange: jest.fn(),
@@ -37,13 +39,35 @@ const baseProps = (persona: 'artist' | 'venue' | 'promoter'): OnboardingMediaFor
 });
 
 describe('OnboardingMediaForm', () => {
+  it.each(['artist', 'venue', 'promoter'] as const)(
+    'renders the shared 3:1 Hero guidance for %s',
+    (persona) => {
+      const screen = render(<OnboardingMediaForm {...baseProps(persona)} />);
+
+      expect(screen.getByText(/Recommended: 1500 × 500 px \(3:1\)\./)).toBeTruthy();
+      expect(StyleSheet.flatten(screen.getByTestId('banner-image-surface').props.style))
+        .toEqual(expect.objectContaining({ aspectRatio: 3, minHeight: 0 }));
+    },
+  );
+
+  it.each(['artist', 'venue'] as const)(
+    'stretches the mobile Website section for %s without changing URL behavior',
+    (persona) => {
+      const screen = render(<OnboardingMediaForm {...baseProps(persona)} mobile />);
+
+      expect(StyleSheet.flatten(screen.getByTestId('media-website-content').props.style))
+        .toEqual(expect.objectContaining({ width: '100%', alignSelf: 'stretch' }));
+      expect(screen.getByLabelText('Website URL, optional').props.keyboardType).toBe('url');
+    },
+  );
+
   it('renders the approved Artist content, providers, and eight-image limit', () => {
     const screen = render(<OnboardingMediaForm {...baseProps('artist')} />);
 
     expect(screen.getByLabelText('Step 04 of 05, MEDIA')).toBeTruthy();
     expect(screen.getByText('MAKE IT YOURS.')).toBeTruthy();
     expect(screen.getByText('SHOW YOURSELF')).toBeTruthy();
-    expect(screen.getByLabelText('0 of 8 gallery images uploaded')).toBeTruthy();
+    expect(screen.getByLabelText('0 of 8 gallery slots occupied')).toBeTruthy();
     expect(screen.getByText('CONNECT YOUR MUSIC')).toBeTruthy();
     expect(screen.getByText('VIDEO & SOCIAL')).toBeTruthy();
     expect(screen.getByLabelText('Search for your Spotify Artist identity')).toBeTruthy();
@@ -58,7 +82,7 @@ describe('OnboardingMediaForm', () => {
 
     expect(screen.getByLabelText('Step 05 of 06, MEDIA')).toBeTruthy();
     expect(screen.getAllByText('SHOW THE ROOM').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('0 of 10 gallery images uploaded')).toBeTruthy();
+    expect(screen.getByLabelText('0 of 10 gallery slots occupied')).toBeTruthy();
     expect(screen.getByLabelText('Instagram profile URL or handle')).toBeTruthy();
     expect(screen.getByLabelText('Facebook profile URL or handle')).toBeTruthy();
     expect(screen.getByLabelText('TikTok profile URL or handle')).toBeTruthy();
@@ -70,7 +94,7 @@ describe('OnboardingMediaForm', () => {
     const screen = render(<OnboardingMediaForm {...baseProps('promoter')} />);
 
     expect(screen.getByText('SHOW YOUR WORK.')).toBeTruthy();
-    expect(screen.getByLabelText('0 of 10 gallery images uploaded')).toBeTruthy();
+    expect(screen.getByLabelText('0 of 10 gallery slots occupied')).toBeTruthy();
     expect(screen.queryByLabelText('Website URL, optional')).toBeNull();
     expect(screen.queryByText('PAST SHOWS')).toBeNull();
   });
@@ -84,5 +108,31 @@ describe('OnboardingMediaForm', () => {
     );
     fireEvent.press(screen.getByLabelText('Save Instagram connection'));
     await waitFor(() => expect(props.onUrlConnectionSave).toHaveBeenCalledWith('INSTAGRAM', '@thevenue'));
+  });
+
+  it('keeps Hero single-select and delegates only Gallery to the plural picker', async () => {
+    const props = baseProps('artist');
+    const screen = render(<OnboardingMediaForm {...props} />);
+
+    fireEvent.press(screen.getByLabelText('Select image'));
+    await waitFor(() => expect(props.onPickImage).toHaveBeenCalledTimes(1));
+    expect(props.onPickGalleryImages).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText('Add gallery photos'));
+    await waitFor(() => expect(props.onPickGalleryImages).toHaveBeenCalledWith(8));
+    expect(props.onPickImage).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['artist', 8],
+    ['venue', 10],
+    ['promoter', 10],
+  ] as const)('passes the remaining %s gallery capacity of %s to the plural picker', async (persona, limit) => {
+    const props = baseProps(persona);
+    const screen = render(<OnboardingMediaForm {...props} />);
+
+    fireEvent.press(screen.getByLabelText('Add gallery photos'));
+
+    await waitFor(() => expect(props.onPickGalleryImages).toHaveBeenCalledWith(limit));
   });
 });

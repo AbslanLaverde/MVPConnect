@@ -33,6 +33,7 @@ import {
   fetchOwnedMedia,
   onboardingMediaContexts,
   pickOnboardingImage,
+  pickOnboardingImages,
   type OwnedMediaResponse,
 } from './onboardingMedia';
 import {
@@ -548,6 +549,7 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
           bannerAdapter={bannerAdapter}
           galleryAdapter={galleryAdapter}
           onPickImage={() => pickOnboardingImage()}
+          onPickGalleryImages={(remainingCapacity) => pickOnboardingImages(remainingCapacity)}
           onBannerChange={setBannerState}
           onGalleryChange={setGalleryStates}
           onWebsiteChange={(websiteUrl) => setWorkingData((current) => (

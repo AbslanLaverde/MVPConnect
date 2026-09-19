@@ -177,7 +177,7 @@ describe('OnboardingRealMediaSession', () => {
     const screen = renderSession('venue', makeStep('venue', data));
 
     await screen.findByLabelText('Selected banner image preview');
-    expect(screen.getAllByLabelText('Selected gallery image preview')).toHaveLength(2);
+    expect(screen.getAllByLabelText(/Selected gallery image \d preview/)).toHaveLength(2);
     expect(mockedApi.get).toHaveBeenCalledWith('/media/banner-1');
     expect(mockedApi.get).toHaveBeenCalledWith('/media/gallery-b');
     expect(mockedApi.get).toHaveBeenCalledWith('/media/gallery-a');

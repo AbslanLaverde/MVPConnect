@@ -76,7 +76,8 @@ export interface OnboardingMediaFormProps {
   errors: Record<string, string | undefined>;
   bannerAdapter: MediaUploadAdapter;
   galleryAdapter: MediaUploadAdapter;
-  onPickImage: (slotIndex?: number) => Promise<MediaFile | undefined>;
+  onPickImage: () => Promise<MediaFile | undefined>;
+  onPickGalleryImages: (remainingCapacity: number) => Promise<readonly MediaFile[]>;
   onBannerChange: (state: MediaUploaderState) => void;
   onGalleryChange: React.Dispatch<React.SetStateAction<MediaUploaderState[]>>;
   onWebsiteChange: (website: string | null) => void;
@@ -128,6 +129,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
   bannerAdapter,
   galleryAdapter,
   onPickImage,
+  onPickGalleryImages,
   onBannerChange,
   onGalleryChange,
   onWebsiteChange,
@@ -143,6 +145,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
   const connection = (provider: ExternalProvider) => connections.find((item) => item.provider === provider);
   const sectionStyle = [mediaStepStyles.section, mobile && mediaStepStyles.sectionMobile];
   const columnStyle = [mediaStepStyles.sectionColumns, mobile && mediaStepStyles.sectionColumnsMobile];
+  const contentStyle = [mediaStepStyles.sectionContent, mobile && mediaStepStyles.sectionContentMobile];
   const copyStyle = mobile ? mediaStepStyles.sectionCopyMobile : undefined;
   const socialProviders: Array<'INSTAGRAM' | 'FACEBOOK' | 'TIKTOK'> = config.persona === 'artist'
     ? ['INSTAGRAM', 'TIKTOK']
@@ -181,8 +184,13 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
 
       <View testID="media-banner-section" style={sectionStyle}>
         <View style={columnStyle}>
-          <View style={copyStyle}><SectionCopy title="HERO IMAGE" helper={presentation.bannerHelper} /></View>
-          <View style={mediaStepStyles.sectionContent}>
+          <View style={copyStyle}>
+            <SectionCopy
+              title="HERO IMAGE"
+              helper={`${presentation.bannerHelper} Recommended: 1500 × 500 px (3:1).`}
+            />
+          </View>
+          <View testID="media-banner-content" style={contentStyle}>
             <MediaUploader
               mode="BANNER_IMAGE"
               label=""
@@ -192,7 +200,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
               adapter={bannerAdapter}
               disabled={interactionBusy}
               accentColor={accent}
-              aspectRatio={16 / 5}
+              aspectRatio={3}
               cropHint="JPG, PNG OR WEBP · MAX 10 MB"
               emptyTitle="UPLOAD BANNER IMAGE"
               fieldContainerStyle={mediaStepStyles.bannerField}
@@ -206,19 +214,18 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
       <View testID="media-gallery-section" style={sectionStyle}>
         <View style={columnStyle}>
           <View style={copyStyle}><SectionCopy title={presentation.gallery} helper={presentation.galleryHelper} /></View>
-          <View style={mediaStepStyles.sectionContent}>
+          <View testID="media-gallery-content" style={contentStyle}>
             <ImageGalleryUploader
               items={galleryStates}
               onChange={onGalleryChange}
               maxCount={MEDIA_GALLERY_LIMITS[config.persona]}
-              onSelectRequest={(slot) => onPickImage(slot)}
+              onSelectRequest={onPickGalleryImages}
               adapter={galleryAdapter}
               label=""
               disabled={interactionBusy}
               accentColor={accent}
-              aspectRatio={4 / 3}
-              cropHint="JPG, PNG OR WEBP · MAX 10 MB"
               error={errors.gallery}
+              mobile={mobile}
             />
           </View>
         </View>
@@ -236,7 +243,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
                   optional={false}
                 />
               </View>
-              <View style={mediaStepStyles.sectionContent}>
+              <View style={contentStyle}>
                 <ArtistIdentityField
                   identity={artistIdentity}
                   config={config}
@@ -276,7 +283,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
                   optional={false}
                 />
               </View>
-              <View style={mediaStepStyles.sectionContent}>
+              <View style={contentStyle}>
                 <View style={mediaStepStyles.connectionsGrid}>
                   <ProviderConnectionCard
                     provider="YOUTUBE"
@@ -313,7 +320,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
                 helper="Add the public social profiles where people can follow your work."
               />
             </View>
-            <View style={[mediaStepStyles.sectionContent, mediaStepStyles.connectionsGrid]}>
+            <View style={[contentStyle, mediaStepStyles.connectionsGrid]}>
               {socialProviders.map((provider) => (
                 <UrlProviderConnectionField
                   key={provider}
@@ -340,7 +347,7 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
                 helper="Add your official website so people can learn more about you."
               />
             </View>
-            <View style={mediaStepStyles.sectionContent}>
+            <View testID="media-website-content" style={contentStyle}>
               <UrlField
                 label=""
                 value={data.websiteUrl ?? ''}
