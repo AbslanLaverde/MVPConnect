@@ -11,6 +11,9 @@ only and has a transparent background.
 - `mvpconnect-logo-native.png`: transparent 608 x 128 native rendering generated
   from the primary SVG for consistent Android and iOS gradient support.
 - `mvpconnect-mark.svg`: exact standalone mark extracted from the primary logo.
+- `mvpconnect-mark-native.png`: transparent 1024 x 1024 native/application-safe
+  raster derivative of the canonical standalone mark, used by the
+  Welcome/graduation reveal.
 - `mvpconnect-logo-monochrome.svg`: white horizontal logo for single-color use.
 - `mvpconnect-mark-monochrome.svg`: white standalone mark for single-color use.
 

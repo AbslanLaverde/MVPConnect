@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import type { StackScreenProps } from '@react-navigation/stack';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import MvpConnectMark from '../../assets/branding/mvpconnect-mark.svg';
 import { BrandLogo } from '../components/BrandLogo';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useGetOnboardingQuery, useGetSelfAccountQuery } from '../onboarding/onboardingApi';
@@ -22,6 +21,7 @@ type Props = StackScreenProps<RootStackParamList, 'Welcome'>;
 
 const welcomeDesktopBackground = require('../../assets/welcome/welcome-background-desktop.png');
 const welcomeMobileBackground = require('../../assets/welcome/welcome-background-mobile.png');
+const welcomeRevealMark = require('../../assets/branding/mvpconnect-mark-native.png');
 
 export const WELCOME_BACKGROUND_BREAKPOINT = 768;
 export type WelcomeBackgroundVariant = 'desktop' | 'mobile';
@@ -32,8 +32,8 @@ export const getWelcomeBackgroundVariant = (width: number, height: number): Welc
 
 export const getWelcomeRevealMarkSize = (width: number, compact: boolean): number => (
   compact
-    ? Math.max(220, Math.min(width * 0.17, 320))
-    : Math.max(220, Math.min(width * 0.17, 320))
+    ? Math.max(112, Math.min(width * 0.32, 144))
+    : Math.max(200, Math.min(width * 0.14, 280))
 );
 
 export const WELCOME_TRANSITION_TIMING = {
@@ -183,11 +183,12 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <MvpConnectMark
+        <Image
           testID="welcome-reveal-mark"
-          width={revealMarkSize}
-          height={revealMarkSize}
-          focusable={false}
+          source={welcomeRevealMark}
+          style={{ width: revealMarkSize, height: revealMarkSize }}
+          resizeMode="contain"
+          accessible={false}
         />
       </Animated.View>
 
