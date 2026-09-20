@@ -77,6 +77,10 @@ async function main() {
     .resize(608, 128)
     .png()
     .toFile(path.join(branding, 'mvpconnect-logo-native.png'));
+  fs.writeFileSync(
+    path.join(branding, 'mvpconnect-mark-native.png'),
+    await renderMark(1024),
+  );
   await squareAsset(path.join(assets, 'icon.png'), 1024, 650, { background: dark });
   await squareAsset(path.join(assets, 'adaptive-icon.png'), 1024, 600);
   await squareAsset(path.join(assets, 'adaptive-icon-monochrome.png'), 1024, 600, { monochrome: true });
