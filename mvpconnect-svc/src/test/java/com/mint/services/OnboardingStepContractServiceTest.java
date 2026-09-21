@@ -727,7 +727,7 @@ class OnboardingStepContractServiceTest {
         ObjectNode data = validStep(PersonaType.PROMOTER, "media");
         data.set("facebookConnection", objectMapper.createObjectNode()
                 .put("connectionId", "connection-1")
-                .put("provider", "TIKTOK"));
+                .put("provider", "INSTAGRAM"));
 
         assertField(PersonaType.PROMOTER, "media", data,
                 "facebookConnection.provider", "INVALID");

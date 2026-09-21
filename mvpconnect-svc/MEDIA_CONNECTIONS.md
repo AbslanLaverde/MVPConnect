@@ -39,12 +39,12 @@ relationships are unaffected.
 
 | Persona | URL/profile | OAuth | Special identity |
 | --- | --- | --- | --- |
-| Artist (`MUSICIAN`) | Instagram, TikTok, Bandcamp | YouTube, SoundCloud | Spotify `ExternalArtist` |
-| Venue | Instagram, Facebook, TikTok | none | none |
-| Promoter | Instagram, Facebook, TikTok | none | none |
+| Artist (`MUSICIAN`) | Instagram, Bandcamp | YouTube, SoundCloud | Spotify `ExternalArtist` |
+| Venue | Instagram, Facebook | none | none |
+| Promoter | Instagram, Facebook | none | none |
 
 URL inputs are HTTP(S), length-limited, and provider-host restricted. Instagram
-and TikTok handles are canonicalized without fetching user URLs. A legacy Artist
+Instagram handles are canonicalized without fetching user URLs. A legacy Artist
 `instagramHandle` remains readable only when there is no canonical Instagram
 connection; public output never emits two Instagram identities.
 

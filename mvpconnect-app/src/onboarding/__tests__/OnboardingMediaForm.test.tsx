@@ -85,7 +85,7 @@ describe('OnboardingMediaForm', () => {
     expect(screen.getByLabelText('0 of 10 gallery slots occupied')).toBeTruthy();
     expect(screen.getByLabelText('Instagram profile URL or handle')).toBeTruthy();
     expect(screen.getByLabelText('Facebook profile URL or handle')).toBeTruthy();
-    expect(screen.getByLabelText('TikTok profile URL or handle')).toBeTruthy();
+    expect(screen.getAllByLabelText(/profile URL or handle/)).toHaveLength(2);
     expect(screen.getByLabelText('Website URL, optional')).toBeTruthy();
     expect(screen.queryByText('GOOGLE MAPS')).toBeNull();
   });

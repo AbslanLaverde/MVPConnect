@@ -79,7 +79,6 @@ export const hydrateMediaStepData = (
       websiteUrl: typeof data.websiteUrl === 'string' ? data.websiteUrl : null,
       bandcampConnection: connectionReference(data.bandcampConnection, 'BANDCAMP'),
       instagramConnection: connectionReference(data.instagramConnection, 'INSTAGRAM'),
-      tiktokConnection: connectionReference(data.tiktokConnection, 'TIKTOK'),
       spotifyArtistIdentity: typeof spotifyIdentity?.externalArtistId === 'string'
         && spotifyIdentity.externalArtistId.trim()
         ? { externalArtistId: spotifyIdentity.externalArtistId.trim() }
@@ -96,7 +95,6 @@ export const hydrateMediaStepData = (
       galleryImages: references(data.galleryImages),
       instagramConnection: connectionReference(data.instagramConnection, 'INSTAGRAM'),
       facebookConnection: connectionReference(data.facebookConnection, 'FACEBOOK'),
-      tiktokConnection: connectionReference(data.tiktokConnection, 'TIKTOK'),
     };
   }
 
@@ -105,7 +103,6 @@ export const hydrateMediaStepData = (
     galleryImages: references(data.galleryImages),
     instagramConnection: connectionReference(data.instagramConnection, 'INSTAGRAM'),
     facebookConnection: connectionReference(data.facebookConnection, 'FACEBOOK'),
-    tiktokConnection: connectionReference(data.tiktokConnection, 'TIKTOK'),
   };
 };
 
@@ -121,7 +118,6 @@ export const withCanonicalMediaConnections = (
       ...artist,
       bandcampConnection: connectionFor(connections, 'BANDCAMP'),
       instagramConnection: connectionFor(connections, 'INSTAGRAM'),
-      tiktokConnection: connectionFor(connections, 'TIKTOK'),
       youtubeConnection: connectionFor(connections, 'YOUTUBE'),
       soundCloudConnection: connectionFor(connections, 'SOUNDCLOUD'),
       spotifyArtistIdentity: spotifyIdentity ? { externalArtistId: spotifyIdentity.id } : null,
@@ -132,14 +128,12 @@ export const withCanonicalMediaConnections = (
       ...(data as VenueMediaStepRequest),
       instagramConnection: connectionFor(connections, 'INSTAGRAM'),
       facebookConnection: connectionFor(connections, 'FACEBOOK'),
-      tiktokConnection: connectionFor(connections, 'TIKTOK'),
     };
   }
   return {
     ...(data as PromoterMediaStepRequest),
     instagramConnection: connectionFor(connections, 'INSTAGRAM'),
     facebookConnection: connectionFor(connections, 'FACEBOOK'),
-    tiktokConnection: connectionFor(connections, 'TIKTOK'),
   };
 };
 

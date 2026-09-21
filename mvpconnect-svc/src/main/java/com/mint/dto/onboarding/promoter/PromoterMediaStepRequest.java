@@ -13,8 +13,7 @@ public record PromoterMediaStepRequest(
         @Valid MediaReferenceDto bannerImage,
         @Size(max = 10) List<@Valid MediaReferenceDto> galleryImages,
         @Valid ExternalConnectionReferenceDto instagramConnection,
-        @Valid ExternalConnectionReferenceDto facebookConnection,
-        @Valid ExternalConnectionReferenceDto tiktokConnection) {
+        @Valid ExternalConnectionReferenceDto facebookConnection) {
 
     public PromoterMediaStepRequest {
         galleryImages = list(galleryImages);
@@ -23,6 +22,6 @@ public record PromoterMediaStepRequest(
     public PromoterMediaStepRequest(
             MediaReferenceDto bannerImage,
             List<MediaReferenceDto> galleryImages) {
-        this(bannerImage, galleryImages, null, null, null);
+        this(bannerImage, galleryImages, null, null);
     }
 }

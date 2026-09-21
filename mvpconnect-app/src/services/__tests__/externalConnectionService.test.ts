@@ -25,9 +25,9 @@ describe('external connection frontend foundation', () => {
 
   it('locks URL and OAuth providers to the approved personas', () => {
     expect(URL_PROVIDERS_BY_PERSONA).toEqual({
-      MUSICIAN: ['INSTAGRAM', 'TIKTOK', 'BANDCAMP'],
-      VENUE: ['INSTAGRAM', 'FACEBOOK', 'TIKTOK'],
-      PROMOTER: ['INSTAGRAM', 'FACEBOOK', 'TIKTOK'],
+      MUSICIAN: ['INSTAGRAM', 'BANDCAMP'],
+      VENUE: ['INSTAGRAM', 'FACEBOOK'],
+      PROMOTER: ['INSTAGRAM', 'FACEBOOK'],
     });
     expect(OAUTH_PROVIDERS_BY_PERSONA).toEqual({
       MUSICIAN: ['YOUTUBE', 'SOUNDCLOUD'], VENUE: [], PROMOTER: [],
