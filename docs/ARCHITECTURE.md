@@ -1,14 +1,14 @@
 # Architecture
 
-This describes implementation at `439eb614eee48fb7c813719f9410820059d11cb8`. Source code takes precedence over older design notes.
+Implementation baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5` (`origin/master` at the start of the employer-readiness pass). Source code takes precedence over this guide.
 
 ## Runtime boundaries
 
 ```mermaid
 flowchart LR
-    App[Expo / React Native client] -->|JSON and bearer JWT| API[Spring Boot API]
+    App[Expo / React Native client] -->|JSON + bearer JWT| API[Spring Boot API]
     API -->|Spring Data Neo4j / Cypher| Graph[(Neo4j)]
-    API -->|Presign and check metadata| Storage[(Private S3-compatible storage)]
+    API -->|Presign + verify metadata| Storage[(Private S3-compatible storage)]
     App -->|Presigned PUT / GET| Storage
     API --> Places[Google Places]
     API --> Spotify[Spotify artist API]
@@ -17,63 +17,95 @@ flowchart LR
     MCP -.-> API
 ```
 
-Compose provides MinIO locally. Neo4j and both application processes run separately. S3 configuration is supported, but no production deployment is established by this diagram. The optional Python MCP prototype has direct graph access outside the API authorization boundary.
+The React Native / Expo client shares web and native product code. The Spring Boot API owns authentication, authorization, typed onboarding transitions, external-provider exchanges, and public/self projections. Neo4j stores personas, resources, and relationships. Private MinIO/S3-compatible storage holds image bytes; the client transfers them through short-lived presigned URLs.
 
-## Client and API
+Local Compose starts MinIO only. Neo4j and both application processes run separately. The optional Python MCP prototype can read the graph directly and therefore sits outside the API's normal authorization and DTO boundaries.
 
-[AppNavigator](../mvpconnect-app/src/navigation/AppNavigator.tsx) owns signup, login, onboarding, OAuth-result, welcome, musician-home, and profile routes. [api.ts](../mvpconnect-app/src/services/api.ts) supplies Axios requests and bearer tokens from AsyncStorage; [onboardingApi](../mvpconnect-app/src/onboarding/onboardingApi.ts) uses RTK Query for onboarding/self-account state. A 401 removes stored authentication data. There is no token-refresh flow in this client.
+## Client, authentication, and navigation
 
-[SecurityConfig](../mvpconnect-svc/src/main/java/com/mint/security/SecurityConfig.java) configures stateless JWT authentication, BCrypt, CORS, and public routes. GET reads under `/musicians/**`, `/venues/**`, and `/promoters/**` are public; other operations generally require authentication, with explicit exceptions for auth, OAuth callbacks, health, and errors. A public DTO is a selected data shape, not anonymous access to every API operation.
+[AppNavigator](../mvpconnect-app/src/navigation/AppNavigator.tsx) owns signup, login, onboarding, OAuth result, Welcome, legacy musician Home, and profile routes. [api.ts](../mvpconnect-app/src/services/api.ts) attaches the stored bearer token and clears persisted authentication after a qualifying 401; there is no token-refresh flow.
 
-[PersonaAuthorizationService](../mvpconnect-svc/src/main/java/com/mint/security/PersonaAuthorizationService.java) constrains owner operations. [PublicProfileService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileService.java), [DiscoveryProfileMapper](../mvpconnect-svc/src/main/java/com/mint/services/DiscoveryProfileMapper.java), and [SelfAccountService](../mvpconnect-svc/src/main/java/com/mint/services/SelfAccountService.java) separate public responses from owner data. Do not substitute direct graph-entity serialization for those projections.
+[SecurityConfig](../mvpconnect-svc/src/main/java/com/mint/security/SecurityConfig.java) configures stateless JWT authentication, BCrypt, CORS, and public routes. [PersonaAuthorizationService](../mvpconnect-svc/src/main/java/com/mint/security/PersonaAuthorizationService.java) enforces owner operations. Public and owner responses are intentionally mapped through [PublicProfileService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileService.java), [DiscoveryProfileMapper](../mvpconnect-svc/src/main/java/com/mint/services/DiscoveryProfileMapper.java), and [SelfAccountService](../mvpconnect-svc/src/main/java/com/mint/services/SelfAccountService.java) rather than direct entity serialization.
 
-## Onboarding and graph data
+Completed users currently enter the legacy `MusicianHome` route. Role-specific Artist, Venue, and Promoter Home experiences—and routing completed login and Welcome → ENTER to those destinations—remain the next product phase.
 
-The intentional modeling rule is: **intrinsic attributes remain persona properties; independently meaningful identities/resources become nodes; real associations become relationships**. Genres, vibes, and goals do not require their own nodes merely for normalization. Media and external identities have independent lifecycles. This supports the future network while keeping ordinary profile attributes straightforward.
+## Onboarding state model
 
-Verified examples in [ExternalArtistRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/ExternalArtistRepository.java) include `SOUNDS_LIKE`, `HAS_WORKED_WITH`, `HAS_ON_ROSTER`, and `HAS_ARTIST_IDENTITY`; [VenueIdentityRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/VenueIdentityRepository.java) includes `WORKS_WITH`. Those stored associations do not imply operational roster dashboards or completed booking workflows.
+[OnboardingStepRegistry](../mvpconnect-svc/src/main/java/com/mint/onboarding/OnboardingStepRegistry.java) defines schema version 2, persona-specific step order, and typed request classes. [OnboardingService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingService.java) coordinates drafts, validation, step transitions, and completion. [OnboardingStepContractService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingStepContractService.java) validates payloads and promotes them to canonical profiles.
 
-[OnboardingStepRegistry](../mvpconnect-svc/src/main/java/com/mint/onboarding/OnboardingStepRegistry.java) defines schema version 2, persona-specific step order, and request types. [OnboardingService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingService.java) coordinates drafts, validation, transitions, and completion. [OnboardingStepContractService](../mvpconnect-svc/src/main/java/com/mint/services/OnboardingStepContractService.java) validates typed payloads and applies them to canonical profiles.
+Account nodes (`Musician`, `Venue`, `Promoter`) link through `HAS_ONBOARDING_DRAFT` to `OnboardingDraft`, then through `HAS_STEP` to each `OnboardingStep`. A saved draft is not a completed profile. Final completion revalidates persisted steps and references, promotes canonical data/media, and records completion/version metadata. Repeating completion for the current version is idempotent.
 
-Account nodes (`Musician`, `Venue`, `Promoter`) link through `HAS_ONBOARDING_DRAFT` to `OnboardingDraft`, then `HAS_STEP` to `OnboardingStep`; steps can link media through `HAS_MEDIA`. Other identity/reference relationships use repository Cypher. The graph also includes `ExternalArtist`, `VenueIdentity`, `MediaAsset`, `ExternalConnection`, and `OAuthConnectionAttempt` nodes. Referenced artists and venue identities need not be registered accounts.
+The client keeps the server authoritative:
 
-[ExternalArtistRelationshipService](../mvpconnect-svc/src/main/java/com/mint/services/ExternalArtistRelationshipService.java) and [VenueIdentityRelationshipService](../mvpconnect-svc/src/main/java/com/mint/services/VenueIdentityRelationshipService.java) synchronize profile references on onboarding completion. [Neo4jSchemaInitializer](../mvpconnect-svc/src/main/java/com/mint/config/Neo4jSchemaInitializer.java) creates declared uniqueness constraints and text indexes at startup; it is not a complete historical migration framework.
+- Valid-only autosave never replaces the last valid backend draft with an invalid edit.
+- Completed-step edits reopen the step before changing persisted state.
+- [onboardingApi](../mvpconnect-app/src/onboarding/onboardingApi.ts) awaits cache synchronization from save/complete/reopen/skip mutation responses.
+- Session components navigate from the backend-returned onboarding state, avoiding a route transition against stale cached progress.
+- Continue coordinates with active persistence so a valid step advances from one activation.
+- [useOnboardingSignOut](../mvpconnect-app/src/onboarding/useOnboardingSignOut.ts) waits for active persistence, flushes a valid dirty draft, warns before discarding invalid local edits, clears auth/cache state, and resets navigation to Login.
 
-[onboardingConfig](../mvpconnect-app/src/onboarding/onboardingConfig.ts) maps client presentation to backend personas (`artist` maps to `MUSICIAN`) and sets `ONBOARDING_PLACEHOLDER_SAVE_BYPASS = false`. Backend-confirmed state controls navigation. Saved draft answers are not equivalent to a completed profile.
+The final Goals flow persists Goals, completes the step, calls `POST /onboarding/complete`, and only then resets navigation to Welcome. Goals are private intent signals; they do not currently drive matching.
 
-The final goals flow saves `/onboarding/steps/goals`, completes that step, then calls `POST /onboarding/complete`. The service revalidates persisted steps/references, promotes canonical data and media membership, and records completion/version metadata. A repeated completion for the current version returns existing completion metadata. Welcome is a separate graduation screen, not another form or a second canonical-promotion operation.
+## Graph modeling
 
-Goals describe future intent, not current professional status. The typed [goal requests](../mvpconnect-svc/src/main/java/com/mint/dto/onboarding) require nonempty persona-specific selections. Canonical `connectionGoals` appear in authenticated account DTOs but not public profile DTOs; venue `bookingEmail` follows the same self/public boundary. Goal collection does not drive the current genre matcher. Post-onboarding goal editing and goals-based ranking remain deferred.
+The governing rule is: **intrinsic attributes remain persona properties; independently meaningful identities/resources become nodes; real associations become relationships**.
 
-## Media and provider connections
+Examples include `ExternalArtist`, `VenueIdentity`, `MediaAsset`, `ExternalConnection`, and `OAuthConnectionAttempt`. External artist and venue identity records can be referenced without becoming registered MVPConnect accounts. Relationship services synchronize artist/venue references during canonical promotion. [Neo4jSchemaInitializer](../mvpconnect-svc/src/main/java/com/mint/config/Neo4jSchemaInitializer.java) creates declared uniqueness constraints and text indexes at startup; it is not a general historical migration framework.
 
-[MediaService](../mvpconnect-svc/src/main/java/com/mint/services/MediaService.java) creates an owned pending media record and presigned upload URL. The client PUTs bytes directly to storage, then calls completion. The backend checks stored content length and MIME metadata before marking the asset ready. Onboarding attaches media to draft steps; public media is projected through [PublicProfileMediaService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileMediaService.java).
+The current Artist-to-Venue matcher is an explainable genre-overlap heuristic implemented in [MusicianController](../mvpconnect-svc/src/main/java/com/mint/controllers/MusicianController.java). It scans candidate venues and is neither graph-ranked nor ML-based.
 
-JPEG, PNG, and WebP are allowed, with a default 10MB limit and 15-minute upload/access URLs. Metadata verification is not malware scanning or full image-content inspection. Graph transactions and object-store operations cross systems; cleanup/failure handling does not create a distributed transaction. See [media storage](../mvpconnect-svc/MEDIA_STORAGE.md).
+## Media lifecycle
 
-[MediaAssetRepository](../mvpconnect-svc/src/main/java/com/mint/repositories/MediaAssetRepository.java) represents canonical profile/banner/gallery membership with `HAS_MEDIA` and gallery ordering with relationship `sortOrder`. Replacing membership removes edges, not necessarily the underlying asset or object. Provider avatar metadata is separate from uploaded media; presenting a provider image does not make it a MinIO upload.
+[MediaService](../mvpconnect-svc/src/main/java/com/mint/services/MediaService.java) creates an owned pending media record and presigned upload URL. The client sends bytes directly to storage and then requests completion. The backend verifies stored content length and MIME metadata before marking the record ready.
 
-Spotify uses backend Client Credentials for artist lookup. Google Places enriches locations and venue identities. YouTube/SoundCloud use backend-owned OAuth attempts; [TokenEncryptionService](../mvpconnect-svc/src/main/java/com/mint/security/TokenEncryptionService.java) encrypts stored provider credentials with AES-GCM. Connections do not replace MVPConnect login. See [environment configuration](ENVIRONMENT.md) for credentials, encryption keys, and return allowlists.
+Onboarding media behavior is designed for recoverability:
 
-[OAuthConnectionService](../mvpconnect-svc/src/main/java/com/mint/services/OAuthConnectionService.java) owns state validation, one-time attempt consumption, and token exchange. Both provider clients send S256 PKCE challenges. Return allowlisting and replay/error behavior have focused service tests. The supplied product brief reports earlier live YouTube/SoundCloud verification; this documentation branch did not repeat it. See [testing provenance](TESTING.md).
+- Hero/banner selection remains single-image with a 3:1 presentation.
+- [ImageGalleryUploader](../mvpconnect-app/src/components/onboarding/ImageGalleryUploader.tsx) accepts multi-select picker results but uploads them sequentially.
+- Each batch item has independent state, so a later failure retains earlier successful uploads.
+- Failed uploads remain retryable/removable, and additional batches respect the persona capacity.
+- Hydration resolves the exact persisted media IDs in order.
+- Canonical profile/banner/gallery membership uses `HAS_MEDIA`; gallery relationships carry contiguous zero-based `sortOrder`.
 
-## Discovery and limits
+Object-store operations and Neo4j transactions span systems, so the design does not claim distributed transaction guarantees. Removing membership edges does not automatically prove physical-object deletion. See [Media Storage](../mvpconnect-svc/MEDIA_STORAGE.md).
 
-[MusicianController](../mvpconnect-svc/src/main/java/com/mint/controllers/MusicianController.java) implements `/musicians/{id}/matches` by loading venues, selecting live-music venues with shared genres, and sorting by overlap count. Responses include text such as `2/3 genres matched`. This is a heuristic with an all-venues scan, not graph-traversal ranking or machine learning. Search uses repository queries and controller filtering; no scalability benchmark is supplied.
+## Provider matrix and OAuth boundary
 
-[WelcomeScreen](../mvpconnect-app/src/screens/WelcomeScreen.tsx) routes all completed personas to `MusicianHome`; [MusicianHomeScreen](../mvpconnect-app/src/screens/MusicianHomeScreen.tsx) calls musician endpoints. Venue/promoter dashboard completeness cannot be inferred from signup/onboarding support. Password reset remains an alert in [LoginScreen](../mvpconnect-app/src/screens/LoginScreen.tsx).
-
-## API orientation and observability
-
-| Area | Routes to start with | Contract source |
+| Provider | Connection model | Personas |
 | --- | --- | --- |
-| Accounts | `POST /auth/login`, `POST /auth/signup/{musician,venue,promoter}`, `GET /me` | Auth/self-account controllers and DTOs |
-| Onboarding | `GET /onboarding`, `PUT /onboarding/steps/{stepKey}`, step complete/skip/reopen, `POST /onboarding/complete` | Onboarding controllers and registry |
-| Media | `POST /media/uploads`, `POST /media/{mediaId}/complete`, owned read/delete | MediaController / MediaService |
-| Identity | `/external-artists`, `/venue-identities`, `/me/artist-identity`, `/locations` | Corresponding controllers |
-| Provider connections | `/external-connections`, `/external-connections/oauth` | ExternalConnectionController / ExternalOAuthController |
-| Public reads | `/musicians/{id}`, `/musicians/search`, `/musicians/{id}/matches`, `/venues/{id}`, `/venues/search`, `/promoters/{id}` | Public profile/discovery controllers and DTOs |
+| Spotify | Backend provider search / external Artist identity | Artist |
+| YouTube | Backend-owned OAuth | Artist |
+| SoundCloud | Backend-owned OAuth | Artist |
+| Instagram | Validated profile URL or handle | Artist, Venue, Promoter |
+| Bandcamp | Validated profile URL | Artist |
+| Facebook | Validated profile URL | Venue, Promoter |
+| Google Places | Backend place/venue lookup | Relevant location and venue-reference flows |
 
-This table is an orientation, not a generated OpenAPI contract. [The Postman generator](../postman/build-collection.js) and [E2E guide](../BACKEND_E2E_TESTING.md) provide executable examples for covered workflows. Check request DTOs before extending a client.
+[OAuthConnectionService](../mvpconnect-svc/src/main/java/com/mint/services/OAuthConnectionService.java) owns state validation, one-time attempt consumption, provider exchange, and the safe return result. Both OAuth clients use S256 PKCE. Return targets must match an exact allowlist. [TokenEncryptionService](../mvpconnect-svc/src/main/java/com/mint/security/TokenEncryptionService.java) encrypts stored provider credentials with AES-GCM. OAuth connections do not replace MVPConnect login.
 
-Request logging includes correlation/account/persona context and configurable slow-operation logging. Actuator liveness checks process state; readiness includes Neo4j and object storage without raw dependency exception details. See [logging](../mvpconnect-svc/LOGGING.md) and [tests](TESTING.md). Tests do not establish production readiness, provider certification, or native-device compatibility.
+Provider avatars are presentation metadata from the provider and are not copied into canonical MVPConnect media. The connection record supports rehydrating that presentation during onboarding.
+
+## Cross-platform brand assets
+
+The canonical brand source is [mvpconnect-logo.svg](../mvpconnect-app/assets/branding/mvpconnect-logo.svg). [generate-brand-assets.js](../mvpconnect-app/scripts/generate-brand-assets.js) derives marks, monochrome variants, native PNGs, launcher/splash assets, and web icons. The Welcome reveal uses the generated transparent native mark because native SVG gradient-reference behavior differs from React Native Web.
+
+Generated assets should be regenerated through `npm run brand:generate`, not edited independently.
+
+## Configuration and operations
+
+Default/non-local startup requires Neo4j connection credentials and `JWT_SECRET`. Safe developer fallbacks are confined to `application-local.properties` and activated explicitly with `SPRING_PROFILES_ACTIVE=local`. Optional provider credentials are empty by default and disable only their provider operations.
+
+Actuator liveness reflects process state. Readiness includes Neo4j and object storage. Structured request logging adds request/account/persona context and configurable slow-operation thresholds without exposing raw provider credentials. See [Environment](ENVIRONMENT.md), [Local Development](LOCAL_DEVELOPMENT.md), and [Logging](../mvpconnect-svc/LOGGING.md).
+
+## API orientation
+
+| Area | Routes to start with |
+| --- | --- |
+| Accounts | `POST /auth/login`, persona signup routes, `GET /me` |
+| Onboarding | `GET /onboarding`, step save/complete/skip/reopen, `POST /onboarding/complete` |
+| Media | upload initiation/completion and owned read/delete under `/media` |
+| Identities | `/external-artists`, `/venue-identities`, `/me/artist-identity`, `/locations` |
+| Connections | `/external-connections` and `/external-connections/oauth` |
+| Public profiles | public Artist, Venue, and Promoter profile/discovery routes |
+
+This is orientation, not a generated OpenAPI specification. Request DTOs and controllers are authoritative; the generated Postman collection supplies executable examples for covered workflows.
