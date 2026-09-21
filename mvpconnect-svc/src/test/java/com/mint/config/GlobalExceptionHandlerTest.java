@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 
@@ -24,6 +25,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
+
+    @Test
+    void unsupportedEnumPathValueUsesStructuredBadRequestContract() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/external-connections/unsupported");
+
+        ResponseEntity<ErrorResponse> response = new GlobalExceptionHandler()
+                .handleArgumentTypeMismatch(mock(MethodArgumentTypeMismatchException.class), request);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("INVALID_PARAMETER", response.getBody().getCode());
+        assertEquals(
+                "The request contains an unsupported path or query parameter value.",
+                response.getBody().getMessage()
+        );
+    }
 
     @Test
     void accessDeniedResponseDoesNotRevealTargetExistence() {
