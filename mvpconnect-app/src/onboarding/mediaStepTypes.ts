@@ -19,7 +19,6 @@ export interface ArtistMediaStepRequest {
   websiteUrl: string | null;
   bandcampConnection: ExternalConnectionReferenceDto | null;
   instagramConnection: ExternalConnectionReferenceDto | null;
-  tiktokConnection: ExternalConnectionReferenceDto | null;
   spotifyArtistIdentity: ArtistIdentityReferenceDto | null;
   youtubeConnection: ExternalConnectionReferenceDto | null;
   soundCloudConnection: ExternalConnectionReferenceDto | null;
@@ -31,7 +30,6 @@ export interface VenueMediaStepRequest {
   galleryImages: MediaReferenceDto[];
   instagramConnection: ExternalConnectionReferenceDto | null;
   facebookConnection: ExternalConnectionReferenceDto | null;
-  tiktokConnection: ExternalConnectionReferenceDto | null;
 }
 
 export interface PromoterMediaStepRequest {
@@ -39,7 +37,6 @@ export interface PromoterMediaStepRequest {
   galleryImages: MediaReferenceDto[];
   instagramConnection: ExternalConnectionReferenceDto | null;
   facebookConnection: ExternalConnectionReferenceDto | null;
-  tiktokConnection: ExternalConnectionReferenceDto | null;
 }
 
 export const MEDIA_GALLERY_LIMITS = {

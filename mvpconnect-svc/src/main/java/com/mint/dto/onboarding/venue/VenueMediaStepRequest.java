@@ -16,8 +16,7 @@ public record VenueMediaStepRequest(
         @Size(max = URL_MAX) String websiteUrl,
         @Size(max = 10) List<@Valid MediaReferenceDto> galleryImages,
         @Valid ExternalConnectionReferenceDto instagramConnection,
-        @Valid ExternalConnectionReferenceDto facebookConnection,
-        @Valid ExternalConnectionReferenceDto tiktokConnection) {
+        @Valid ExternalConnectionReferenceDto facebookConnection) {
 
     public VenueMediaStepRequest {
         websiteUrl = string(websiteUrl);
@@ -28,6 +27,6 @@ public record VenueMediaStepRequest(
             MediaReferenceDto bannerImage,
             String websiteUrl,
             List<MediaReferenceDto> galleryImages) {
-        this(bannerImage, websiteUrl, galleryImages, null, null, null);
+        this(bannerImage, websiteUrl, galleryImages, null, null);
     }
 }
