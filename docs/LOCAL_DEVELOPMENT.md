@@ -5,7 +5,7 @@ Run commands from the repository root unless a different directory is shown. Exa
 ## Prerequisites
 
 - JDK 21 and Maven (there is no Maven wrapper). Audit environment: Java 21.0.6 and Maven 3.9.11.
-- Node.js and npm. Audit environment: Node 22.18.0 and npm 10.9.3; the repository does not pin a Node version. Use `npm ci` with the committed lockfile.
+- Node.js 22.18.0 (pinned in [`.nvmrc`](../.nvmrc)) and npm. Use `npm ci` with the committed lockfile.
 - Docker with Compose for MinIO.
 - A separately provisioned Neo4j database. The repository does not pin a server version or provide a Neo4j container definition. It must support the constraint and text-index syntax in [Neo4jSchemaInitializer](../mvpconnect-svc/src/main/java/com/mint/config/Neo4jSchemaInitializer.java). Compatibility with a specific server release must be checked in your environment.
 
@@ -25,7 +25,7 @@ docker compose logs minio-init
 
 Expect MinIO on port 9000, its console on 9001, and `minio-init` to exit successfully after creating the private bucket. Compose uses a persistent named volume and a fixed project name, `mvpconnect-local`; multiple worktrees using these defaults share infrastructure. Coordinate ports, project names, and data before starting another instance.
 
-Start your separate Neo4j instance and create/select the `neo4j` database. The checked-in defaults expect Bolt at `bolt://localhost:7687`, username `neo4j`, and local password `changeme`. Supply your actual credentials to the backend process instead of changing tracked properties. Startup executes schema creation statements, so the database user needs appropriate schema permissions.
+Start your separate Neo4j instance and create/select the `neo4j` database. The `local` profile defaults to Bolt at `bolt://localhost:7687`, username `neo4j`, and local password `changeme`. Supply your actual credentials to the backend process instead of changing tracked properties. Default/non-local startup has no database-credential or JWT-secret fallback. Startup executes schema creation statements, so the database user needs appropriate schema permissions.
 
 ## 2. Start Spring Boot
 
