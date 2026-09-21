@@ -4,7 +4,7 @@ import { theme } from '../../theme/theme';
 import { FieldFrame } from './FieldFrame';
 import { fieldStyles } from './OnboardingFields.styles';
 
-export type SocialProvider = 'SPOTIFY' | 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
+export type SocialProvider = 'SPOTIFY' | 'YOUTUBE' | 'INSTAGRAM';
 export type SocialConnectionStatus = 'NOT_CONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
 export interface SocialConnectionValue {

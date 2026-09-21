@@ -18,7 +18,6 @@ public record ArtistMediaStepRequest(
         @Size(max = URL_MAX) String websiteUrl,
         @Valid ExternalConnectionReferenceDto bandcampConnection,
         @Valid ExternalConnectionReferenceDto instagramConnection,
-        @Valid ExternalConnectionReferenceDto tiktokConnection,
         @Valid ArtistIdentityReferenceDto spotifyArtistIdentity,
         @Valid ExternalConnectionReferenceDto youtubeConnection,
         @Valid ExternalConnectionReferenceDto soundCloudConnection) {
@@ -32,6 +31,6 @@ public record ArtistMediaStepRequest(
             MediaReferenceDto bannerImage,
             List<MediaReferenceDto> showcaseImages,
             String websiteUrl) {
-        this(bannerImage, showcaseImages, websiteUrl, null, null, null, null, null, null);
+        this(bannerImage, showcaseImages, websiteUrl, null, null, null, null, null);
     }
 }

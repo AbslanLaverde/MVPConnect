@@ -20,7 +20,6 @@ const PROVIDER_LABELS: Record<ExternalProvider, string> = {
   YOUTUBE: 'YouTube',
   SOUNDCLOUD: 'SoundCloud',
   INSTAGRAM: 'Instagram',
-  TIKTOK: 'TikTok',
   BANDCAMP: 'Bandcamp',
   FACEBOOK: 'Facebook',
 };
@@ -172,7 +171,7 @@ export const ProviderConnectionCard: React.FC<ProviderConnectionCardProps> = ({
 };
 
 export interface UrlProviderConnectionFieldProps {
-  provider: 'INSTAGRAM' | 'TIKTOK' | 'BANDCAMP' | 'FACEBOOK';
+  provider: 'INSTAGRAM' | 'BANDCAMP' | 'FACEBOOK';
   connection?: ExternalConnectionSummary;
   accentColor: string;
   placeholder: string;
@@ -204,7 +203,7 @@ export const UrlProviderConnectionField: React.FC<UrlProviderConnectionFieldProp
     try {
       await onSave(value.trim());
     } catch {
-      setError(`Enter a valid ${PROVIDER_LABELS[provider]} profile${provider === 'INSTAGRAM' || provider === 'TIKTOK' ? ' URL or handle' : ' URL'}.`);
+      setError(`Enter a valid ${PROVIDER_LABELS[provider]} profile${provider === 'INSTAGRAM' ? ' URL or handle' : ' URL'}.`);
     } finally {
       setSaving(false);
     }

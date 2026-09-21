@@ -265,8 +265,6 @@ public class OnboardingStepContractService {
                     owner, errors);
             connection("instagramConnection", request.instagramConnection(), ExternalProvider.INSTAGRAM,
                     owner, errors);
-            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
-                    owner, errors);
             connection("youtubeConnection", request.youtubeConnection(), ExternalProvider.YOUTUBE,
                     owner, errors);
             connection("soundCloudConnection", request.soundCloudConnection(), ExternalProvider.SOUNDCLOUD,
@@ -302,8 +300,6 @@ public class OnboardingStepContractService {
                     owner, errors);
             connection("facebookConnection", request.facebookConnection(), ExternalProvider.FACEBOOK,
                     owner, errors);
-            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
-                    owner, errors);
         } else if (data instanceof VenueGoalsStepRequest request) {
             duplicates("connectionGoals", request.connectionGoals(), errors);
         } else if (data instanceof PromoterBusinessStepRequest request) {
@@ -332,8 +328,6 @@ public class OnboardingStepContractService {
             connection("instagramConnection", request.instagramConnection(), ExternalProvider.INSTAGRAM,
                     owner, errors);
             connection("facebookConnection", request.facebookConnection(), ExternalProvider.FACEBOOK,
-                    owner, errors);
-            connection("tiktokConnection", request.tiktokConnection(), ExternalProvider.TIKTOK,
                     owner, errors);
         } else if (data instanceof PromoterGoalsStepRequest request) {
             duplicates("connectionGoals", request.connectionGoals(), errors);
@@ -439,7 +433,7 @@ public class OnboardingStepContractService {
         }
         ExternalConnectionMethod expectedMethod = switch (expectedProvider) {
             case YOUTUBE, SOUNDCLOUD -> ExternalConnectionMethod.OAUTH;
-            case INSTAGRAM, TIKTOK, BANDCAMP, FACEBOOK -> ExternalConnectionMethod.PROFILE_URL;
+            case INSTAGRAM, BANDCAMP, FACEBOOK -> ExternalConnectionMethod.PROFILE_URL;
             case SPOTIFY -> ExternalConnectionMethod.PROVIDER_SEARCH;
         };
         boolean valid = externalConnectionRepository.findById(reference.connectionId())

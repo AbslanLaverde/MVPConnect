@@ -5,7 +5,6 @@ public enum ExternalProvider {
     YOUTUBE,
     SOUNDCLOUD,
     INSTAGRAM,
-    TIKTOK,
     BANDCAMP,
     FACEBOOK
 }

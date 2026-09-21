@@ -28,8 +28,7 @@ import java.util.Set;
 public class ExternalConnectionService {
 
     private static final Set<ExternalProvider> URL_PROVIDERS = EnumSet.of(
-            ExternalProvider.INSTAGRAM, ExternalProvider.TIKTOK,
-            ExternalProvider.FACEBOOK, ExternalProvider.BANDCAMP);
+            ExternalProvider.INSTAGRAM, ExternalProvider.FACEBOOK, ExternalProvider.BANDCAMP);
 
     private final AuthenticatedPersonaProvider authenticatedPersonaProvider;
     private final ExternalConnectionRepository repository;
@@ -127,11 +126,11 @@ public class ExternalConnectionService {
     public void requireAllowed(PersonaType persona, ExternalProvider provider, ExternalConnectionMethod method) {
         boolean allowed = switch (persona) {
             case MUSICIAN -> method == ExternalConnectionMethod.PROFILE_URL
-                    ? EnumSet.of(ExternalProvider.INSTAGRAM, ExternalProvider.TIKTOK, ExternalProvider.BANDCAMP)
+                    ? EnumSet.of(ExternalProvider.INSTAGRAM, ExternalProvider.BANDCAMP)
                         .contains(provider)
                     : EnumSet.of(ExternalProvider.YOUTUBE, ExternalProvider.SOUNDCLOUD).contains(provider);
             case VENUE, PROMOTER -> method == ExternalConnectionMethod.PROFILE_URL
-                    && EnumSet.of(ExternalProvider.INSTAGRAM, ExternalProvider.FACEBOOK, ExternalProvider.TIKTOK)
+                    && EnumSet.of(ExternalProvider.INSTAGRAM, ExternalProvider.FACEBOOK)
                         .contains(provider);
         };
         if (!allowed) throw ExternalConnectionException.invalidProvider();
@@ -176,8 +175,6 @@ public class ExternalConnectionService {
         String value = raw == null ? "" : raw.trim();
         if (provider == ExternalProvider.INSTAGRAM && isHandle(value)) {
             value = "https://www.instagram.com/" + handle(value, 30) + "/";
-        } else if (provider == ExternalProvider.TIKTOK && isHandle(value)) {
-            value = "https://www.tiktok.com/@" + handle(value, 24);
         }
         try {
             URI uri = URI.create(value);
@@ -197,7 +194,6 @@ public class ExternalConnectionService {
         String host = rawHost.startsWith("www.") ? rawHost.substring(4) : rawHost;
         return switch (provider) {
             case INSTAGRAM -> host.equals("instagram.com");
-            case TIKTOK -> host.equals("tiktok.com");
             case FACEBOOK -> host.equals("facebook.com") || host.equals("fb.com");
             case BANDCAMP -> host.equals("bandcamp.com") || host.endsWith(".bandcamp.com");
             default -> false;

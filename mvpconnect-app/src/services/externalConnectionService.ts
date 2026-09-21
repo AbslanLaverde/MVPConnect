@@ -6,7 +6,6 @@ export type ExternalProvider =
   | 'YOUTUBE'
   | 'SOUNDCLOUD'
   | 'INSTAGRAM'
-  | 'TIKTOK'
   | 'BANDCAMP'
   | 'FACEBOOK';
 
@@ -59,9 +58,9 @@ export interface ParsedOAuthReturn {
 }
 
 export const URL_PROVIDERS_BY_PERSONA: Record<ConnectionPersona, readonly ExternalProvider[]> = {
-  MUSICIAN: ['INSTAGRAM', 'TIKTOK', 'BANDCAMP'],
-  VENUE: ['INSTAGRAM', 'FACEBOOK', 'TIKTOK'],
-  PROMOTER: ['INSTAGRAM', 'FACEBOOK', 'TIKTOK'],
+  MUSICIAN: ['INSTAGRAM', 'BANDCAMP'],
+  VENUE: ['INSTAGRAM', 'FACEBOOK'],
+  PROMOTER: ['INSTAGRAM', 'FACEBOOK'],
 };
 
 export const OAUTH_PROVIDERS_BY_PERSONA: Record<ConnectionPersona, readonly ExternalProvider[]> = {
