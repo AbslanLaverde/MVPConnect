@@ -1,6 +1,6 @@
 # Architecture
 
-Implementation baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5` (`origin/master` at the start of the employer-readiness pass). Source code takes precedence over this guide.
+Implementation baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5`. Source code takes precedence over this guide.
 
 ## Runtime boundaries
 
