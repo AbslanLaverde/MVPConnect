@@ -1,121 +1,186 @@
 # MVPConnect
 
-MVPConnect is a three-sided professional network for **Artists, Venues, and Promoters** in the live/local music ecosystem. It brings fragmented identity, discovery, and relationship information into a structured network designed to support collaboration and booking opportunities.
+**The professional network for live music.**
 
-![MVPConnect — live music network for Artists, Venues, and Promoters](docs/assets/screenshots/mvpconnect-hero.png)
+MVPConnect connects Artists, Venues, and Promoters through structured profiles, media, relationships, and discovery—building the foundation for smarter opportunities across the live-music ecosystem.
 
-*Promotional composite presenting the product across desktop and mobile, not a literal runtime screenshot. The capability descriptions below distinguish implemented workflows from product direction.*
+[![CI](https://github.com/AbslanLaverde/MVPConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/AbslanLaverde/MVPConnect/actions/workflows/ci.yml)
 
-Artists need relevant rooms and collaborators; venues need artists suited to their space; promoters connect talent with places and opportunities. The product thesis is that structured profiles, external identities, and meaningful relationships can improve discovery across that network.
+![MVPConnect promotional product artwork](docs/assets/screenshots/mvpconnect-hero.png)
 
-The current implementation provides account creation, resumable persona-specific onboarding, profile media, external identities, and basic Artist-to-Venue matching. It is an evolving MVP, not yet a complete booking marketplace. The client uses **Artist** terminology; backend persona values, routes, and legacy screens retain `MUSICIAN` / `Musician` names.
+*Promotional product artwork, not a runtime capture.*
 
-## What is implemented
+**Artists • Venues • Promoters • One connected ecosystem**
 
-| Area | Repository-backed capability | Boundary |
-| --- | --- | --- |
-| Accounts | Artist, Venue, and Promoter signup; JWT login; authenticated self-account reads | Password reset remains a UI placeholder |
-| Onboarding | Typed steps, server validation, saved drafts, resume, completion, and sign-out handling | Backend-confirmed state controls navigation; the placeholder save bypass is disabled |
-| Goals | Required persona-specific selections, saved canonically and returned to the owner | Private intent signals; goals-driven ranking and dedicated post-onboarding editing remain deferred |
-| Media | Private JPEG, PNG, and WebP uploads, profile/banner/gallery references, expiring access URLs | Image storage, not general video hosting |
-| External context | Spotify artist identities; Google Places locations and venue identities; free-form references | Provider lookup needs backend credentials; a referenced entity is not necessarily a registered account |
-| External connections | Persona-specific URL connections; YouTube/SoundCloud OAuth for Artists | Provider configuration is required; this is not social login |
-| Discovery | Public profile APIs, Artist/Venue search, legacy Artist home and profile editing, venue matches | Matching counts shared genres among live-music venues; no learned recommendation model |
+## What is MVPConnect?
 
-The welcome screen currently sends every persona to `MusicianHome`, which calls musician APIs. Dedicated venue/promoter dashboards are not implemented. Messaging, payments, booking transactions, push notifications, and token refresh are not presented as shipped capabilities.
+Live music still runs through scattered social profiles, spreadsheets, inboxes, and personal contacts. Artists need rooms and collaborators that fit. Venues need talent suited to their audience and production setup. Promoters need a clearer view of artists, venues, and markets.
 
-## Three-persona onboarding
+MVPConnect turns that fragmented ecosystem into a structured network. Its completed Onboarding V1 captures each persona's identity, sound, space, media, relationships, and goals in a resumable flow, then promotes validated data into canonical profiles for the experiences that come next.
 
-Shared onboarding infrastructure supports distinct identities, data, and workflows. These supplied desktop screenshots show the first step for each persona, followed by the Welcome experience. They include synthetic/test accounts; capture revisions are unknown, and some labels or styling differ from this checkout. See [image provenance](docs/PORTFOLIO.md#assets-and-screenshots).
+## Built for the Live-Music Network
 
-### Artist
+### Artists
 
-The Basics introduces the Artist's profile identity, image, and location within an Artist-specific progression.
+- Build a professional live-music identity.
+- Present sound, live setup, media, and external artist presence.
+- Find relevant venues and collaborators.
+- Create the foundation for better-fit opportunities.
 
-![Artist onboarding — The Basics](docs/assets/screenshots/artist-onboarding-desktop.png)
+### Venues
 
-### Venue
+- Define the room, audience, production support, and booking approach.
+- Show artists and promoters what the space can support.
+- Discover appropriate talent and build promoter relationships.
+- Prepare for smarter open-date planning.
 
-The Room collects the space's identity, description, and address, with a progression tailored to music, production, and booking needs.
+### Promoters
 
-![Venue onboarding — The Room](docs/assets/screenshots/venue-onboarding-desktop.png)
+- Present specialties, markets, roster direction, and network.
+- Connect artist and venue relationships in one model.
+- Communicate the kinds of shows and opportunities they create.
+- Build toward roster-aware booking workflows.
 
-### Promoter
+Future opportunity and matching capabilities are product direction, not claims of completed automation.
 
-The Business introduces the Promoter's identity and place in the scene, leading into specialties and network information.
+## Product Experience
 
-![Promoter onboarding — The Business](docs/assets/screenshots/promoter-onboarding-desktop.png)
+Onboarding V1 is complete for all three personas, with backend-authoritative drafts, cross-platform controls, media, goals, and a dedicated graduation experience.
 
-### Completion and Welcome
+### Graduation
 
-The backend revalidates persisted onboarding data, promotes canonical profile/network state, and records completion before Welcome becomes eligible. This graduation moment is separate from the onboarding forms; the current ENTER destination remains the legacy `MusicianHome` described above.
+![MVPConnect Welcome graduation screen](docs/assets/screenshots/welcome-desktop.png)
 
-![MVPConnect onboarding completion and Welcome experience](docs/assets/screenshots/welcome-desktop.png)
+*Runtime capture of the final Welcome environment. Web and Android graduation behavior have been manually verified.*
 
-## Engineering highlights
+### Persona onboarding
 
-- **Draft-to-profile lifecycle:** versioned onboarding contracts separate incomplete answers from canonical profile data, with ownership checks and completion validation on the server.
-- **Purposeful graph modeling:** intrinsic attributes stay on persona nodes; independent identities/resources become nodes; meaningful associations become relationships. External artists and venue identities can be referenced without creating login accounts.
-- **Private media delivery:** metadata lives in Neo4j while image bytes move directly to S3-compatible storage through presigned URLs.
-- **Explicit public projections:** goals, venue booking email, and provider credentials stay outside public profile/discovery projections.
-- **Operational visibility:** request logging and distinct liveness/readiness probes make dependency failures easier to diagnose.
+![Artist onboarding Step 1](docs/assets/screenshots/artist-onboarding-desktop.png)
 
-See [architecture](docs/ARCHITECTURE.md) for implementation evidence and tradeoffs, and [the portfolio case study](docs/PORTFOLIO.md) for a reusable presentation and maintenance checklist.
+*Artist onboarding runtime capture. This supplied capture predates the final V1 copy and state polish; the implemented five-step flow is current.*
 
-## Product direction
+![Venue onboarding Step 1](docs/assets/screenshots/venue-onboarding-desktop.png)
 
-Planned work includes richer persona-specific home/profile experiences, broader discovery, and goals-aware matching. Longer-term direction includes messaging, venue availability, roster/network workflows, and opportunities connecting a promoter's artist with a suitable venue open date. Provider connections and graph references are foundations for that work, not evidence of an AI classification or recommendation pipeline.
+*Venue onboarding runtime capture. This supplied capture predates final V1 stabilization; the implemented six-step flow is current.*
 
-The MVP prioritizes identity, introductions, and discovery before payments, contracts, or complete booking transactions. See [portfolio direction and tradeoffs](docs/PORTFOLIO.md).
+![Promoter onboarding Step 1](docs/assets/screenshots/promoter-onboarding-desktop.png)
 
-## Run locally
+*Promoter onboarding runtime capture. The image shows the older “Specialties” label; the current product uses “Your Lane.” Recapture is planned.*
 
-The application uses an Expo / React Native client, a Spring Boot API, and Neo4j, with S3-compatible media storage.
+Synthetic test accounts appear in these images. See [asset provenance](docs/PORTFOLIO.md#assets-and-screenshots) for exact dimensions and limitations.
 
-Use the [local setup guide](docs/LOCAL_DEVELOPMENT.md) for prerequisites, Neo4j configuration, MinIO startup, and separate backend/frontend terminals. Compose starts MinIO only; it does not start Neo4j or the application.
+## Current Status
 
-Once infrastructure and environment variables are configured:
+| Area | Status |
+| --- | --- |
+| Artist Onboarding | ✅ Complete |
+| Venue Onboarding | ✅ Complete |
+| Promoter Onboarding | ✅ Complete |
+| Web QA | ✅ Verified |
+| Android QA | ✅ Verified |
+| iOS QA | ◯ Not yet verified |
+| Post-Onboarding Experience | 🚧 Next phase |
 
-```powershell
-# Repository root, backend terminal
-$env:SPRING_PROFILES_ACTIVE = 'local'
-mvn -f mvpconnect-svc/pom.xml spring-boot:run
+## Engineering Highlights
+
+### Server-Authoritative Onboarding
+
+Versioned, typed drafts remain resumable without becoming canonical profile data too early. Valid-only autosave, persistence-safe Sign Out, synchronized mutation responses, and backend-confirmed navigation prevent stale state and lost edits. Final promotion is validated and idempotent.
+
+### Graph-Backed Domain Model
+
+Simple intrinsic attributes remain persona properties. Independently meaningful resources and identities become nodes. Real associations become graph relationships. This keeps ordinary profile data readable while supporting external artists, venue identities, media, and future network reasoning.
+
+### Production-Oriented Media Lifecycle
+
+Private image bytes upload directly through presigned URLs while Neo4j owns canonical `MediaAsset` metadata. The client supports 3:1 Hero presentation, compact multi-select galleries, sequential uploads, partial-failure retention, and deterministic zero-based gallery order.
+
+### Secure External Connections
+
+Provider authorization stays backend-owned, with PKCE, state validation, one-time attempts, return-target allowlisting, and encrypted provider credentials. Spotify supplies external artist identity; YouTube and SoundCloud use OAuth; Instagram, Facebook, and Bandcamp use validated profile URLs where applicable.
+
+### Cross-Platform Product Engineering
+
+One React Native / Expo client serves web and native UI with shared responsive behavior. Onboarding V1 has completed human QA on web and Android, including native rendering fixes and generated native-safe brand assets. iOS has not yet been QA-verified.
+
+## Architecture Snapshot
+
+```mermaid
+flowchart LR
+    Client[React Native / Expo] -->|JWT + typed JSON| API[Spring Boot API]
+    API --> Graph[(Neo4j)]
+    API --> Storage[(Private MinIO / S3)]
+    Client -->|Presigned image transfer| Storage
+    API --> Providers[Spotify · YouTube · SoundCloud · Google Places]
 ```
 
+The API owns authentication, authorization, onboarding transitions, public/self projections, OAuth exchanges, and canonical promotion. Neo4j stores personas and relationships; private object storage holds image bytes. Instagram, Facebook, and Bandcamp are URL-first connections rather than OAuth integrations.
+
+Read the [architecture guide](docs/ARCHITECTURE.md) for boundaries, tradeoffs, and implementation evidence.
+
+## What's Next
+
+The next major phase is the **post-onboarding experience**.
+
+### Role-Specific Home
+
+Give Artists, Venues, and Promoters useful landing experiences and route completed login and Welcome → ENTER to the correct role-specific Home.
+
+### Profiles
+
+Turn canonical onboarding data into polished public profiles, self profiles, and editing experiences.
+
+### Artist Intelligence
+
+Explore user-reviewable structured suggestions from existing signals such as “Sounds Like.” AI-derived data should remain transparent and correctable; this is not implemented yet.
+
+### Discovery & Search
+
+Help each side find the others through role, location, genres, and structured profile signals.
+
+### Matching
+
+Start with explainable deterministic matching across signals such as genre, geography, draw, venue capacity, goals, and network relationships before considering embeddings or machine learning.
+
+Later milestones may include venue availability, promoter roster/network tools, opportunity generation, inquiries, connections, and messaging. These are directional milestones, not a delivery schedule.
+
+## Tech Stack
+
+- **Frontend:** React Native, Expo, TypeScript
+- **Backend:** Spring Boot, Java 21
+- **Data:** Neo4j, private MinIO/S3-compatible object storage
+- **Integrations:** Spotify, YouTube, SoundCloud, Google Places
+- **Testing:** Jest, Maven, Postman/Newman
+
+## Local Development
+
+1. Configure local environment files and process variables.
+2. Start MinIO and a separate Neo4j instance.
+3. Start the Spring Boot API with the `local` profile.
+4. Install frontend dependencies and start Expo web or native.
+5. Check health endpoints and exercise a disposable onboarding flow.
+
 ```powershell
-# Separate terminal
+# Backend, from the repository root
+$env:SPRING_PROFILES_ACTIVE = 'local'
+mvn -f mvpconnect-svc/pom.xml spring-boot:run
+
+# Frontend, in a separate terminal
 Set-Location mvpconnect-app
 npm ci
 npm run web -- --port 8081
 ```
 
-The API defaults to `http://localhost:8080`, with no `/api` prefix. The frontend URL is configured through `EXPO_PUBLIC_API_BASE_URL`, not by editing source files. See [environment and secrets](docs/ENVIRONMENT.md) before enabling external providers.
+See [Local Development](docs/LOCAL_DEVELOPMENT.md) for the complete setup, Neo4j/MinIO requirements, environment variables, native-device notes, and troubleshooting.
 
-## Repository map
+## Documentation
 
-| Path | Purpose |
-| --- | --- |
-| [mvpconnect-app](mvpconnect-app/README.md) | Expo SDK 51, React 18, React Native 0.74, TypeScript, React Navigation, Redux Toolkit / RTK Query, Axios |
-| [mvpconnect-svc](mvpconnect-svc/pom.xml) | Java 21, Spring Boot 3.5.16, Spring Security, Spring Data Neo4j, AWS SDK v2 |
-| [mvpconnect-mcp](mvpconnect-mcp/README.md) | Optional Python/FastMCP prototype with direct database access; separate from the app runtime |
-| [compose.yaml](compose.yaml) | Local MinIO and private bucket initialization |
-| [postman](postman) / [scripts](scripts) | Backend E2E collection, generator, and guarded local cleanup |
-| [docs](docs) | Setup, configuration, architecture, validation, and portfolio maintenance |
+- [Architecture](docs/ARCHITECTURE.md) — system boundaries, graph model, onboarding, media, and integrations
+- [Local Development](docs/LOCAL_DEVELOPMENT.md) — repeatable workstation setup and runtime checks
+- [Environment](docs/ENVIRONMENT.md) — configuration and secret boundaries
+- [Testing](docs/TESTING.md) — automated, API/E2E, and human-QA evidence
+- [Portfolio Case Study](docs/PORTFOLIO.md) — engineering decisions and interview-ready narratives
+- [Security Policy](SECURITY.md) — supported line and vulnerability-reporting guidance
+- [Contributing](CONTRIBUTING.md) — branch, verification, and review expectations
 
-## Validation and further reading
-
-```powershell
-# Repository root
-mvn -f mvpconnect-svc/pom.xml test
-node --test scripts/cleanup-local-e2e.test.js
-```
-
-```powershell
-# mvpconnect-app
-npm test
-npm run typecheck
-```
-
-[Testing guide](docs/TESTING.md) · [Backend E2E runbook](BACKEND_E2E_TESTING.md) · [Media storage](mvpconnect-svc/MEDIA_STORAGE.md) · [External connections](mvpconnect-svc/MEDIA_CONNECTIONS.md) · [Spotify identities](mvpconnect-svc/SPOTIFY_EXTERNAL_ARTISTS.md) · [Venue identities](mvpconnect-svc/VENUE_IDENTITY.md) · [Logging](mvpconnect-svc/LOGGING.md)
-
-Feature statements describe code present in this repository, not a production deployment or external-provider certification. No root license file or public deployment URL is supplied by this checkout.
+MVPConnect is an evolving pre-release product. No public deployment, production-readiness certification, adoption metric, or completed booking/payment workflow is claimed by this repository. No open-source license has been granted.

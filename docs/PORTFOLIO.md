@@ -1,101 +1,158 @@
 # MVPConnect portfolio case study
 
-## Project presentation
+Evidence baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5` (`origin/master` at the start of the employer-readiness pass). Source code remains authoritative.
 
-MVPConnect is a three-sided professional network for Artists, Venues, and Promoters in the live/local music ecosystem. Its product premise is that identity, discovery, and relationship management are fragmented across inboxes, social platforms, spreadsheets, and personal networks. Structured, editable profiles and meaningful associations provide a foundation for better discovery and future booking opportunities.
+## Product story
 
-The strongest current demonstration is the path from a new account to a saved, resumable profile: persona-specific onboarding, typed validation, private image uploads, optional provider-backed identities, and server-confirmed completion. An Artist can then view genre-based venue matches and edit their profile. Venue and Promoter onboarding are present; the real home experience remains deferred, with legacy `MusicianHome` shared as a temporary destination.
+MVPConnect is a three-sided professional network for Artists, Venues, and Promoters in live and local music. Today, identity, discovery, and working relationships are fragmented across social platforms, inboxes, spreadsheets, and personal contacts. MVPConnect structures that information so each participant can present who they are and eventually find relevant people, places, and opportunities.
 
-The Expo / React Native client, Spring Boot API, and Neo4j model support that foundation. Use Artist in product prose and preserve `Musician` in exact implementation names. MVPConnect provides the connecting network rather than representing a fourth account persona.
+Onboarding V1 is the completed product milestone. Each persona has a tailored, resumable flow that collects identity, operating context, media, relationships, and goals before promoting validated answers into canonical profile data.
 
-| Persona | Current onboarding sequence | Intended product value |
+| Persona | Onboarding sequence | Product outcome |
 | --- | --- | --- |
-| Artist | The Basics → Your Sound → Playing Live → Media → Your Goals | Present identity, sound, experience, and intent |
-| Venue | The Room → Your Music → The Stage → Booking → Media → Your Goals | Describe room, music, production, and booking needs |
-| Promoter | The Business → Your Lane → Your Network → Media → Your Goals | Describe markets, specialties, and relationships |
+| Artist | The Basics → Your Sound → Playing Live → Media → Your Goals | A structured live-music identity with sound, draw, setup, references, media, and intent |
+| Venue | The Room → Your Music → The Stage → Booking → Media → Your Goals | A room profile with audience, production, booking, media, and intent |
+| Promoter | The Business → Your Lane → Your Network → Media → Your Goals | A promoter identity with specialties, markets, artist/venue relationships, media, and intent |
 
-Collecting goals or relationships does not mean they already power ranking or operational roster management.
+Web and Android human QA are complete for all three flows. iOS has not yet been QA-verified. Post-onboarding Home, profile, discovery, and matching experiences are the next product phase.
 
-## Engineering decisions to discuss
+## Engineering story 1: Server-authoritative onboarding reliability
 
-| Decision | What it makes possible | Tradeoff and evidence |
-| --- | --- | --- |
-| Keep intrinsic attributes as properties and independent resources as nodes | Model meaningful relationships without normalizing every profile field | Requires explicit lifecycle/identity decisions; persona nodes and identity/media repositories |
-| Versioned drafts separate from canonical profiles | Partial onboarding can resume before completion | Client/server contracts must stay aligned; OnboardingStepRegistry and onboarding services |
-| External identity nodes separate from accounts | Reference artists and places that have not signed up | Resolution and provider availability need handling; external-artist/venue-identity services |
-| Direct uploads to private storage | Bytes bypass the API; access can expire | Connectivity and cross-system cleanup matter; MediaService and S3ObjectStorageService |
-| Public DTOs distinct from self-account data | Discovery exposes selected fields without account/provider secrets | New fields need intentional projection decisions; public/self/discovery services |
-| Simple genre-overlap matching | Explainable initial venue suggestions | Scans venues; lacks learned relevance and scale evidence; MusicianController |
+### Why it matters
 
-See [architecture](ARCHITECTURE.md) for implementation evidence. Product rationale follows the supplied product brief; exact behavior follows source. Individual authorship and measured business impact still require separate evidence.
+Onboarding spans multiple sessions, devices, optional provider operations, and steps with different validation rules. A visual wizard is not enough: incomplete edits must not silently overwrite the last valid draft, and completion must not create divergent canonical data.
 
-## Interview and buyer narrative
+### Technical decisions
 
-Use **problem → constraint → decision → implementation → tradeoff → verification**. Users may leave onboarding before finishing, but incomplete answers must not count as a completed profile. Versioned drafts and backend-owned completion allow resume and validation before canonical promotion. The cost is coordinating client/server contracts and failure recovery; workflow and ownership tests provide evidence beyond a wizard UI.
+- Versioned typed drafts remain separate from canonical persona profiles.
+- Valid-only autosave preserves the last server-accepted state.
+- Save/complete mutations synchronize the RTK Query cache before navigation consumes the returned onboarding state.
+- Continue serializes against active persistence so one activation produces one deterministic transition.
+- Sign Out waits for active persistence, flushes valid dirty data, and asks before discarding invalid unsaved edits.
+- Completed-step editing uses explicit reopen semantics.
+- Final completion revalidates persisted steps and performs idempotent canonical promotion.
 
-For buyers, the current asset is the multi-persona identity/network foundation: structured onboarding, canonical promotion, graph relationships, media lifecycles, provider integration, privacy projections, and verification tooling. It is not yet an operational marketplace. Avoid extrapolating adoption, revenue, or readiness from the architecture.
+### Verification evidence
 
-## Product direction — planned
+- Focused frontend tests cover invalid/valid autosave, hydration, reopen, save failure, completion failure, one-press transition, and Sign Out coordination.
+- Backend tests cover step contracts, state transitions, promotion, authorization, and idempotency.
+- Product-owner QA verified complete Artist, Venue, and Promoter flows on web and Android.
 
-The graph is intended to support role-dependent discovery: Artists finding Venues, Promoters, or collaborators; Venues finding Artists or Promoters; Promoters finding talent, venues, and eventually opportunities. A future opportunity could combine **roster artist × venue open date × relevant fit**, leading to an inquiry. Current genre-overlap matches do not implement that model.
+### Interview talking point
 
-Future classification and richer ranking could use geography, draw/capacity, goals, preferences, and network associations. The guiding intent is that AI may suggest information but people confirm or correct it. No complete AI classification, supply-sourcing, or recommendation pipeline is claimed today.
+Describe the failure mode that appears when UI navigation outruns an asynchronous cache update, then explain why consuming the server mutation response is more deterministic than relying on eventual refetch timing.
 
-Deferred work includes real home/profile experiences, post-onboarding goal editing, goals-driven ranking, provider feeds/players, identity claim/verification, roster and venue-network dashboards, availability, messaging, direct video upload, media captions/tagging/featured media, and Google venue-photo import. Messaging is intended to become a separate service; no messaging microservice is implemented in this checkout.
+## Engineering story 2: Production-oriented media lifecycle
 
-Payments, contracts, and transaction-heavy booking infrastructure were deliberately deferred to focus first on introductions and discovery. These are product directions, not delivery dates or an approved pricing schedule. Historical launch hypotheses and unapproved pricing/limits are omitted from public presentation.
+### Why it matters
+
+Profile media crosses database, object-storage, UI, and onboarding boundaries. Upload success alone is not enough: ownership, canonical membership, ordering, deletion, hydration, and partial failure must agree.
+
+### Technical decisions
+
+- Neo4j owns `MediaAsset` metadata and persona/draft relationships; private MinIO/S3-compatible storage owns image bytes.
+- The backend issues presigned upload/access URLs and verifies stored MIME/length metadata before marking an asset ready.
+- Hero images use a consistent 3:1 presentation while preserving single-select behavior.
+- Galleries allow multi-select intake but upload sequentially, keeping successful earlier items when a later item fails.
+- Failed items remain retryable/removable instead of invalidating the entire batch.
+- Canonical gallery relationships preserve a deterministic contiguous zero-based `sortOrder`.
+
+### Verification evidence
+
+- Jest covers media validation, single and multi-select behavior, limits, hydration, reordering, retry, removal, and persona-specific media contracts.
+- Backend tests cover ownership, upload completion, storage metadata, canonical membership, and public/self projection.
+- Android QA verified contained Hero rendering, compact two-column galleries, batching, limits, ordering, and removal.
+
+### Interview talking point
+
+Use the gallery flow to discuss the tradeoff between parallel throughput and predictable partial-failure semantics. Sequential uploads were chosen for an onboarding-sized batch where clarity and recoverability matter more than peak throughput.
+
+## Engineering story 3: Cross-platform UI stabilization
+
+### Why it matters
+
+React Native Web and native platforms share component logic but not identical rendering behavior. Controls that look correct in a desktop browser can clip, overflow, or lose SVG paint on Android.
+
+### Technical decisions
+
+- Shared persona accents and onboarding primitives keep Artist, Venue, and Promoter behavior aligned.
+- Responsive layouts use the established shell breakpoints rather than parallel mobile screens.
+- Selected-state components communicate state through checks/semantics as well as color.
+- Media cards, option tiles, equipment quantities, and footers were corrected at the shared-component level where the contract was shared.
+- The Welcome reveal uses a generated native-safe PNG derived from the canonical SVG while preserving opacity-only animation.
+
+### Verification evidence
+
+- Full Jest and TypeScript checks cover shared components, screens, navigation, responsive helpers, and accessibility semantics.
+- Product-owner Android QA verified the Step 1 media card, Step 2/3 selection fills, Step 4 media layout, persistence behavior, and Welcome reveal.
+- Web QA verified all three persona onboarding flows.
+
+### Interview talking point
+
+Explain how a structurally present SVG can remain invisible on native because of gradient-reference support, and why a generated raster derivative is safer than maintaining an unrelated hand-edited asset.
+
+## Engineering story 4: Provider simplification and clean-environment verification
+
+### Why it matters
+
+External identity and social integrations should reflect real provider capabilities without forcing every provider through OAuth or leaving retired fields in contracts and stored data.
+
+### Technical decisions
+
+- Spotify is an external Artist identity/search source, not MVPConnect login.
+- YouTube and SoundCloud use backend-owned OAuth with PKCE, state checks, exact return allowlisting, and encrypted credentials.
+- Instagram, Facebook, and Bandcamp remain validated URL-first connections for applicable personas.
+- TikTok was removed from active frontend/backend contracts and local development data rather than retained as a misleading placeholder.
+- A clean Neo4j + MinIO rebuild was used to verify current schema/bootstrap and fresh onboarding after the reset.
+- The graph rule remains deliberate: intrinsic values are properties, independent identities/resources are nodes, and meaningful associations are relationships.
+
+### Verification evidence
+
+- Focused unit/service tests cover provider matrices, URL normalization, OAuth state/replay/allowlist behavior, and connection promotion.
+- The recorded API/E2E milestone covers generated Postman/Newman requests and assertions; see [Testing](TESTING.md) for provenance.
+- Fresh Artist, Venue, and Promoter onboarding was exercised after the clean local environment rebuild.
+
+### Interview talking point
+
+Discuss why “OAuth everywhere” is not automatically more secure or useful: the connection method should follow provider capabilities and product needs, while credentials and callbacks remain server-owned whenever OAuth is used.
+
+## Architecture decisions worth discussing
+
+- **Properties vs nodes:** ordinary persona attributes stay readable; independent media/external identities gain lifecycle and relationships.
+- **Draft vs canonical data:** incomplete input can resume without masquerading as a completed profile.
+- **Public vs self projections:** private goals, booking contact data, and provider credentials do not leak through discovery DTOs.
+- **Presigned object transfer:** large bytes bypass the API, with explicit ownership and metadata checks.
+- **Explainable first matching:** the current Artist-to-Venue heuristic uses shared genres; richer deterministic signals should precede opaque ML ranking.
+
+See [Architecture](ARCHITECTURE.md) for implementation boundaries and source links.
 
 ## Suggested demo
 
-1. Start isolated local infrastructure using [local development](LOCAL_DEVELOPMENT.md). Check readiness.
-2. Register an Artist with synthetic data and complete part of onboarding.
-3. Sign out and sign back in to show saved state and resume.
-4. Add a profile image, complete onboarding, and enter the musician home screen.
-5. Show genre matches if suitable local venues exist; explain an empty result honestly.
-6. Optionally show venue/promoter onboarding or configured provider connections, keeping their scope explicit.
+1. Start disposable local infrastructure using [Local Development](LOCAL_DEVELOPMENT.md).
+2. Register one persona and complete part of onboarding.
+3. Sign out and back in to demonstrate server-authoritative resume.
+4. Complete media with a Hero and ordered gallery, then finish Goals.
+5. Show canonical completion and the Welcome graduation experience.
+6. Explain honestly that role-specific Home/profile experiences are the next phase.
 
-No public deployment, adoption numbers, performance benchmark, completed booking/payment flow, or individual contribution attribution is established by this checkout. Do not claim them without evidence.
+Do not present a public deployment, user adoption, payments, booking transactions, iOS QA, or AI-driven matching as completed evidence.
 
 ## Assets and screenshots
 
-The README uses five user-supplied images, preserved byte-for-byte under `docs/assets/screenshots`. The hero is a **promotional composite**; the other four were supplied as **application runtime screenshots**. They were not captured or live-verified by this documentation branch. Image content does not establish that marketing promises, provider behavior, or every visible workflow is currently implemented.
+The README uses five supplied images preserved under `docs/assets/screenshots`. The hero is promotional artwork; the other four are runtime captures with synthetic accounts. This documentation pass did not fabricate or edit them.
 
-| Asset / caption | Kind and purpose | Platform / image dimensions | Capture provenance | Visible account data |
-| --- | --- | --- | --- | --- |
-| [mvpconnect-hero.png](assets/screenshots/mvpconnect-hero.png) — Product experience across desktop and mobile | Promotional composite; main README hero | Desktop/mobile presentation, 1536 × 1024 | Date and creation revision unknown; user-supplied artwork | Illustrative profiles and placeholder sign-in text, not customer evidence |
-| [artist-onboarding-desktop.png](assets/screenshots/artist-onboarding-desktop.png) — Artist onboarding: The Basics | Runtime screenshot; profile identity and onboarding progression | Web/desktop, 1517 × 934 | Source filename indicates September 4, 2026, 16:55:02; capture timezone and commit/branch unknown | `TESTBAND20`, synthetic/test data |
-| [venue-onboarding-desktop.png](assets/screenshots/venue-onboarding-desktop.png) — Venue onboarding: The Room | Runtime screenshot; room identity and venue-specific progression | Web/desktop, 1917 × 955 | Source filename indicates September 4, 2026, 16:56:50; capture timezone and commit/branch unknown | `VENUE1`, synthetic/test data |
-| [promoter-onboarding-desktop.png](assets/screenshots/promoter-onboarding-desktop.png) — Promoter onboarding: The Business | Runtime screenshot; business/scene identity | Web/desktop, 1915 × 984 | Source filename indicates September 4, 2026, 16:56:07; capture timezone and commit/branch unknown | `TESTPROMOTER20`, synthetic/test data |
-| [welcome-desktop.png](assets/screenshots/welcome-desktop.png) — Onboarding completion and Welcome | Supplied runtime screenshot; graduation moment after the persona sequence | Web/desktop, 1725 × 912 | Date and commit/branch unknown | No account-specific identity visible |
+| Asset | Kind | Dimensions | Accuracy note |
+| --- | --- | --- | --- |
+| [mvpconnect-hero.png](assets/screenshots/mvpconnect-hero.png) | Promotional composite | 1536 × 1024 | Strong README artwork, but not a runtime capture and not GitHub's ideal 1280 × 640 social-preview ratio |
+| [artist-onboarding-desktop.png](assets/screenshots/artist-onboarding-desktop.png) | Runtime, web desktop | 1517 × 934 | Representative Step 1 capture; predates final V1 copy/state polish |
+| [venue-onboarding-desktop.png](assets/screenshots/venue-onboarding-desktop.png) | Runtime, web desktop | 1917 × 955 | Representative Step 1 capture; predates final V1 stabilization |
+| [promoter-onboarding-desktop.png](assets/screenshots/promoter-onboarding-desktop.png) | Runtime, web desktop | 1915 × 984 | Stale visible copy includes “Specialties” where current product uses “Your Lane” |
+| [welcome-desktop.png](assets/screenshots/welcome-desktop.png) | Runtime, web desktop | 1725 × 912 | Current final environment; the preceding native reveal is animation and is not shown here |
 
-Dimensions describe image pixels, not verified browser viewport sizes. The onboarding date comes from filenames, not independently verified capture metadata. The supplied Venue/Promoter screenshots use labels such as “The Music” and “Specialties”; this checkout's configuration uses “Your Music” and “Your Lane”. The supplied Welcome title/layout also differs from current `WelcomeScreen`. Preserve these as supplied captures, not pixel-exact evidence of this branch. No visible real private account information or credentials were identified; test names have not been altered to fabricate customers.
+Recommended recaptures are current Artist, Venue, and Promoter Step 1 desktop screens; one Android Media screen showing Hero/gallery behavior; and a current final Welcome capture. Capture accounts should remain synthetic and free of credentials or private contact data.
 
-Original files total approximately 4.30 MiB. No resizing, cropping, color changes, or lossy compression was applied. Onboarding screenshots are stacked at normal README content width and link to the full-resolution files through this ledger. Each image appears once in the root README, with meaningful alt text.
+## Product direction
 
-[Brand asset guidance](../mvpconnect-app/assets/branding/BRAND_ASSETS.md) still identifies the canonical application logo and `npm run brand:generate` command. The supplied composite does not replace those application assets.
+The next phase turns canonical onboarding data into role-specific Home, public/self profile, editing, discovery, and explainable matching experiences. Later milestones may add availability, roster/network workflows, opportunities, inquiries, connections, and messaging.
 
-For future captures, record commit SHA, date, platform, viewport, setup/seed assumptions, and caption. Exclude credentials, account emails, tokens, provider-console details, and presigned URLs. Check image rights before publishing and label mockups as mockups. Refresh images when relevant screens change rather than silently assigning a newer revision to older captures.
-
-## Maintenance mechanism
-
-Treat this document and the README capability table as the portfolio's source-controlled claim ledger. Review them when a meaningful capability, architecture decision, integration, privacy/security change, UX milestone, or verification improvement lands. Not every commit needs portfolio prose. At those milestones:
-
-1. Compare claims against changed routes, controllers, DTOs, configuration, and tests.
-2. Update setup when manifests/defaults change; retain one detailed setup source in `LOCAL_DEVELOPMENT.md` and link module guides to it.
-3. Mark affected claims as implemented, partial, planned, or unverified. A backend endpoint alone does not prove a complete UI workflow.
-4. Record evidence path, revision, and uncertainty below. Keep older test totals dated rather than copying them into current claims.
-5. Run relevant [checks](TESTING.md), review Markdown links, and refresh screenshots whose screens changed.
-6. Review staged changes for secrets/private handoffs. Publish only supported claims.
-
-This is a manual review mechanism, not an automated CI gate. No scheduled job or CI workflow is installed.
-
-| Documentation area | Evidence to revisit | Current distinction / uncertainty |
-| --- | --- | --- |
-| Accounts/onboarding | AppNavigator, onboardingConfig, backend registry/services, sign-out tests | Implemented; dedicated venue/promoter dashboards absent |
-| Profile/media privacy | PublicProfileService, SelfAccountService, MediaService and tests | Image flow implemented; not video hosting or security certification |
-| Providers | Spotify/Google/OAuth clients, properties, connection tests | Implemented; live credentials/provider acceptance unverified here |
-| Matching | MusicianController and musician home | Genre heuristic implemented; no ML/performance claims |
-| Setup/testing | pom.xml, package.json/lockfile, Compose, properties | Commands audited; validation status in TESTING.md |
-| Visuals | Canonical brand guidance and image provenance ledger above | One promotional composite and four supplied runtime screenshots; capture revisions unknown |
-
-Baseline evidence revision: `439eb614eee48fb7c813719f9410820059d11cb8`. Update it when re-auditing application behavior, not for prose-only edits.
+Potential AI-derived profile intelligence should be user-reviewable and correctable. No complete AI classification, recommendation pipeline, operational booking marketplace, or delivery schedule is claimed.

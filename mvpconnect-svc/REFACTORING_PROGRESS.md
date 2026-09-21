@@ -78,7 +78,7 @@ Prereqs quick checklist
 - Or use Neo4j Desktop: start DB and confirm bolt URL and credentials.
 
 2) Start the Spring Boot app
-- From project root (/Users/mark/Crescendo/Crescendo/Crescendo):
+- From the repository root:
     - With Maven wrapper:
         - ./mvnw spring-boot:run
     - Or build + run:
@@ -1421,7 +1421,7 @@ For the POC, we implemented minimal viable nodes with only core fields (13-14 fi
 When the POC is validated, we'll expand nodes incrementally:
 
 **Phase 1B: Extended Profile Fields**
-- Additional social media links (YouTube, Spotify, SoundCloud, TikTok, Bandcamp, Apple Music)
+- Additional provider connections should extend the current typed provider matrix only when product requirements are approved.
 - Performance details (setLengthMinutes, hasOwnEquipment, soundRequirements, stageSizeRequirement)
 - Extended booking info (advanceBookingRequired, availableDays, contractRequired)
 - Audience/demographic info (targetAudience, targetDemographic, typicalCrowdSize)
