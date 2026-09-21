@@ -1,6 +1,6 @@
 # MVPConnect portfolio case study
 
-Evidence baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5` (`origin/master` at the start of the employer-readiness pass). Source code remains authoritative.
+Evidence baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5`. Source code remains authoritative.
 
 ## Product story
 
