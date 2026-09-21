@@ -11,7 +11,7 @@ Authoritative defaults live in [application.properties](../mvpconnect-svc/src/ma
 | Expo | `mvpconnect-app/.env` and process environment | Every `EXPO_PUBLIC_*` value is public client configuration |
 | Optional MCP prototype | Process environment | Direct database credentials; separate from Spring configuration |
 
-Real credentials, tokens, presigned URLs, database exports, and OAuth callback captures belong outside tracked documentation. `.env` and `.env.local` are ignored; arbitrary filenames containing secrets may not be. Check `git status` and the staged diff before committing. The checked-in database, JWT, and MinIO defaults are development values, not deployment secrets.
+Real credentials, tokens, presigned URLs, database exports, and OAuth callback captures belong outside tracked documentation. `.env` and `.env.local` are ignored; arbitrary filenames containing secrets may not be. Check `git status` and the staged diff before committing. Neo4j, JWT, and MinIO development fallbacks are scoped to the `local` Spring profile; default/non-local startup requires database credentials and a JWT signing secret from the environment.
 
 Use development credentials for local work; production credentials should not be needed to review the project. Central distribution of shared development secrets is planned, but no secrets-management vendor is part of the implemented architecture. A secret injected into a developer-controlled process is accessible to that developer; credentials that must remain inaccessible need to stay behind a controlled remote service.
 
@@ -19,9 +19,9 @@ Use development credentials for local work; production credentials should not be
 
 | Variables | Purpose / default | Required when |
 | --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | `local` activates MinIO defaults and detailed local logging | Following local setup |
-| `SPRING_NEO4J_URI`, `SPRING_NEO4J_AUTHENTICATION_USERNAME`, `SPRING_NEO4J_AUTHENTICATION_PASSWORD`, `SPRING_DATA_NEO4J_DATABASE` | Spring overrides for Bolt URI, login, database; defaults are localhost:7687 / neo4j / changeme / neo4j | Your local instance differs; Neo4j is required for startup |
-| `JWT_SECRET` | Signing key; implementation uses UTF-8 bytes, not Base64 decoding | Override the checked-in default outside isolated development; use at least 32 random bytes of key material represented as a string |
+| `SPRING_PROFILES_ACTIVE` | `local` activates local Neo4j/JWT/MinIO defaults and detailed logging | Following local setup |
+| `SPRING_NEO4J_URI`, `SPRING_NEO4J_AUTHENTICATION_USERNAME`, `SPRING_NEO4J_AUTHENTICATION_PASSWORD`, `SPRING_DATA_NEO4J_DATABASE` | Spring settings for Bolt URI, login, and database; the local profile defaults to localhost:7687 / neo4j / changeme / neo4j | Required outside the local profile; override whenever local settings differ |
+| `JWT_SECRET` | Signing key; implementation uses UTF-8 bytes, not Base64 decoding | Required outside the local profile; use at least 32 random bytes of key material represented as a string |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated exact browser origins; local defaults include 8081 | Your frontend origin differs |
 | `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` | Compose admin credentials; both default to minioadmin | Changing local storage credentials |
 | `MINIO_API_PORT`, `MINIO_CONSOLE_PORT`, `MINIO_API_CORS_ALLOW_ORIGIN` | Compose host ports 9000 / 9001 and local wildcard CORS | Changing local storage exposure |

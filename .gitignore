@@ -107,4 +107,4 @@ chrome-profiler-events.json
 speed-measure-plugin.json
 /coverage
 .sass-cache/
-.metadata/
+/mvpconnect-svc/.metadata/
