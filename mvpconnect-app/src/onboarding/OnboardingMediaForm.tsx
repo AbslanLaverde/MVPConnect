@@ -54,9 +54,8 @@ const PRESENTATION = {
   },
 } as const;
 
-const URL_PLACEHOLDERS: Record<'INSTAGRAM' | 'TIKTOK' | 'BANDCAMP' | 'FACEBOOK', string> = {
+const URL_PLACEHOLDERS: Record<'INSTAGRAM' | 'BANDCAMP' | 'FACEBOOK', string> = {
   INSTAGRAM: '@yourname or https://instagram.com/yourname',
-  TIKTOK: '@yourname or https://tiktok.com/@yourname',
   BANDCAMP: 'https://yourname.bandcamp.com',
   FACEBOOK: 'https://facebook.com/yourpage',
 };
@@ -147,9 +146,9 @@ export const OnboardingMediaForm: React.FC<OnboardingMediaFormProps> = ({
   const columnStyle = [mediaStepStyles.sectionColumns, mobile && mediaStepStyles.sectionColumnsMobile];
   const contentStyle = [mediaStepStyles.sectionContent, mobile && mediaStepStyles.sectionContentMobile];
   const copyStyle = mobile ? mediaStepStyles.sectionCopyMobile : undefined;
-  const socialProviders: Array<'INSTAGRAM' | 'FACEBOOK' | 'TIKTOK'> = config.persona === 'artist'
-    ? ['INSTAGRAM', 'TIKTOK']
-    : ['INSTAGRAM', 'FACEBOOK', 'TIKTOK'];
+  const socialProviders: Array<'INSTAGRAM' | 'FACEBOOK'> = config.persona === 'artist'
+    ? ['INSTAGRAM']
+    : ['INSTAGRAM', 'FACEBOOK'];
 
   return (
     <View testID={`onboarding-media-${config.persona}`} style={mediaStepStyles.layout}>
