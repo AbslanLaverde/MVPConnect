@@ -45,6 +45,7 @@ export const theme = {
     panelDivider: '#2b303a',
     inputBorder: '#2f3440',
     artistBorder: 'rgba(14, 165, 233, 0.28)',
+    promoterBorder: 'rgba(14, 165, 233, 0.28)',
     venueBorder: 'rgba(139, 92, 246, 0.28)',
     mvpGoldBorder: 'rgba(245, 199, 107, 0.45)',
     

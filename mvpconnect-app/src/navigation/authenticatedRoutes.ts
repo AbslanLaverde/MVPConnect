@@ -9,19 +9,11 @@ export interface AuthenticatedHomeIdentity {
 export type AuthenticatedHomeRoute =
   | { name: 'ArtistHome' }
   | { name: 'VenueHome' }
-  | {
-      name: 'MusicianHome';
-      params: {
-        userId: string;
-        userName: string;
-        userType: AuthenticatedPersona;
-      };
-    };
+  | { name: 'PromoterHome' };
 
 /**
  * Resolves the completed-account destination without coupling callers to a
- * persona-specific screen. Promoter deliberately retains the legacy
- * destination until its dedicated Home composition is implemented.
+ * persona-specific caller logic.
  */
 export const resolveAuthenticatedHomeRoute = (
   identity: AuthenticatedHomeIdentity,
@@ -34,12 +26,5 @@ export const resolveAuthenticatedHomeRoute = (
     return { name: 'VenueHome' };
   }
 
-  return {
-    name: 'MusicianHome',
-    params: {
-      userId: identity.id,
-      userName: identity.displayName,
-      userType: identity.persona,
-    },
-  };
+  return { name: 'PromoterHome' };
 };

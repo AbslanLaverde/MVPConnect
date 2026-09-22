@@ -225,7 +225,7 @@ describe('WelcomeScreen', () => {
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
   });
 
-  it('keeps a completed Promoter on the temporary legacy destination', async () => {
+  it('enters Promoter Home only on activation for a completed Promoter account', async () => {
     mockedSelfQuery.mockReturnValue({
       data: {
         id: 'promoter-1', persona: 'PROMOTER', displayName: 'Night Signal Presents', email: 'promoter@example.com',
@@ -246,11 +246,7 @@ describe('WelcomeScreen', () => {
     const screen = renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
-    expect(screen.navigation.replace).toHaveBeenCalledWith('MusicianHome', {
-      userId: 'promoter-1',
-      userName: 'Night Signal Presents',
-      userType: 'PROMOTER',
-    });
+    expect(screen.navigation.replace).toHaveBeenCalledWith('PromoterHome');
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
   });

@@ -3,7 +3,6 @@ import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
-import { MusicianHomeScreen } from '../screens/MusicianHomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { OnboardingShell } from '../onboarding/OnboardingShell';
 import type { OnboardingPersona } from '../onboarding/onboardingTypes';
@@ -12,6 +11,7 @@ import { OAuthResultScreen } from '../screens/OAuthResultScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
 import { VenueHomeScreen } from '../home/venue/VenueHomeScreen';
+import { PromoterHomeScreen } from '../home/promoter/PromoterHomeScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,7 +24,7 @@ export type RootStackParamList = {
   Welcome: undefined;
   ArtistHome: undefined;
   VenueHome: undefined;
-  MusicianHome: { userId: string; userName: string; userType: string };
+  PromoterHome: undefined;
   Profile: { userId: string; userName?: string };
 };
 
@@ -117,12 +117,9 @@ export const AppNavigator: React.FC = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          name="MusicianHome"
-          component={MusicianHomeScreen}
-          options={({ route }) => ({
-            title: route.params?.userName || 'Dashboard',
-            headerRight: () => null,
-          })}
+          name="PromoterHome"
+          component={PromoterHomeScreen}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Profile"
