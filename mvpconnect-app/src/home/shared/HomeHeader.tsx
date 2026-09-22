@@ -23,9 +23,11 @@ interface HomeHeaderProps {
   displayName?: string;
   profileImageUrl?: string;
   supportingCopy: string;
+  avatarTestIDPrefix: string;
   loading?: boolean;
   accentStart?: string;
   accentEnd?: string;
+  avatarBorderColor?: string;
 }
 
 const AccentRule = ({ start, end }: { start: string; end: string }) => {
@@ -51,13 +53,16 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   displayName,
   profileImageUrl,
   supportingCopy,
+  avatarTestIDPrefix,
   loading = false,
   accentStart = theme.personas.artist.accentStart,
   accentEnd = theme.personas.artist.accentEnd,
+  avatarBorderColor = theme.colors.artistBorder,
 }) => {
   const { width } = useWindowDimensions();
   const mobile = width < HOME_MOBILE_BREAKPOINT;
   const heading = displayName ? `${greeting}, ${displayName}` : greeting;
+  const identityLabel = `${contextLabel.charAt(0)}${contextLabel.slice(1).toLowerCase()}`;
 
   return (
     <View style={[styles.header, mobile && styles.headerMobile]}>
@@ -69,7 +74,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
               testID="home-identity-loading"
               style={styles.loadingCopy}
               accessible
-              accessibilityLabel="Loading Artist identity"
+              accessibilityLabel={`Loading ${identityLabel} identity`}
             >
               <View style={[styles.loadingBar, styles.loadingBarWide]} />
               <View style={[styles.loadingBar, styles.loadingBarShort]} />
@@ -89,23 +94,36 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
         </View>
 
         {loading ? (
-          <View testID="home-avatar-loading" style={[styles.avatar, mobile && styles.avatarMobile, styles.avatarLoading]} />
+          <View
+            testID={`${avatarTestIDPrefix}-avatar-loading`}
+            style={[
+              styles.avatar,
+              mobile && styles.avatarMobile,
+              styles.avatarLoading,
+              { borderColor: avatarBorderColor },
+            ]}
+          />
         ) : profileImageUrl ? (
           <Image
-            testID="artist-home-avatar"
+            testID={`${avatarTestIDPrefix}-avatar`}
             source={{ uri: profileImageUrl }}
             resizeMode="cover"
-            style={[styles.avatar, mobile && styles.avatarMobile]}
+            style={[styles.avatar, mobile && styles.avatarMobile, { borderColor: avatarBorderColor }]}
             accessible={false}
           />
         ) : (
           <View
-            testID="artist-home-avatar-fallback"
-            style={[styles.avatar, mobile && styles.avatarMobile, styles.avatarFallback]}
+            testID={`${avatarTestIDPrefix}-avatar-fallback`}
+            style={[
+              styles.avatar,
+              mobile && styles.avatarMobile,
+              styles.avatarFallback,
+              { borderColor: avatarBorderColor },
+            ]}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           >
-            <Text style={[styles.initials, mobile && styles.initialsMobile]}>
+            <Text style={[styles.initials, mobile && styles.initialsMobile, { color: accentStart }]}>
               {getDisplayInitials(displayName)}
             </Text>
           </View>
@@ -179,7 +197,6 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderWidth: 1,
-    borderColor: theme.colors.artistBorder,
   },
   avatarMobile: {
     width: 58,
@@ -191,7 +208,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.elevatedSurface,
   },
   initials: {
-    color: theme.colors.brandBlue,
     fontFamily: theme.typography.fontFamily.displayBold,
     fontSize: 30,
     letterSpacing: 1,
