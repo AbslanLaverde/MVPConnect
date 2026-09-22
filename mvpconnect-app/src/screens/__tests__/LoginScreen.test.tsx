@@ -129,22 +129,52 @@ describe('LoginScreen authenticated entry routing', () => {
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
   });
 
-  it.each([
-    ['VENUE', 'venue-1', 'The Marlowe Room'],
-    ['PROMOTER', 'promoter-1', 'Night Signal Presents'],
-  ] as const)('keeps completed %s accounts on the temporary legacy destination', async (persona, id, name) => {
+  it('routes a completed Venue directly to Venue Home', async () => {
     mockedLogin.mockResolvedValue({
-      accessToken: 'token', tokenType: 'Bearer', userType: persona, userId: id, email: 'account@example.com', name,
+      accessToken: 'token', tokenType: 'Bearer', userType: 'VENUE', userId: 'venue-1',
+      email: 'venue@example.com', name: 'The Marlowe Room',
     });
-    mockedFetchOnboarding.mockResolvedValue(onboardingState(persona, 'COMPLETED'));
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('VENUE', 'COMPLETED'));
+    const screen = renderScreen();
+    fireEvent.press(screen.getByLabelText('Sign in to your account'));
+
+    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('VenueHome'));
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('Welcome');
+  });
+
+  it.each(['IN_PROGRESS', 'READY'] as const)('keeps a %s Venue in onboarding', async (status) => {
+    mockedLogin.mockResolvedValue({
+      accessToken: 'token', tokenType: 'Bearer', userType: 'VENUE', userId: 'venue-1',
+      email: 'venue@example.com', name: 'The Marlowe Room',
+    });
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('VENUE', status));
+    const screen = renderScreen();
+    fireEvent.press(screen.getByLabelText('Sign in to your account'));
+
+    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('Onboarding', {
+      persona: 'venue',
+      step: 'music',
+    }));
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+  });
+
+  it('keeps a completed Promoter on the temporary legacy destination', async () => {
+    mockedLogin.mockResolvedValue({
+      accessToken: 'token', tokenType: 'Bearer', userType: 'PROMOTER', userId: 'promoter-1',
+      email: 'account@example.com', name: 'Night Signal Presents',
+    });
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('PROMOTER', 'COMPLETED'));
     const screen = renderScreen();
     fireEvent.press(screen.getByLabelText('Sign in to your account'));
 
     await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('MusicianHome', {
-      userId: id,
-      userName: name,
-      userType: persona,
+      userId: 'promoter-1',
+      userName: 'Night Signal Presents',
+      userType: 'PROMOTER',
     }));
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
   });
 });

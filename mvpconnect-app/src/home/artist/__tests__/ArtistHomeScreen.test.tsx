@@ -1,7 +1,9 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useGetSelfAccountQuery } from '../../../onboarding/onboardingApi';
+import { theme } from '../../../theme/theme';
 import { ArtistHomeScreen } from '../ArtistHomeScreen';
 import { getGreetingForHour } from '../../shared/HomeHeader';
 
@@ -101,8 +103,14 @@ describe('ArtistHomeScreen', () => {
       refetch: jest.fn(),
     });
     const screen = renderScreen();
-    expect(screen.getByTestId('artist-home-avatar-fallback', { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.getByText('GH', { includeHiddenElements: true })).toBeTruthy();
+    const fallback = screen.getByTestId('artist-home-avatar-fallback', { includeHiddenElements: true });
+    const initials = screen.getByText('GH', { includeHiddenElements: true });
+    expect(fallback).toBeTruthy();
+    expect(initials).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByText('ARTIST').props.style).color)
+      .toBe(theme.personas.artist.accentStart);
+    expect(StyleSheet.flatten(fallback.props.style).borderColor).toBe(theme.colors.artistBorder);
+    expect(StyleSheet.flatten(initials.props.style).color).toBe(theme.personas.artist.accentStart);
     expect(screen.queryByText(/COULDN’T LOAD/)).toBeNull();
   });
 

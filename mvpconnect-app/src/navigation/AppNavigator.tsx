@@ -11,6 +11,7 @@ import { theme } from '../theme/theme';
 import { OAuthResultScreen } from '../screens/OAuthResultScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
+import { VenueHomeScreen } from '../home/venue/VenueHomeScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   OAuthResult: { attemptId?: string; provider?: string; status?: string } | undefined;
   Welcome: undefined;
   ArtistHome: undefined;
+  VenueHome: undefined;
   MusicianHome: { userId: string; userName: string; userType: string };
   Profile: { userId: string; userName?: string };
 };
@@ -107,6 +109,11 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen
           name="ArtistHome"
           component={ArtistHomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="VenueHome"
+          component={VenueHomeScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen
