@@ -16,6 +16,7 @@ import { useGetOnboardingQuery, useGetSelfAccountQuery } from '../onboarding/onb
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { theme } from '../theme/theme';
 import { welcomeStyles } from './WelcomeScreen.styles';
+import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 
 type Props = StackScreenProps<RootStackParamList, 'Welcome'>;
 
@@ -167,11 +168,16 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
     || !onboardingComplete;
   const enter = () => {
     if (enterDisabled || !selfQuery.data) return;
-    navigation.replace('MusicianHome', {
-      userId: selfQuery.data.id,
-      userName: selfQuery.data.displayName,
-      userType: selfQuery.data.persona,
+    const home = resolveAuthenticatedHomeRoute({
+      id: selfQuery.data.id,
+      displayName: selfQuery.data.displayName,
+      persona: selfQuery.data.persona,
     });
+    if (home.name === 'ArtistHome') {
+      navigation.replace(home.name);
+    } else {
+      navigation.replace(home.name, home.params);
+    }
   };
 
   return (

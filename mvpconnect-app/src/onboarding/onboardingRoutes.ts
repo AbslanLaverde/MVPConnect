@@ -11,7 +11,7 @@ export interface ResolvedOnboardingRoute {
 }
 
 export type AuthenticatedEntryRoute =
-  | { screen: 'home' }
+  | { screen: 'home'; persona: OnboardingState['persona'] }
   | { screen: 'onboarding'; persona: OnboardingPersona; step: string };
 
 const orderedSteps = (state: OnboardingState) =>
@@ -32,7 +32,7 @@ export const resolveAuthenticatedEntryRoute = (
   state: OnboardingState,
 ): AuthenticatedEntryRoute => {
   if (state.status === 'COMPLETED') {
-    return { screen: 'home' };
+    return { screen: 'home', persona: state.persona };
   }
 
   const step = resumeStepFromState(state);

@@ -178,7 +178,7 @@ describe('resolveAuthenticatedEntryRoute', () => {
     state.currentStep = null;
     state.steps = [];
 
-    expect(resolveAuthenticatedEntryRoute(state)).toEqual({ screen: 'home' });
+    expect(resolveAuthenticatedEntryRoute(state)).toEqual({ screen: 'home', persona: 'VENUE' });
   });
 
   it('rejects an incomplete state with no resumable steps', () => {

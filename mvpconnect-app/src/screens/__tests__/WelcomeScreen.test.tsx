@@ -193,14 +193,11 @@ describe('WelcomeScreen', () => {
       .props.accessibilityState.disabled).toBe(true);
   });
 
-  it('enters the existing completed-account destination only on activation', async () => {
+  it('enters Artist Home only on activation for a completed Artist account', async () => {
     const screen = renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
-    expect(screen.navigation.replace).toHaveBeenCalledWith('MusicianHome', {
-      userId: 'artist-1',
-      userName: 'Glass Houses',
-      userType: 'MUSICIAN',
-    });
+    expect(screen.navigation.replace).toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
   });
 });
