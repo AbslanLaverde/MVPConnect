@@ -101,10 +101,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         displayName: response.name || email.trim(),
         persona: destination.persona,
       });
-      if (home.name === 'ArtistHome') {
-        navigation.replace(home.name);
-      } else {
+      if (home.name === 'MusicianHome') {
         navigation.replace(home.name, home.params);
+      } else {
+        navigation.replace(home.name);
       }
     } catch (error: any) {
       console.error(authenticated ? 'Post-login routing error:' : 'Login error:', error);

@@ -200,4 +200,58 @@ describe('WelcomeScreen', () => {
     expect(screen.navigation.replace).toHaveBeenCalledWith('ArtistHome');
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
   });
+
+  it('enters Venue Home only on activation for a completed Venue account', async () => {
+    mockedSelfQuery.mockReturnValue({
+      data: { id: 'venue-1', persona: 'VENUE', displayName: 'Elsewhere', email: 'venue@example.com' },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    mockedOnboardingQuery.mockReturnValue({
+      data: {
+        persona: 'VENUE', status: 'COMPLETED', currentStep: 'goals', onboardingVersion: 2, steps: [],
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    const screen = renderScreen();
+    await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
+    fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
+    expect(screen.navigation.replace).toHaveBeenCalledWith('VenueHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
+  });
+
+  it('keeps a completed Promoter on the temporary legacy destination', async () => {
+    mockedSelfQuery.mockReturnValue({
+      data: {
+        id: 'promoter-1', persona: 'PROMOTER', displayName: 'Night Signal Presents', email: 'promoter@example.com',
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    mockedOnboardingQuery.mockReturnValue({
+      data: {
+        persona: 'PROMOTER', status: 'COMPLETED', currentStep: 'goals', onboardingVersion: 2, steps: [],
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    const screen = renderScreen();
+    await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
+    fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
+    expect(screen.navigation.replace).toHaveBeenCalledWith('MusicianHome', {
+      userId: 'promoter-1',
+      userName: 'Night Signal Presents',
+      userType: 'PROMOTER',
+    });
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+  });
 });
