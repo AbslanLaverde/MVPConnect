@@ -21,6 +21,7 @@ import { theme } from '../theme/theme';
 import { fetchOnboardingState, onboardingApi } from '../onboarding/onboardingApi';
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { store } from '../store/store';
+import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 
 const connectionGradientWebStyle = {
   backgroundImage: `linear-gradient(90deg, ${theme.colors.brandBlue}, ${theme.colors.brandViolet})`,
@@ -95,13 +96,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         return;
       }
 
-      // Persona-specific home screens are still TBD. Preserve the existing home
-      // destination, but only after the backend confirms onboarding is complete.
-      navigation.replace('MusicianHome', {
-        userId: response.userId,
-        userName: response.name || email.trim(),
-        userType: response.userType,
+      const home = resolveAuthenticatedHomeRoute({
+        id: response.userId,
+        displayName: response.name || email.trim(),
+        persona: destination.persona,
       });
+      if (home.name === 'ArtistHome') {
+        navigation.replace(home.name);
+      } else {
+        navigation.replace(home.name, home.params);
+      }
     } catch (error: any) {
       console.error(authenticated ? 'Post-login routing error:' : 'Login error:', error);
 
