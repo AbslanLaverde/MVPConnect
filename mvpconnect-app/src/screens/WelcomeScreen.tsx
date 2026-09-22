@@ -173,10 +173,10 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       displayName: selfQuery.data.displayName,
       persona: selfQuery.data.persona,
     });
-    if (home.name === 'ArtistHome') {
-      navigation.replace(home.name);
-    } else {
+    if (home.name === 'MusicianHome') {
       navigation.replace(home.name, home.params);
+    } else {
+      navigation.replace(home.name);
     }
   };
 
