@@ -10,6 +10,7 @@ import type { OnboardingPersona } from '../onboarding/onboardingTypes';
 import { theme } from '../theme/theme';
 import { OAuthResultScreen } from '../screens/OAuthResultScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Onboarding: { persona: OnboardingPersona; step: string };
   OAuthResult: { attemptId?: string; provider?: string; status?: string } | undefined;
   Welcome: undefined;
+  ArtistHome: undefined;
   MusicianHome: { userId: string; userName: string; userType: string };
   Profile: { userId: string; userName?: string };
 };
@@ -101,6 +103,11 @@ export const AppNavigator: React.FC = () => {
           name="Welcome"
           component={WelcomeScreen}
           options={{ headerShown: false, animationEnabled: false }}
+        />
+        <Stack.Screen
+          name="ArtistHome"
+          component={ArtistHomeScreen}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="MusicianHome"
