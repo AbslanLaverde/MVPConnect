@@ -1,26 +1,18 @@
 # MVPConnect client
 
-Expo / React Native client for Artist, Venue, and Promoter accounts. Artist maps to `MUSICIAN` in the backend; code/API identifiers retain their existing names. Start with the [project overview](../README.md), [local setup](../docs/LOCAL_DEVELOPMENT.md), and [environment reference](../docs/ENVIRONMENT.md).
+Expo / React Native client for Artist, Venue, and Promoter accounts. Artist maps to `MUSICIAN` in the backend; code/API identifiers retain their existing names. Start with the [project overview](../README.md), [architecture guide](../docs/ARCHITECTURE.md), and [environment reference](../docs/ENVIRONMENT.md).
 
-## Run and check
+## Verification
 
-With the backend and storage configured, run from this directory:
+From this package after installing the committed dependency graph:
 
 ```powershell
-# Copy only if .env does not already exist
-Copy-Item .env.example .env
 npm ci
-npm run web -- --port 8081
-```
-
-Use `npm start`, `npm run android`, or `npm run ios` for a compatible native environment. iOS simulator development requires macOS. This repository uses Expo SDK 51; current Expo Go compatibility is not assumed. A global Expo CLI is unnecessary.
-
-```powershell
 npm test
 npm run typecheck
 ```
 
-The API URL comes from `EXPO_PUBLIC_API_BASE_URL`, falling back to `http://localhost:8080`. Do not edit `src/services/api.ts` to configure a machine. `EXPO_PUBLIC_OAUTH_RETURN_TARGET` must match the backend return allowlist. All `EXPO_PUBLIC_*` values are public; provider secrets belong in the backend environment. Restart Expo after configuration changes.
+`EXPO_PUBLIC_API_BASE_URL` selects the backend origin. `EXPO_PUBLIC_OAUTH_RETURN_TARGET` must exactly match a backend return allowlist entry. All `EXPO_PUBLIC_*` values are public client configuration; provider secrets belong in the backend environment.
 
 ## Code map
 
@@ -28,7 +20,8 @@ The API URL comes from `EXPO_PUBLIC_API_BASE_URL`, falling back to `http://local
 | --- | --- |
 | `App.tsx` | Application entry and providers |
 | `src/navigation/AppNavigator.tsx` | Routes and deep links |
-| `src/screens` | Login/signup, welcome, OAuth result, musician home, profile editor |
+| `src/screens` | Login/signup, Welcome, OAuth result, and profile surfaces |
+| `src/home` | Shared Home foundation and explicit Artist, Venue, and Promoter compositions |
 | `src/onboarding` | Typed steps, state/API integration, save/resume/completion and sign-out |
 | `src/components/onboarding` | Reusable fields, provider selectors, upload controls |
 | `src/services` | Axios client and provider/identity/location requests |
@@ -38,6 +31,6 @@ The API URL comes from `EXPO_PUBLIC_API_BASE_URL`, falling back to `http://local
 
 Auth responses use `accessToken`, `tokenType`, `userType`, `userId`, `email`, and optional `name`; see `AuthResponse` in the API client. Tokens use `authToken` in AsyncStorage, with `userType` stored separately. This is not encrypted credential storage or a token-refresh mechanism.
 
-Onboarding navigation follows server state; `ONBOARDING_PLACEHOLDER_SAVE_BYPASS` is false. Signup/onboarding exist for all three personas. Welcome currently sends all personas to musician home, so dedicated venue/promoter dashboards are incomplete. Password reset is a placeholder. Image upload is implemented; general video hosting, messaging, bookings, and payments are not shipped claims.
+Onboarding navigation follows server state; `ONBOARDING_PLACEHOLDER_SAVE_BYPASS` is false. Signup/onboarding and dedicated post-onboarding Home destinations exist for all three personas. Completed login and Welcome use one authenticated resolver to route Musician/Artist, Venue, and Promoter accounts. Password reset is a placeholder. Image upload is implemented; general video hosting, messaging, bookings, and payments are not shipped claims.
 
-See [architecture](../docs/ARCHITECTURE.md), [testing](../docs/TESTING.md), and [brand maintenance](assets/branding/BRAND_ASSETS.md). Create synthetic local accounts; this guide does not promise pre-seeded credentials.
+See [architecture](../docs/ARCHITECTURE.md), [testing](../docs/TESTING.md), and [brand maintenance](assets/branding/BRAND_ASSETS.md).

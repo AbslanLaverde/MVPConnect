@@ -1,7 +1,7 @@
 # MVPConnect external media connections
 
-This document covers the Pass 1 account-level provider foundation. The real
-persona Media onboarding screens are intentionally deferred to Pass 2.
+This document covers the account-level provider foundation used by persona
+Media onboarding and self-account projections.
 
 ## Canonical models
 
@@ -95,47 +95,39 @@ attempt. Clients cannot provide an arbitrary owner ID.
 Never log client secrets, provider codes, Authorization headers, plaintext or
 encrypted tokens, or nonces.
 
-## Local configuration
+## Configuration contract
 
-Put secrets in the IntelliJ Spring Boot run configuration under **Environment
-variables**, or in the process environment. Do not put them in Git-tracked files.
+Supply secrets through the backend's controlled environment. Do not put them in
+Git-tracked files or public client variables.
 
 ```ini
 YOUTUBE_CLIENT_ID=
 YOUTUBE_CLIENT_SECRET=
-YOUTUBE_REDIRECT_URI=http://localhost:8080/external-connections/oauth/youtube/callback
+YOUTUBE_REDIRECT_URI=https://api.example.com/external-connections/oauth/youtube/callback
 
 SOUNDCLOUD_CLIENT_ID=
 SOUNDCLOUD_CLIENT_SECRET=
-SOUNDCLOUD_REDIRECT_URI=http://localhost:8080/external-connections/oauth/soundcloud/callback
+SOUNDCLOUD_REDIRECT_URI=https://api.example.com/external-connections/oauth/soundcloud/callback
 
 OAUTH_TOKEN_ENCRYPTION_KEY_BASE64=
 OAUTH_TOKEN_ENCRYPTION_KEY_VERSION=1
-OAUTH_RETURN_ALLOWED_TARGETS=mvpconnect://oauth/result,http://localhost:19006/oauth/result
-CORS_ALLOWED_ORIGINS=http://localhost:19006
+OAUTH_RETURN_ALLOWED_TARGETS=mvpconnect://oauth/result,https://app.example.com/oauth/result
+CORS_ALLOWED_ORIGINS=https://app.example.com
 ```
 
-Generate a key in PowerShell without printing or committing it anywhere except
-your local secret/run configuration:
+Generate a cryptographically secure random 32-byte value, encode it as Base64,
+and store it in the deployment secret manager. Losing this key requires
+connected users to reconnect.
 
-```powershell
-$keyBytes = New-Object byte[] 32
-[Security.Cryptography.RandomNumberGenerator]::Fill($keyBytes)
-[Convert]::ToBase64String($keyBytes)
-```
-
-The encoded value must decode to exactly 32 bytes. Keep the key backed up in the
-deployment secret manager; losing it requires connected users to reconnect.
-
-Register these exact local provider redirect URIs:
+Register these exact provider callback paths under the deployed API origin:
 
 ```text
-http://localhost:8080/external-connections/oauth/youtube/callback
-http://localhost:8080/external-connections/oauth/soundcloud/callback
+{api-origin}/external-connections/oauth/youtube/callback
+{api-origin}/external-connections/oauth/soundcloud/callback
 ```
 
-Deployed callback URIs must use the deployed HTTPS backend host. Also configure
-the exact web/app result targets in `OAUTH_RETURN_ALLOWED_TARGETS`, the web origins
+Callback URIs should use the deployed HTTPS backend host. Also configure the
+exact web/app result targets in `OAUTH_RETURN_ALLOWED_TARGETS`, the web origins
 in `CORS_ALLOWED_ORIGINS`, and the frontend's public
 `EXPO_PUBLIC_OAUTH_RETURN_TARGET`. Native builds use
 `mvpconnect://oauth/result`; web uses its exact `/oauth/result` URL.
@@ -162,10 +154,9 @@ in this order:
 This ordering preserves shared ExternalArtist/VenueIdentity reference data and
 avoids hidden ownership ambiguity.
 
-## Pass 2 UI notes
+## Media onboarding presentation
 
-Media must be the single current progress step: Artist `04 / 05` with the
-blue-to-violet accent, Venue `05 / 06` violet, and Promoter `04 / 05` electric
-blue. The existing `OnboardingShell` is authoritative. Gallery slots wrap
-responsively, provider raster logos from mockups are not copied, and update-later
-promises must not be shown until post-onboarding editing actually exists.
+Media is the fourth Artist and Promoter step and the fifth Venue step. The shared
+`OnboardingShell` supplies responsive framing and persona accents. Gallery items
+wrap responsively, and provider presentation remains separate from canonical
+MVPConnect media.

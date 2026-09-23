@@ -29,4 +29,4 @@ Remove credentials, tokens, personal data, and private contact information befor
 
 ## Environment
 
-Branch/commit, browser or device/OS, and relevant local-service state. Do not include secrets.
+Application version or commit, browser or device/OS, and relevant API error codes. Do not include secrets or private infrastructure details.

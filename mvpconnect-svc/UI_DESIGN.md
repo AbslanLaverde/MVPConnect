@@ -1,5 +1,16 @@
-# UI Design Document - MVPConnect
+# Historical UI design concepts - MVPConnect
 ## Music Industry Platform for Musicians, Venues & Promoters
+
+> **Historical proposal, not an implementation specification.** The wireframes,
+> sample data, component sketches, and integrations below describe earlier design
+> concepts. Current Onboarding V1 and Home V1 behavior is documented in the
+> [product overview](../README.md) and [architecture guide](../docs/ARCHITECTURE.md).
+> Home V1 provides persona identity, a Needs Your Attention foundation, and shared
+> loading/error/empty states. Recommendations, matching scores, Board opportunities,
+> booking calendars, messaging, roster intelligence, activity feeds, notifications,
+> and AI tagging depicted here are unimplemented concepts, not shipped Home modules
+> or delivery commitments. Accessibility and deployment descriptions are design
+> goals, not certification or distribution claims.
 
 **Version:** 1.0  
 **Date:** October 26, 2025  
@@ -2843,19 +2854,6 @@ Example:
 
 ---
 
-### Design Handoff Checklist
-
-- [ ] All screens designed in Figma (high-fidelity mockups)
-- [ ] Component library created in Storybook
-- [ ] Design tokens exported (colors, spacing, typography)
-- [ ] Accessibility audit completed (WCAG 2.1 AA)
-- [ ] Responsive layouts tested (mobile, tablet, desktop)
-- [ ] User flows documented (onboarding, inquiries, messaging)
-- [ ] Icon assets exported (SVG, 1x/2x/3x for mobile)
-- [ ] Developer handoff meeting scheduled
-
----
-
 ### References & Inspiration
 
 **Design Inspiration:**
@@ -2883,19 +2881,6 @@ This UI Design Document provides a comprehensive blueprint for building MVPConne
 5. **Accessibility:** WCAG 2.1 AA compliant for inclusive design
 6. **Scalability:** Component-based architecture for easy maintenance and expansion
 
-**Next Steps:**
-1. Review and approve this document
-2. Begin high-fidelity mockups in Figma
-3. Set up React Native project with Expo
-4. Implement core components and navigation
-5. Integrate AI tagging and recommendation APIs
-6. Conduct user testing and iterate
-
----
-
-**Document Version:** 1.0  
-**Last Updated:** October 26, 2025  
-**Author:** MVPConnect Design Team  
-**Status:** Ready for Development
-
----
+For current product status and future direction, use the
+[project overview](../README.md#current-status). These historical concepts do not
+set the implementation sequence.

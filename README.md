@@ -2,7 +2,7 @@
 
 **The professional network for live music.**
 
-MVPConnect connects Artists, Venues, and Promoters through structured profiles, media, relationships, and discovery—building the foundation for smarter opportunities across the live-music ecosystem.
+MVPConnect brings Artists, Venues, and Promoters into a structured live-music network through persona-specific onboarding, canonical profile data, and dedicated Home experiences.
 
 [![CI](https://github.com/AbslanLaverde/MVPConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/AbslanLaverde/MVPConnect/actions/workflows/ci.yml)
 
@@ -16,7 +16,7 @@ MVPConnect connects Artists, Venues, and Promoters through structured profiles, 
 
 Live music still runs through scattered social profiles, spreadsheets, inboxes, and personal contacts. Artists need rooms and collaborators that fit. Venues need talent suited to their audience and production setup. Promoters need a clearer view of artists, venues, and markets.
 
-MVPConnect turns that fragmented ecosystem into a structured network. Its completed Onboarding V1 captures each persona's identity, sound, space, media, relationships, and goals in a resumable flow, then promotes validated data into canonical profiles for the experiences that come next.
+MVPConnect turns that fragmented ecosystem into a structured network. Onboarding V1 captures each persona's identity, sound, space, media, relationships, and goals in a resumable flow, promotes validated data into canonical profiles, and graduates each completed account into a dedicated persona-specific Home.
 
 ## Built for the Live-Music Network
 
@@ -24,34 +24,32 @@ MVPConnect turns that fragmented ecosystem into a structured network. Its comple
 
 - Build a professional live-music identity.
 - Present sound, live setup, media, and external artist presence.
-- Find relevant venues and collaborators.
-- Create the foundation for better-fit opportunities.
+- Record performance history and artist references.
+- Capture connection goals alongside musical identity.
 
 ### Venues
 
 - Define the room, audience, production support, and booking approach.
-- Show artists and promoters what the space can support.
-- Discover appropriate talent and build promoter relationships.
-- Prepare for smarter open-date planning.
+- Capture the space's equipment and technical capabilities.
+- Record artist references and booking preferences.
+- Capture connection goals alongside the room's identity.
 
 ### Promoters
 
 - Present specialties, markets, roster direction, and network.
 - Connect artist and venue relationships in one model.
-- Communicate the kinds of shows and opportunities they create.
-- Build toward roster-aware booking workflows.
-
-Future opportunity and matching capabilities are product direction, not claims of completed automation.
+- Describe the kinds of events they organize.
+- Capture connection goals alongside business identity.
 
 ## Product Experience
 
-Onboarding V1 is complete for all three personas, with backend-authoritative drafts, cross-platform controls, media, goals, and a dedicated graduation experience.
+Onboarding V1 and the first post-onboarding Home foundation are complete for all three personas. The first-run experience includes backend-authoritative drafts, cross-platform controls, media, goals, a dedicated graduation experience, and role-aware entry into Artist Home, Venue Home, or Promoter Home.
 
 ### Graduation
 
 ![MVPConnect Welcome graduation screen](docs/assets/screenshots/welcome-desktop.png)
 
-*Runtime capture of the final Welcome environment. Web and Android graduation behavior have been manually verified.*
+*Runtime capture of the final Welcome environment. Web and Android graduation behavior are QA-verified.*
 
 ### Persona onboarding
 
@@ -76,10 +74,22 @@ Synthetic test accounts appear in these images. See [asset provenance](docs/PORT
 | Artist Onboarding | ✅ Complete |
 | Venue Onboarding | ✅ Complete |
 | Promoter Onboarding | ✅ Complete |
+| Artist Home V1 | ✅ Complete |
+| Venue Home V1 | ✅ Complete |
+| Promoter Home V1 | ✅ Complete |
 | Web QA | ✅ Verified |
 | Android QA | ✅ Verified |
-| iOS QA | ◯ Not yet verified |
-| Post-Onboarding Experience | 🚧 Next phase |
+| iOS QA | ◯ Structurally supported; not yet QA-certified |
+
+### Home foundations
+
+MVPConnect keeps three product responsibilities distinct:
+
+- **Profile:** Who is this?
+- **Home:** What is happening and worth acting on?
+- **Discovery:** Who or what can I find?
+
+Home V1 establishes a responsive, persona-aware destination with authenticated identity, a Needs Your Attention foundation, and truthful loading, error, and empty states.
 
 ## Engineering Highlights
 
@@ -101,7 +111,11 @@ Provider authorization stays backend-owned, with PKCE, state validation, one-tim
 
 ### Cross-Platform Product Engineering
 
-One React Native / Expo client serves web and native UI with shared responsive behavior. Onboarding V1 has completed human QA on web and Android, including native rendering fixes and generated native-safe brand assets. iOS has not yet been QA-verified.
+One React Native / Expo client serves web and native UI with shared responsive behavior. Onboarding V1 and Home V1 are QA-verified on Web and Android. iOS remains structurally supported but is not yet QA-certified.
+
+### Persona-Specific Home Architecture
+
+A shared responsive Home foundation supports separate Artist, Venue, and Promoter compositions, role-aware authenticated routing, and reusable loading, error, and empty-state conventions. See the [Home engineering story](docs/PORTFOLIO.md#engineering-story-4-persona-specific-home-architecture) for the design and migration decisions.
 
 ## Architecture Snapshot
 
@@ -120,19 +134,11 @@ Read the [architecture guide](docs/ARCHITECTURE.md) for boundaries, tradeoffs, a
 
 ## What's Next
 
-The next major phase is the **post-onboarding experience**.
+The next major phase is **Profile + Profile Editing**, beginning with Artist and then extending to Venue and Promoter.
 
-### Role-Specific Home
-
-Give Artists, Venues, and Promoters useful landing experiences and route completed login and Welcome → ENTER to the correct role-specific Home.
-
-### Profiles
+### Profiles and Editing
 
 Turn canonical onboarding data into polished public profiles, self profiles, and editing experiences.
-
-### Artist Intelligence
-
-Explore user-reviewable structured suggestions from existing signals such as “Sounds Like.” AI-derived data should remain transparent and correctable; this is not implemented yet.
 
 ### Discovery & Search
 
@@ -140,9 +146,9 @@ Help each side find the others through role, location, genres, and structured pr
 
 ### Matching
 
-Start with explainable deterministic matching across signals such as genre, geography, draw, venue capacity, goals, and network relationships before considering embeddings or machine learning.
+Build explainable Connect recommendations from structured signals before considering opaque ranking approaches.
 
-Later milestones may include venue availability, promoter roster/network tools, opportunity generation, inquiries, connections, and messaging. These are directional milestones, not a delivery schedule.
+Later milestones may add actionable Home modules, structured Board opportunities, messaging and relationship workflows, venue availability, and promoter roster/network tools. These are future directions, not claims of implemented functionality or a delivery schedule.
 
 ## Tech Stack
 
@@ -152,31 +158,9 @@ Later milestones may include venue availability, promoter roster/network tools, 
 - **Integrations:** Spotify, YouTube, SoundCloud, Google Places
 - **Testing:** Jest, Maven, Postman/Newman
 
-## Local Development
-
-1. Configure local environment files and process variables.
-2. Start MinIO and a separate Neo4j instance.
-3. Start the Spring Boot API with the `local` profile.
-4. Install frontend dependencies and start Expo web or native.
-5. Check health endpoints and exercise a disposable onboarding flow.
-
-```powershell
-# Backend, from the repository root
-$env:SPRING_PROFILES_ACTIVE = 'local'
-mvn -f mvpconnect-svc/pom.xml spring-boot:run
-
-# Frontend, in a separate terminal
-Set-Location mvpconnect-app
-npm ci
-npm run web -- --port 8081
-```
-
-See [Local Development](docs/LOCAL_DEVELOPMENT.md) for the complete setup, Neo4j/MinIO requirements, environment variables, native-device notes, and troubleshooting.
-
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — system boundaries, graph model, onboarding, media, and integrations
-- [Local Development](docs/LOCAL_DEVELOPMENT.md) — repeatable workstation setup and runtime checks
 - [Environment](docs/ENVIRONMENT.md) — configuration and secret boundaries
 - [Testing](docs/TESTING.md) — automated, API/E2E, and human-QA evidence
 - [Portfolio Case Study](docs/PORTFOLIO.md) — engineering decisions and interview-ready narratives

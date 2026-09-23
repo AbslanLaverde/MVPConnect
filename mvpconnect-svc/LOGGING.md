@@ -33,37 +33,18 @@ Do not add request/response-body logging. In particular, logs must not contain:
 Use stable IDs, persona, status, counts, durations, media type, step key, and error
 codes when adding new operational events.
 
-## Local development
+## Request correlation
 
-Run with the `local` Spring profile. Application flow logging is `DEBUG`, Neo4j
-driver logging is `INFO`, and output is written to both IntelliJ and the following
-path relative to the service process's working directory:
-
-```text
-logs/mvpconnect.log
-```
-
-Follow the file from PowerShell:
-
-```powershell
-Get-Content .\logs\mvpconnect.log -Wait
-```
-
-Find every event for one failed request:
-
-```powershell
-Select-String -Path .\logs\mvpconnect.log -Pattern 'requestId:<the-id>'
-```
-
-The client-visible request ID is in the failed HTTP response's
-`X-Request-ID` header. Browser JavaScript may read this header through CORS.
+Use the client-visible `X-Request-ID` response header to correlate a failed
+request with backend events. Browser JavaScript may read this header through
+CORS. Log destinations and collection are controlled by the deployment environment.
 
 ## Runtime controls
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
-| `APP_LOG_LEVEL` | `INFO` (`DEBUG` in local) | MVPConnect application detail |
-| `LOG_FILE` | `logs/mvpconnect.log` in local | Local rolling log destination |
+| `APP_LOG_LEVEL` | `INFO` | MVPConnect application detail |
+| `LOG_FILE` | Profile-dependent | File destination when mapped to Spring's `logging.file.name` |
 | `LOG_MAX_FILE_SIZE` | `20MB` | Roll the active file at this size |
 | `LOG_MAX_HISTORY` | `30` | Maximum archived-file history |
 | `LOG_TOTAL_SIZE_CAP` | `1GB` | Maximum retained rolling-log size |

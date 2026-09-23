@@ -1,8 +1,8 @@
 # Crescendo MCP Server
 
-> Optional legacy-named local prototype; not required to run MVPConnect.
+> Optional legacy-named prototype; not required to run MVPConnect.
 > Direct Neo4j reads do not inherit API authorization or public DTO privacy rules.
-> Restrict use to trusted local databases. Seed/password utilities mutate data
+> Restrict use to trusted environments. Seed/password utilities mutate data
 > and are not part of normal application setup.
 
 AI-native tools for Crescendo, the music industry marketplace connecting musicians, venues, and promoters.
@@ -19,20 +19,10 @@ pip install -r requirements.txt
 python crescendo_mcp.py
 ```
 
-Connects to Neo4j at `bolt://localhost:7687` and the backend API at `http://localhost:8081`.
-
-That API port is this prototype's code default. For the current Spring backend,
-set the following before starting it:
-
-```powershell
-$env:CRESCENDO_API_URL = 'http://localhost:8080'
-python crescendo_mcp.py
-```
-
-Database overrides are `NEO4J_URI`, `NEO4J_USER`, and `NEO4J_PASS`, distinct from
-Spring environment names. The historical Python 3.11 test claim below was not
-reverified in the README audit; compatibility with current graph fields also
-needs validation. See [environment configuration](../docs/ENVIRONMENT.md).
+Configure the backend through `CRESCENDO_API_URL` and Neo4j through `NEO4J_URI`,
+`NEO4J_USER`, and `NEO4J_PASS`. These names are distinct from the Spring
+environment contract. Compatibility with current graph fields should be
+validated before use. See [environment configuration](../docs/ENVIRONMENT.md).
 
 ### Tools (10)
 

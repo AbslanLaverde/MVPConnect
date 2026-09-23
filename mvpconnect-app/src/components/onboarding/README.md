@@ -1,12 +1,12 @@
 # Onboarding component foundation
 
-These components are the shared vocabulary for future persona onboarding steps. They are deliberately composable React controls, not a schema-driven form engine.
+These components are the shared vocabulary for Artist, Venue, and Promoter onboarding. They are composable React controls with explicit persona-specific integration.
 
 ## Integration boundaries
 
 - `LocationField` always reads and writes a structured `LocationValue`. Artist and Promoter city fields and Venue address fields use the authenticated Google Places backend proxy when it is configured; manual entry remains available when it is not.
-- `MediaUploader` supports profile, banner, and gallery image modes plus empty, local, uploading, uploaded, and error states. A local selection is labeled as not uploaded unless a `MediaUploadAdapter` is supplied. No production media transport, object storage, presigned upload, native picker, or camera integration is included.
-- `ImageGalleryUploader` composes `MediaUploader`, requires an explicit maximum, and exposes reorder/remove behavior without selecting a final product limit.
+- `MediaUploader` supports profile, banner, and gallery image modes plus empty, selected, uploading, uploaded, and error states. A selection is labeled as not uploaded unless a `MediaUploadAdapter` is supplied. [Onboarding media adapters](../../onboarding/onboardingMedia.ts) connect the picker, presigned upload, and step-association lifecycle.
+- `ImageGalleryUploader` requires an explicit maximum and provides compact multi-select intake, ordered presentation, retry, and removal. Onboarding supplies the persona limit: 8 gallery images for Artists and 10 for Venues and Promoters.
 - `SocialConnectionField` is a controlled display/action shell. It does not implement OAuth or assume that Spotify, YouTube, and Instagram expose identical metadata.
 - `AISuggestionReview` never treats an AI suggestion as accepted until the user explicitly accepts it.
 - `UrlField` does not normalize by default. Set `normalizeOnBlur` to add `https://` only to domain-shaped values that omit a scheme; the normalized value is returned through `onChange`.

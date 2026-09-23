@@ -5,75 +5,30 @@ object storage. The browser or mobile client uploads directly to object storage 
 using a short-lived, server-generated presigned URL. Spring Boot never proxies the
 image body.
 
-## Local MinIO
+## Storage boundary
 
-From the repository root, optionally copy `.env.example` to `.env`, then start the
-local object-storage dependency:
+The API requires a private bucket in an S3-compatible provider. Configure the
+endpoint, addressing mode, bucket, region, and credential source through the
+[environment contract](../docs/ENVIRONMENT.md). Browser uploads also require
+storage CORS rules for the application's authorized origin. Presigned endpoints
+must be reachable by the client performing the transfer.
 
-```powershell
-docker compose up -d
-docker compose ps
-docker compose logs minio-init
-```
+## Authenticated upload lifecycle
 
-MinIO exposes the S3 API at `http://localhost:9000` and its console at
-`http://localhost:9001`. The one-shot `minio-init` service creates the private
-`mvpconnect-media` bucket if it does not exist. Its local default login is
-`minioadmin` / `minioadmin`; override those values in the untracked `.env` file if
-desired.
+1. Call `POST /media/uploads` with a bearer token, media type/context, filename,
+   MIME type, exact byte count, and image dimensions.
+2. Send the image bytes to the returned presigned URL using `PUT` and the declared
+   content type. Storage authorization is encoded in that URL; do not attach the
+   application's bearer token to the storage request.
+3. Call `POST /media/{id}/complete`. The backend checks the object with `HEAD`,
+   verifies content type and length, and changes the asset from `PENDING` to `READY`.
+4. Use `GET /media/{id}` for an owned asset's current access URL. Explicit
+   `DELETE /media/{id}` handles deletion.
 
-Start the backend with the `local` Spring profile so `application-local.properties`
-uses MinIO's endpoint, path-style addressing, and local credentials:
-
-```powershell
-$env:SPRING_PROFILES_ACTIVE = 'local'
-mvn spring-boot:run
-```
-
-The service still needs the project's existing Neo4j instance at
-`bolt://localhost:7687`. The compose file adds only the newly required MinIO
-dependency and does not replace the existing Neo4j workflow.
-
-## Authenticated smoke test
-
-Obtain a valid JWT from the existing signup/login flow and put it in `$token`. Use
-an actual small JPEG and make `sizeBytes` equal its exact byte count.
-
-```powershell
-$token = '<jwt>'
-$imagePath = 'C:\path\to\test.jpg'
-$size = (Get-Item -LiteralPath $imagePath).Length
-$headers = @{ Authorization = "Bearer $token" }
-$body = @{
-  mediaType = 'PROFILE_IMAGE'
-  mediaContext = 'PROFILE'
-  fileName = 'test.jpg'
-  mimeType = 'image/jpeg'
-  sizeBytes = $size
-  width = 1200
-  height = 1200
-} | ConvertTo-Json
-$upload = Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/media/uploads' -Headers $headers -ContentType 'application/json' -Body $body
-Invoke-WebRequest -Method Put -Uri $upload.uploadUrl -ContentType 'image/jpeg' -InFile $imagePath
-$ready = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/media/$($upload.mediaId)/complete" -Headers $headers
-Invoke-RestMethod -Method Get -Uri "http://localhost:8080/media/$($upload.mediaId)" -Headers $headers
-Invoke-RestMethod -Method Delete -Uri "http://localhost:8080/media/$($upload.mediaId)" -Headers $headers
-```
-
-The completion call verifies the object with `HEAD`, including its content type and
-content length, before changing the asset from `PENDING` to `READY`. The MinIO
-console can be used to confirm the object appears before deletion and is absent
-after deletion.
-
-To associate a verified asset with the authenticated account's current onboarding
-draft step:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:8080/onboarding/steps/basics/media/$($upload.mediaId)" -Headers $headers
-```
-
-Use a step key valid for the authenticated persona. Association requires an active
-current-version draft, ownership of the media, and `READY` status.
+Associate a verified asset with onboarding using
+`POST /onboarding/steps/{stepKey}/media/{mediaId}`. Association requires an active
+current-version draft, a step valid for the authenticated persona, media ownership,
+and `READY` status.
 
 ## Production AWS S3
 
@@ -104,7 +59,7 @@ infrastructure, not application startup.
 | `media.storage.upload-url-expiration` | `MEDIA_UPLOAD_URL_EXPIRATION` | `15m` |
 | `media.storage.access-url-expiration` | `MEDIA_ACCESS_URL_EXPIRATION` | `15m` |
 
-Only `image/jpeg`, `image/png`, and `image/webp` are accepted in this pass.
+Only `image/jpeg`, `image/png`, and `image/webp` are accepted.
 
 ## Canonical profile media
 
@@ -145,7 +100,7 @@ keys.
 `MediaCleanupService.findStaleCandidates` is an internal, read-only planning
 primitive for stale `PENDING`/`FAILED` assets and unattached `READY` assets. It is
 bounded to 1,000 candidates and requires a positive minimum age. No scheduler or
-automatic deletion is enabled in Pass 1.
+automatic deletion is enabled.
 
 A future guarded sweeper must delete the object first, delete graph metadata only
 after storage succeeds, retain attached assets, and make retries safe. Canonical
