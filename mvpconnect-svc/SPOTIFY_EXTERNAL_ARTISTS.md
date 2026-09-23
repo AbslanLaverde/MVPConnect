@@ -1,4 +1,4 @@
-# Spotify / ExternalArtist local configuration
+# Spotify / ExternalArtist configuration
 
 MVPConnect uses Spotify's Client Credentials flow only for backend artist identity search.
 No Spotify user authorization is part of this integration.
@@ -10,9 +10,8 @@ SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
 ```
 
-In IntelliJ, add them under **Run > Edit Configurations > MVPConnect > Environment
-variables**. Do not put them in the mobile/web app, committed Postman environments,
-or source control.
+Supply these values through the backend's controlled environment. Do not put
+them in the mobile/web app, committed Postman environments, or source control.
 
 When either value is missing, the rest of the backend starts normally. Spotify-backed
 endpoints return HTTP `503` with the safe code `SPOTIFY_UNAVAILABLE`, allowing onboarding

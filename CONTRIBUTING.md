@@ -4,7 +4,7 @@ MVPConnect is a pre-release product and is not currently offered under an open-s
 
 ## Workflow
 
-1. Follow [Local Development](docs/LOCAL_DEVELOPMENT.md) and keep secrets in ignored local configuration.
+1. Review the public [environment contract](docs/ENVIRONMENT.md) and keep secrets outside tracked files.
 2. Create a focused branch from the current `master` branch.
 3. Keep changes scoped and add or update tests with behavioral changes.
 4. Run the relevant checks before opening a pull request:

@@ -1,6 +1,6 @@
 # Architecture
 
-Implementation baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5`. Source code takes precedence over this guide.
+Source code takes precedence over this guide.
 
 ## Runtime boundaries
 
@@ -13,13 +13,13 @@ flowchart LR
     API --> Places[Google Places]
     API --> Spotify[Spotify artist API]
     API --> OAuth[YouTube / SoundCloud OAuth]
-    MCP[Optional local MCP prototype] -.-> Graph
+    MCP[Optional MCP prototype] -.-> Graph
     MCP -.-> API
 ```
 
 The React Native / Expo client shares web and native product code. The Spring Boot API owns authentication, authorization, typed onboarding transitions, external-provider exchanges, and public/self projections. Neo4j stores personas, resources, and relationships. Private MinIO/S3-compatible storage holds image bytes; the client transfers them through short-lived presigned URLs.
 
-Local Compose starts MinIO only. Neo4j and both application processes run separately. The optional Python MCP prototype can read the graph directly and therefore sits outside the API's normal authorization and DTO boundaries.
+The optional Python MCP prototype can read the graph directly and therefore sits outside the API's normal authorization and DTO boundaries.
 
 ## Client, authentication, and navigation
 
@@ -28,6 +28,38 @@ Local Compose starts MinIO only. Neo4j and both application processes run separa
 [SecurityConfig](../mvpconnect-svc/src/main/java/com/mint/security/SecurityConfig.java) configures stateless JWT authentication, BCrypt, CORS, and public routes. [PersonaAuthorizationService](../mvpconnect-svc/src/main/java/com/mint/security/PersonaAuthorizationService.java) enforces owner operations. Public and owner responses are intentionally mapped through [PublicProfileService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileService.java), [DiscoveryProfileMapper](../mvpconnect-svc/src/main/java/com/mint/services/DiscoveryProfileMapper.java), and [SelfAccountService](../mvpconnect-svc/src/main/java/com/mint/services/SelfAccountService.java) rather than direct entity serialization.
 
 Completed users enter a persona-specific Home through one shared resolver: Musicians route to `ArtistHome`, Venues to `VenueHome`, and Promoters to `PromoterHome`. Completed login goes directly Home, while first-time onboarding completion reaches Welcome before ENTER resolves the same destination.
+
+## Post-onboarding Home architecture
+
+Home answers “What is happening and worth acting on?” It is intentionally separate from Profile (“Who is this?”) and Discovery (“Who or what can I find?”).
+
+The shared Home foundation provides infrastructure rather than a configurable dashboard engine:
+
+- [HomeShell](../mvpconnect-app/src/home/shared/HomeShell.tsx) owns responsive framing, scrolling, and safe-area behavior.
+- [HomeHeader](../mvpconnect-app/src/home/shared/HomeHeader.tsx) owns authenticated identity presentation, time-aware greeting, image/fallback behavior, and persona accents.
+- [HomeSection](../mvpconnect-app/src/home/shared/HomeSection.tsx) and [HomeEmptyState](../mvpconnect-app/src/home/shared/HomeEmptyState.tsx) provide consistent section and truthful empty-state structure.
+- [AttentionSection](../mvpconnect-app/src/home/shared/AttentionSection.tsx) composes the current `NEEDS YOUR ATTENTION` foundation.
+- [HomeIdentityError](../mvpconnect-app/src/home/shared/HomeIdentityError.tsx) keeps the frame intact and provides inline retry behavior when `/me` fails.
+
+Product behavior remains explicit in three compositions:
+
+- [ArtistHomeScreen](../mvpconnect-app/src/home/artist/ArtistHomeScreen.tsx)
+- [VenueHomeScreen](../mvpconnect-app/src/home/venue/VenueHomeScreen.tsx)
+- [PromoterHomeScreen](../mvpconnect-app/src/home/promoter/PromoterHomeScreen.tsx)
+
+Shared shell, typography, layout, responsive behavior, and state conventions support explicit persona compositions. Future modules can be composed within each screen without a persona-conditional mega-dashboard or a configuration-driven widget system.
+
+All three consume the existing `/me` self-account projection for display name, persona context, and optional profile image. Canonical onboarding/profile fields are not dumped into Home merely because they are available.
+
+Login and Welcome both call the same [authenticated Home resolver](../mvpconnect-app/src/navigation/authenticatedRoutes.ts):
+
+| Account persona | Destination |
+| --- | --- |
+| `MUSICIAN` | `ArtistHome` |
+| `VENUE` | `VenueHome` |
+| `PROMOTER` | `PromoterHome` |
+
+The legacy `MusicianHome` route has been retired. Current Home screens establish identity, Attention, and shared loading/error/empty-state behavior; they do not yet provide matching, Board posts, messaging, availability, roster intelligence, recommendations, or opportunity engines.
 
 ## Onboarding state model
 
@@ -93,9 +125,9 @@ Generated assets should be regenerated through `npm run brand:generate`, not edi
 
 ## Configuration and operations
 
-Default/non-local startup requires Neo4j connection credentials and `JWT_SECRET`. Safe developer fallbacks are confined to `application-local.properties` and activated explicitly with `SPRING_PROFILES_ACTIVE=local`. Optional provider credentials are empty by default and disable only their provider operations.
+Deployed environments require Neo4j connection credentials and `JWT_SECRET`. Optional provider credentials are empty by default and disable only their provider operations.
 
-Actuator liveness reflects process state. Readiness includes Neo4j and object storage. Structured request logging adds request/account/persona context and configurable slow-operation thresholds without exposing raw provider credentials. See [Environment](ENVIRONMENT.md), [Local Development](LOCAL_DEVELOPMENT.md), and [Logging](../mvpconnect-svc/LOGGING.md).
+Actuator liveness reflects process state. Readiness includes Neo4j and object storage. Structured request logging adds request/account/persona context and configurable slow-operation thresholds without exposing raw provider credentials. See [Environment](ENVIRONMENT.md) and [Logging](../mvpconnect-svc/LOGGING.md).
 
 ## API orientation
 

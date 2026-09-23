@@ -1,12 +1,12 @@
 # MVPConnect portfolio case study
 
-Evidence baseline: `0fe9b20a1b0e17503fa8ec965774d10c5ee5a9d5`. Source code remains authoritative.
+Source code remains authoritative when this case study and the implementation differ.
 
 ## Product story
 
 MVPConnect is a three-sided professional network for Artists, Venues, and Promoters in live and local music. Today, identity, discovery, and working relationships are fragmented across social platforms, inboxes, spreadsheets, and personal contacts. MVPConnect structures that information so each participant can present who they are and eventually find relevant people, places, and opportunities.
 
-Onboarding V1 is the completed product milestone. Each persona has a tailored, resumable flow that collects identity, operating context, media, relationships, and goals before promoting validated answers into canonical profile data.
+Onboarding V1 and Home V1 form the completed first-run product milestone. Each persona has a tailored, resumable flow that collects identity, operating context, media, relationships, and goals before promoting validated answers into canonical profile data. Completed accounts graduate through Welcome into a dedicated Artist, Venue, or Promoter Home.
 
 | Persona | Onboarding sequence | Product outcome |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ Onboarding V1 is the completed product milestone. Each persona has a tailored, r
 | Venue | The Room → Your Music → The Stage → Booking → Media → Your Goals | A room profile with audience, production, booking, media, and intent |
 | Promoter | The Business → Your Lane → Your Network → Media → Your Goals | A promoter identity with specialties, markets, artist/venue relationships, media, and intent |
 
-Web and Android human QA are complete for all three flows. iOS has not yet been QA-verified. Post-onboarding Home, profile, discovery, and matching experiences are the next product phase.
+Web and Android QA are complete for all three onboarding and Home flows. iOS has not yet been QA-verified. Profile and profile editing are the next product phase.
 
 ## Engineering story 1: Server-authoritative onboarding reliability
 
@@ -36,7 +36,7 @@ Onboarding spans multiple sessions, devices, optional provider operations, and s
 
 - Focused frontend tests cover invalid/valid autosave, hydration, reopen, save failure, completion failure, one-press transition, and Sign Out coordination.
 - Backend tests cover step contracts, state transitions, promotion, authorization, and idempotency.
-- Product-owner QA verified complete Artist, Venue, and Promoter flows on web and Android.
+- Cross-platform QA verified complete Artist, Venue, and Promoter flows on web and Android.
 
 ### Interview talking point
 
@@ -84,14 +84,40 @@ React Native Web and native platforms share component logic but not identical re
 ### Verification evidence
 
 - Full Jest and TypeScript checks cover shared components, screens, navigation, responsive helpers, and accessibility semantics.
-- Product-owner Android QA verified the Step 1 media card, Step 2/3 selection fills, Step 4 media layout, persistence behavior, and Welcome reveal.
+- Android QA verified the Step 1 media card, Step 2/3 selection fills, Step 4 media layout, persistence behavior, and Welcome reveal.
 - Web QA verified all three persona onboarding flows.
 
 ### Interview talking point
 
 Explain how a structurally present SVG can remain invisible on native because of gradient-reference support, and why a generated raster derivative is safer than maintaining an unrelated hand-edited asset.
 
-## Engineering story 4: Provider simplification and clean-environment verification
+## Engineering story 4: Persona-specific Home architecture
+
+### Why it matters
+
+Artist, Venue, and Promoter Homes share presentation and state conventions, but each role has a different product center of gravity. Reusing a single conditional dashboard would couple future modules and make persona behavior harder to reason about.
+
+### Technical decisions
+
+- `HomeShell`, `HomeHeader`, `HomeSection`, `HomeEmptyState`, `AttentionSection`, and `HomeIdentityError` provide responsive structure and shared state conventions.
+- `ArtistHomeScreen`, `VenueHomeScreen`, and `PromoterHomeScreen` remain separate explicit compositions.
+- Home reads authenticated identity from the existing `/me` projection without reproducing the canonical profile.
+- Login and Welcome use one completed-account resolver for Artist, Venue, and Promoter destinations.
+- Welcome remains a one-time graduation transition; later completed logins enter Home directly.
+- The legacy `MusicianHome` route was removed after all three persona destinations existed.
+- V1 renders truthful Attention empty states instead of fake recommendations, opportunities, or disabled actions.
+
+### Verification evidence
+
+- Routing tests cover completed and incomplete account behavior for all three personas.
+- Screen tests cover identity, image/fallback, greeting, Attention, loading, error, retry, and intentional absence of future modules.
+- Web and Android QA verified the three persona destinations, responsive layout, safe areas, scrolling, and regression routing.
+
+### Interview talking point
+
+Explain the balance between reuse and product specificity: shared primitives remove duplicate infrastructure, while explicit persona compositions avoid a conditional mega-dashboard and leave future modules independently composable.
+
+## Engineering story 5: Provider simplification
 
 ### Why it matters
 
@@ -102,15 +128,13 @@ External identity and social integrations should reflect real provider capabilit
 - Spotify is an external Artist identity/search source, not MVPConnect login.
 - YouTube and SoundCloud use backend-owned OAuth with PKCE, state checks, exact return allowlisting, and encrypted credentials.
 - Instagram, Facebook, and Bandcamp remain validated URL-first connections for applicable personas.
-- TikTok was removed from active frontend/backend contracts and local development data rather than retained as a misleading placeholder.
-- A clean Neo4j + MinIO rebuild was used to verify current schema/bootstrap and fresh onboarding after the reset.
+- TikTok was removed from active frontend/backend contracts and persisted product data rather than retained as a misleading placeholder.
 - The graph rule remains deliberate: intrinsic values are properties, independent identities/resources are nodes, and meaningful associations are relationships.
 
 ### Verification evidence
 
 - Focused unit/service tests cover provider matrices, URL normalization, OAuth state/replay/allowlist behavior, and connection promotion.
 - The recorded API/E2E milestone covers generated Postman/Newman requests and assertions; see [Testing](TESTING.md) for provenance.
-- Fresh Artist, Venue, and Promoter onboarding was exercised after the clean local environment rebuild.
 
 ### Interview talking point
 
@@ -128,18 +152,18 @@ See [Architecture](ARCHITECTURE.md) for implementation boundaries and source lin
 
 ## Suggested demo
 
-1. Start disposable local infrastructure using [Local Development](LOCAL_DEVELOPMENT.md).
-2. Register one persona and complete part of onboarding.
-3. Sign out and back in to demonstrate server-authoritative resume.
-4. Complete media with a Hero and ordered gallery, then finish Goals.
-5. Show canonical completion and the Welcome graduation experience.
-6. Explain honestly that role-specific Home/profile experiences are the next phase.
+1. Register one persona and complete part of onboarding.
+2. Sign out and back in to demonstrate server-authoritative resume.
+3. Complete media with a Hero and ordered gallery, then finish Goals.
+4. Show canonical completion and the one-time Welcome graduation experience.
+5. Enter the persona-specific Home and compare its purpose with Profile and Discovery.
+6. Explain honestly that profile editing and actionable Home modules are future phases.
 
 Do not present a public deployment, user adoption, payments, booking transactions, iOS QA, or AI-driven matching as completed evidence.
 
 ## Assets and screenshots
 
-The README uses five supplied images preserved under `docs/assets/screenshots`. The hero is promotional artwork; the other four are runtime captures with synthetic accounts. This documentation pass did not fabricate or edit them.
+The README uses five supplied images preserved under `docs/assets/screenshots`. The hero is promotional artwork; the other four are runtime captures with synthetic accounts.
 
 | Asset | Kind | Dimensions | Accuracy note |
 | --- | --- | --- | --- |
@@ -153,6 +177,6 @@ Recommended recaptures are current Artist, Venue, and Promoter Step 1 desktop sc
 
 ## Product direction
 
-The next phase turns canonical onboarding data into role-specific Home, public/self profile, editing, discovery, and explainable matching experiences. Later milestones may add availability, roster/network workflows, opportunities, inquiries, connections, and messaging.
+The next phase turns canonical onboarding data into public/self profiles and editing experiences, starting with Artist and then extending to Venue and Promoter. Later milestones may add actionable Home modules, discovery, explainable Connect recommendations, structured Board opportunities, availability, roster/network workflows, inquiries, connections, and messaging.
 
 Potential AI-derived profile intelligence should be user-reviewable and correctable. No complete AI classification, recommendation pipeline, operational booking marketplace, or delivery schedule is claimed.
