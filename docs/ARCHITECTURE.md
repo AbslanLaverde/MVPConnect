@@ -23,11 +23,11 @@ Local Compose starts MinIO only. Neo4j and both application processes run separa
 
 ## Client, authentication, and navigation
 
-[AppNavigator](../mvpconnect-app/src/navigation/AppNavigator.tsx) owns signup, login, onboarding, OAuth result, Welcome, legacy musician Home, and profile routes. [api.ts](../mvpconnect-app/src/services/api.ts) attaches the stored bearer token and clears persisted authentication after a qualifying 401; there is no token-refresh flow.
+[AppNavigator](../mvpconnect-app/src/navigation/AppNavigator.tsx) owns signup, login, onboarding, OAuth result, Welcome, persona-specific Home, and profile routes. [api.ts](../mvpconnect-app/src/services/api.ts) attaches the stored bearer token and clears persisted authentication after a qualifying 401; there is no token-refresh flow.
 
 [SecurityConfig](../mvpconnect-svc/src/main/java/com/mint/security/SecurityConfig.java) configures stateless JWT authentication, BCrypt, CORS, and public routes. [PersonaAuthorizationService](../mvpconnect-svc/src/main/java/com/mint/security/PersonaAuthorizationService.java) enforces owner operations. Public and owner responses are intentionally mapped through [PublicProfileService](../mvpconnect-svc/src/main/java/com/mint/services/PublicProfileService.java), [DiscoveryProfileMapper](../mvpconnect-svc/src/main/java/com/mint/services/DiscoveryProfileMapper.java), and [SelfAccountService](../mvpconnect-svc/src/main/java/com/mint/services/SelfAccountService.java) rather than direct entity serialization.
 
-Completed users currently enter the legacy `MusicianHome` route. Role-specific Artist, Venue, and Promoter Home experiences—and routing completed login and Welcome → ENTER to those destinations—remain the next product phase.
+Completed users enter a persona-specific Home through one shared resolver: Musicians route to `ArtistHome`, Venues to `VenueHome`, and Promoters to `PromoterHome`. Completed login goes directly Home, while first-time onboarding completion reaches Welcome before ENTER resolves the same destination.
 
 ## Onboarding state model
 

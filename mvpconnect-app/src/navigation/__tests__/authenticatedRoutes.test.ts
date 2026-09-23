@@ -17,18 +17,19 @@ describe('resolveAuthenticatedHomeRoute', () => {
     })).toEqual({ name: 'VenueHome' });
   });
 
-  it('keeps Promoter on the temporary legacy destination', () => {
+  it('routes a completed Promoter account to Promoter Home without identity params', () => {
     expect(resolveAuthenticatedHomeRoute({
       id: 'promoter-1',
       displayName: 'Night Signal Presents',
       persona: 'PROMOTER',
-    })).toEqual({
-      name: 'MusicianHome',
-      params: {
-        userId: 'promoter-1',
-        userName: 'Night Signal Presents',
-        userType: 'PROMOTER',
-      },
-    });
+    })).toEqual({ name: 'PromoterHome' });
+  });
+
+  it('only returns the three persona-specific Home routes', () => {
+    const destinations = (['MUSICIAN', 'VENUE', 'PROMOTER'] as const).map((persona) => (
+      resolveAuthenticatedHomeRoute({ id: 'account-1', displayName: 'Account', persona }).name
+    ));
+
+    expect(destinations).toEqual(['ArtistHome', 'VenueHome', 'PromoterHome']);
   });
 });

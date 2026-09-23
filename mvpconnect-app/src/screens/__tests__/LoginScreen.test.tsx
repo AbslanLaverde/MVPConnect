@@ -160,7 +160,7 @@ describe('LoginScreen authenticated entry routing', () => {
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
   });
 
-  it('keeps a completed Promoter on the temporary legacy destination', async () => {
+  it('routes a completed Promoter directly to Promoter Home', async () => {
     mockedLogin.mockResolvedValue({
       accessToken: 'token', tokenType: 'Bearer', userType: 'PROMOTER', userId: 'promoter-1',
       email: 'account@example.com', name: 'Night Signal Presents',
@@ -169,12 +169,25 @@ describe('LoginScreen authenticated entry routing', () => {
     const screen = renderScreen();
     fireEvent.press(screen.getByLabelText('Sign in to your account'));
 
-    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('MusicianHome', {
-      userId: 'promoter-1',
-      userName: 'Night Signal Presents',
-      userType: 'PROMOTER',
-    }));
+    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('PromoterHome'));
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('Welcome');
+  });
+
+  it.each(['IN_PROGRESS', 'READY'] as const)('keeps a %s Promoter in onboarding', async (status) => {
+    mockedLogin.mockResolvedValue({
+      accessToken: 'token', tokenType: 'Bearer', userType: 'PROMOTER', userId: 'promoter-1',
+      email: 'account@example.com', name: 'Night Signal Presents',
+    });
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('PROMOTER', status));
+    const screen = renderScreen();
+    fireEvent.press(screen.getByLabelText('Sign in to your account'));
+
+    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('Onboarding', {
+      persona: 'promoter',
+      step: 'specialties',
+    }));
+    expect(screen.navigation.replace).not.toHaveBeenCalledWith('PromoterHome');
   });
 });

@@ -2168,7 +2168,7 @@ App (Root)
 │   └── AppStack (Logged in)
 │       ├── MainTabs
 │       │   ├── HomeTab
-│       │   │   ├── MusicianHomeScreen
+│       │   │   ├── ArtistHomeScreen
 │       │   │   ├── VenueHomeScreen
 │       │   │   └── PromoterHomeScreen
 │       │   ├── RecommendationsTab
@@ -2899,4 +2899,3 @@ This UI Design Document provides a comprehensive blueprint for building MVPConne
 **Status:** Ready for Development
 
 ---
-

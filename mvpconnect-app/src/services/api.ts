@@ -221,18 +221,6 @@ export interface MusicianSearchResult {
   profileImage?: PublicProfileMedia;
 }
 
-export interface VenueMatch {
-  id: string;
-  venueName: string;
-  location?: PublicVenueLocation;
-  capacity?: number;
-  genrePreferences?: string[];
-  ambience?: string[];
-  websiteUrl?: string;
-  matchScore?: string;
-  profileImage?: PublicProfileMedia;
-}
-
 export interface VenueSummary {
   id: string;
   venueName: string;
@@ -251,11 +239,6 @@ export const musicianAPI = {
 
   updateProfile: async (id: string, data: MusicianProfileUpdate): Promise<void> => {
     await api.put(`/musicians/${id}`, data);
-  },
-
-  getVenueMatches: async (id: string): Promise<VenueMatch[]> => {
-    const response = await api.get(`/musicians/${id}/matches`);
-    return response.data;
   },
 
   search: async (params?: { genre?: string; location?: string }): Promise<MusicianSearchResult[]> => {
