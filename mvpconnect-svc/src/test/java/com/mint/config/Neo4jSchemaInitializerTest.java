@@ -10,7 +10,15 @@ class Neo4jSchemaInitializerTest {
 
     @Test
     void schemaStatementsAreIdempotentAndCoverOnboardingIdentity() {
-        assertEquals(17, Neo4jSchemaInitializer.SCHEMA_STATEMENTS.size());
+        assertEquals(22, Neo4jSchemaInitializer.SCHEMA_STATEMENTS.size());
+        assertTrue(Neo4jSchemaInitializer.SCHEMA_STATEMENTS.stream()
+                .anyMatch(s -> s.contains("AuthSession") && s.contains("node.id IS UNIQUE")));
+        assertTrue(Neo4jSchemaInitializer.SCHEMA_STATEMENTS.stream()
+                .anyMatch(s -> s.contains("RefreshCredential") && s.contains("node.hash IS UNIQUE")));
+        for (String property : java.util.List.of("inactivityExpiresAt", "absoluteExpiresAt", "revokedAt")) {
+            assertTrue(Neo4jSchemaInitializer.SCHEMA_STATEMENTS.stream()
+                    .anyMatch(s -> s.contains("AuthSession") && s.contains("ON (node." + property + ")")));
+        }
         assertTrue(Neo4jSchemaInitializer.SCHEMA_STATEMENTS.stream()
                 .allMatch(statement -> statement.contains("IF NOT EXISTS")));
         assertTrue(Neo4jSchemaInitializer.SCHEMA_STATEMENTS.stream()

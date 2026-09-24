@@ -1,8 +1,9 @@
 package com.mint.security;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,16 +12,20 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.Date;
 
 /**
- * JWT Token Provider
- * Handles creation and validation of JWT tokens
+ * Transitional legacy JWT issuance/validation. Remove at the Phase 5 client cutover.
+ * Login/signup intentionally keep their existing raw UTF-8 key and configured 24-hour TTL.
  */
 @Component
 public class JwtTokenProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
+    private static final ObjectMapper LEGACY_SHAPE_READER = new ObjectMapper()
+            .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -118,24 +123,23 @@ public class JwtTokenProvider {
      */
     public boolean validateToken(String token) {
         try {
+            if (token == null || token.length() > 8192) return false;
             SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token);
+                    .parseSignedClaims(token).getPayload();
 
-            return true;
-        } catch (SignatureException e) {
-            logger.error("Invalid JWT signature: {}", e.getMessage());
-        } catch (MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("JWT claims string is empty: {}", e.getMessage());
+            // JJWT normalizes away null/empty claims. Inspect the verified original JSON too,
+            // so sid:null (or empty iss/aud) cannot downgrade into the legacy path.
+            var original = LEGACY_SHAPE_READER.readTree(Base64.getUrlDecoder().decode(token.split("\\.", -1)[1]));
+            return original.isObject() && !original.has("sid") && !original.has("iss") && !original.has("aud")
+                    && claims.getSubject() != null && !claims.getSubject().isBlank()
+                    && claims.get("userId", String.class) != null
+                    && claims.get("userType", String.class) != null && claims.getExpiration() != null;
+        } catch (JwtException | IllegalArgumentException | IOException e) {
+            logger.debug("auth.legacy-token.rejected");
         }
         return false;
     }

@@ -21,6 +21,11 @@ public class Neo4jSchemaInitializer implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(Neo4jSchemaInitializer.class);
 
     static final List<String> SCHEMA_STATEMENTS = List.of(
+            "CREATE CONSTRAINT auth_session_id_unique IF NOT EXISTS FOR (node:AuthSession) REQUIRE node.id IS UNIQUE",
+            "CREATE CONSTRAINT refresh_credential_hash_unique IF NOT EXISTS FOR (node:RefreshCredential) REQUIRE node.hash IS UNIQUE",
+            "CREATE INDEX auth_session_inactivity_expiry IF NOT EXISTS FOR (node:AuthSession) ON (node.inactivityExpiresAt)",
+            "CREATE INDEX auth_session_absolute_expiry IF NOT EXISTS FOR (node:AuthSession) ON (node.absoluteExpiresAt)",
+            "CREATE INDEX auth_session_revoked_at IF NOT EXISTS FOR (node:AuthSession) ON (node.revokedAt)",
             "CREATE CONSTRAINT musician_id_unique IF NOT EXISTS FOR (node:Musician) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT venue_id_unique IF NOT EXISTS FOR (node:Venue) REQUIRE node.id IS UNIQUE",
             "CREATE CONSTRAINT promoter_id_unique IF NOT EXISTS FOR (node:Promoter) REQUIRE node.id IS UNIQUE",

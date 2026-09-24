@@ -3,6 +3,9 @@ package com.mint.security;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
 import com.mint.nodes.Venue;
+import com.mint.onboarding.PersonaType;
+import com.mint.authsession.AuthFailure;
+import com.mint.authsession.SessionAuthException;
 import com.mint.repositories.MusicianRepository;
 import com.mint.repositories.PromoterRepository;
 import com.mint.repositories.VenueRepository;
@@ -29,6 +32,18 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
     private VenueRepository venueRepository;
+
+    /** New session tokens resolve immutable account identity, never email. */
+    public CustomUserDetails loadByOwnerId(String ownerId, PersonaType persona) {
+        return (switch (persona) {
+            case MUSICIAN -> musicianRepository.findById(ownerId)
+                    .map(m -> new CustomUserDetails(m.getId(), m.getEmail(), m.getPassword(), "MUSICIAN"));
+            case VENUE -> venueRepository.findById(ownerId)
+                    .map(v -> new CustomUserDetails(v.getId(), v.getEmail(), v.getPassword(), "VENUE"));
+            case PROMOTER -> promoterRepository.findById(ownerId)
+                    .map(p -> new CustomUserDetails(p.getId(), p.getEmail(), p.getPassword(), "PROMOTER"));
+        }).orElseThrow(() -> new SessionAuthException(AuthFailure.INVALID_OWNER));
+    }
 
     /**
      * Load user by email (username)
