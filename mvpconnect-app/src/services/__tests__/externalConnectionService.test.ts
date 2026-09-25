@@ -1,3 +1,7 @@
+import { sessionController } from '../../auth/session';
+jest.mock('../../auth/session', () => ({
+  sessionController: { getGeneration: jest.fn(() => 1), isCurrent: jest.fn(() => true), subscribe: jest.fn(() => () => {}), signOut: jest.fn(), assertGeneration: jest.fn() },
+}));
 import { Linking } from 'react-native';
 import api from '../api';
 import {

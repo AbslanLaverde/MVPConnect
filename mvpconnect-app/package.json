@@ -23,6 +23,7 @@
     "expo": "~51.0.28",
     "expo-font": "~12.0.10",
     "expo-image-picker": "~15.1.0",
+    "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -54,6 +55,9 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-svg|@reduxjs/toolkit|react-redux|redux|immer)/)"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
     ]
   },
   "private": true

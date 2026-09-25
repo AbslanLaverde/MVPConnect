@@ -58,8 +58,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route 
         setWillingToTravel(profile.willingToTravel || false);
         setWebsiteUrl(profile.websiteUrl || '');
         setInstagramHandle(profile.instagramHandle || '');
-      } catch (error) {
-        console.error('Failed to load profile:', error);
+      } catch {
+        // Axios errors can contain Authorization headers; never log the request object.
         Alert.alert('Error', 'Could not load profile');
       } finally {
         setLoading(false);

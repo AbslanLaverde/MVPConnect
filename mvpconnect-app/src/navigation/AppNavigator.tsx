@@ -12,9 +12,11 @@ import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
 import { VenueHomeScreen } from '../home/venue/VenueHomeScreen';
 import { PromoterHomeScreen } from '../home/promoter/PromoterHomeScreen';
+import { rootNavigation, flushSessionNavigation } from './rootNavigation';
+import type { SessionNotice } from '../auth/authTypes';
 
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { sessionNotice?: SessionNotice } | undefined;
   Signup: undefined;
   SignupArtist: undefined;
   SignupVenue: undefined;
@@ -48,7 +50,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 
 export const AppNavigator: React.FC = () => {
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} ref={rootNavigation} onReady={flushSessionNavigation}>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{

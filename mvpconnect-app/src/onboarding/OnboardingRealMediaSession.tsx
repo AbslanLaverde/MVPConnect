@@ -59,6 +59,7 @@ import type {
 } from './onboardingTypes';
 import { styles } from './OnboardingShell.styles';
 import { useOnboardingSignOut } from './useOnboardingSignOut';
+import { sessionController } from '../auth/session';
 
 type FailedOperation = 'hydrate' | 'autosave' | 'save' | 'complete' | 'skip' | 'reopen';
 
@@ -469,14 +470,15 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
 
   useEffect(() => {
     if (!oauthAttempt) return undefined;
+    const generation = sessionController.getGeneration();
     let active = true;
     let polling = false;
     const poll = async () => {
-      if (polling) return;
+      if (polling || !active || !sessionController.isCurrent(generation)) return;
       polling = true;
       try {
         const result = await externalConnectionService.status(oauthAttempt.attemptId);
-        if (!active) return;
+        if (!active || !sessionController.isCurrent(generation)) return;
         if (result.status === 'PENDING') {
           if (Date.parse(result.expiresAt) <= Date.now()) {
             setOAuthErrors((current) => ({
@@ -507,9 +509,13 @@ export const OnboardingRealMediaSession: React.FC<OnboardingRealMediaSessionProp
     };
     void poll();
     const timer = setInterval(() => void poll(), 1500);
+    const unsubscribe = sessionController.subscribe(() => {
+      if (!sessionController.isCurrent(generation)) { active = false; clearInterval(timer); }
+    });
     return () => {
       active = false;
       clearInterval(timer);
+      unsubscribe();
     };
   }, [oauthAttempt, refreshConnections]);
 

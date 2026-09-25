@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,13 +19,12 @@ import Svg, {
 import { BrandLogo } from '../../components/BrandLogo';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { storageHelpers } from '../../services/api';
+import { sessionController } from '../../auth/session';
+import { StaleSessionError } from '../../auth/authErrors';
 import { theme } from '../../theme/theme';
 import { SignupAccountConfig } from './signupAccountConfig';
 import { styles } from './SignupAccountScreen.styles';
 import { entryStepForPersona } from '../../onboarding/onboardingConfig';
-import { onboardingApi } from '../../onboarding/onboardingApi';
-import { store } from '../../store/store';
 
 interface SignupAccountScreenProps {
   config: SignupAccountConfig;
@@ -201,6 +200,8 @@ export const SignupAccountScreen: React.FC<SignupAccountScreenProps> = ({
   const [duplicateEmail, setDuplicateEmail] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string>();
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   const clearFieldError = (field: keyof FieldErrors) => {
     setErrors((current) =>
@@ -246,13 +247,13 @@ export const SignupAccountScreen: React.FC<SignupAccountScreenProps> = ({
     setLoading(true);
     try {
       const response = await config.submit(normalizedName, normalizedEmail, password);
-      await storageHelpers.saveAuthData(response.accessToken, response.userType);
-      store.dispatch(onboardingApi.util.resetApiState());
+      if (!mounted.current || !sessionController.isCurrent(response.generation)) return;
       navigation.replace('Onboarding', {
         persona: config.persona,
         step: entryStepForPersona(config.persona),
       });
     } catch (error: any) {
+      if (!mounted.current || error instanceof StaleSessionError) return;
       if (error.response?.data?.code === DUPLICATE_EMAIL_CODE) {
         setDuplicateEmail(true);
         setErrors((current) => ({ ...current, email: DUPLICATE_EMAIL_MESSAGE }));
@@ -260,7 +261,7 @@ export const SignupAccountScreen: React.FC<SignupAccountScreenProps> = ({
         setFormError(GENERIC_ERROR_MESSAGE);
       }
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
   };
 

@@ -1,8 +1,9 @@
+import { sessionController } from '../../auth/session';
 import React from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
-import api, { storageHelpers } from '../../services/api';
+import api from '../../services/api';
 import type { ArtistReferenceProvider } from '../../services/externalArtistService';
 import { onboardingApi } from '../onboardingApi';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
@@ -11,11 +12,12 @@ import type { OnboardingPersona } from '../onboardingTypes';
 import type { OnboardingState, OnboardingStep } from '../onboardingTypes';
 import type { StepTwoRequest } from '../stepTwoTypes';
 
+jest.mock('../../auth/session', () => ({
+  sessionController: { signOut: jest.fn(), getGeneration: jest.fn(() => 1), assertGeneration: jest.fn() },
+}));
+
 jest.mock('../../services/api', () => ({
   __esModule: true,
-  storageHelpers: {
-    clearAuthData: jest.fn(),
-  },
   default: {
     get: jest.fn(),
     put: jest.fn(),
@@ -25,7 +27,7 @@ jest.mock('../../services/api', () => ({
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
-const mockedStorage = storageHelpers as jest.Mocked<typeof storageHelpers>;
+const mockedSignOut = sessionController.signOut as jest.Mock;
 const testStores: ReturnType<typeof configureStore>[] = [];
 const artistProvider: ArtistReferenceProvider = {
   searchLocal: jest.fn().mockResolvedValue([]),
@@ -125,7 +127,7 @@ describe('OnboardingRealStepTwoSession', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    mockedStorage.clearAuthData.mockResolvedValue();
+    mockedSignOut.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -271,12 +273,7 @@ describe('OnboardingRealStepTwoSession', () => {
       fireEvent.press(screen.getByLabelText('Sign out'));
 
       await waitFor(() => {
-        expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1);
-        expect(screen.dispatchSpy).toHaveBeenCalledWith(onboardingApi.util.resetApiState());
-        expect(screen.navigation.reset).toHaveBeenCalledWith({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
+        expect(mockedSignOut).toHaveBeenCalledTimes(1);
       });
       expect(mockedApi.put).not.toHaveBeenCalled();
       expect(mockedApi.post).not.toHaveBeenCalled();
@@ -297,18 +294,14 @@ describe('OnboardingRealStepTwoSession', () => {
       '/onboarding/steps/sound',
       { data: { ...PERSONA.artist.valid, genres: ['ROCK', 'INDIE'] } },
     ));
-    expect(mockedStorage.clearAuthData).not.toHaveBeenCalled();
+    expect(mockedSignOut).not.toHaveBeenCalled();
     expect(screen.navigation.reset).not.toHaveBeenCalled();
 
     await act(async () => {
       resolveSave?.({ data: makeStep('artist') });
       await Promise.resolve();
     });
-    await waitFor(() => expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1));
-    expect(screen.navigation.reset).toHaveBeenCalledWith({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
   });
 
   it('waits for an in-flight autosave before signing out', async () => {
@@ -322,14 +315,14 @@ describe('OnboardingRealStepTwoSession', () => {
     await act(async () => jest.advanceTimersByTime(1100));
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledTimes(1));
     fireEvent.press(screen.getByLabelText('Sign out'));
-    expect(mockedStorage.clearAuthData).not.toHaveBeenCalled();
+    expect(mockedSignOut).not.toHaveBeenCalled();
 
     await act(async () => {
       resolveSave?.({ data: makeStep('artist') });
       await Promise.resolve();
       jest.advanceTimersByTime(50);
     });
-    await waitFor(() => expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
     expect(mockedApi.put).toHaveBeenCalledTimes(1);
   });
 
@@ -343,20 +336,17 @@ describe('OnboardingRealStepTwoSession', () => {
     fireEvent.press(continueButton(screen));
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledTimes(1));
     fireEvent.press(screen.getByLabelText('Sign out'));
-    expect(mockedStorage.clearAuthData).not.toHaveBeenCalled();
+    expect(mockedSignOut).not.toHaveBeenCalled();
 
     await act(async () => {
       resolveSave?.({ data: makeStep('artist') });
       await Promise.resolve();
       jest.advanceTimersByTime(50);
     });
-    await waitFor(() => expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
     expect(mockedApi.post).not.toHaveBeenCalled();
     expect(screen.navigation.push).not.toHaveBeenCalled();
-    expect(screen.navigation.reset).toHaveBeenCalledWith({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    expect(mockedSignOut).toHaveBeenCalledTimes(1);
   });
 
   it('requires explicit confirmation before discarding an invalid dirty draft', async () => {
@@ -366,19 +356,16 @@ describe('OnboardingRealStepTwoSession', () => {
     fireEvent.press(screen.getByLabelText('Sign out'));
 
     expect(screen.getByText('DISCARD UNSAVED CHANGES?')).toBeTruthy();
-    expect(mockedStorage.clearAuthData).not.toHaveBeenCalled();
+    expect(mockedSignOut).not.toHaveBeenCalled();
     fireEvent.press(screen.getByLabelText('Keep editing'));
     expect(screen.queryByText('DISCARD UNSAVED CHANGES?')).toBeNull();
     expect(screen.getByLabelText('Rock').props.accessibilityState.checked).toBe(false);
 
     fireEvent.press(screen.getByLabelText('Sign out'));
     fireEvent.press(screen.getByLabelText('Sign out and discard unsaved changes'));
-    await waitFor(() => expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
     expect(mockedApi.put).not.toHaveBeenCalled();
-    expect(screen.navigation.reset).toHaveBeenCalledWith({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    expect(mockedSignOut).toHaveBeenCalledTimes(1);
   });
 
   it('blocks sign-out when the required valid-draft save fails', async () => {
@@ -389,24 +376,24 @@ describe('OnboardingRealStepTwoSession', () => {
     fireEvent.press(screen.getByLabelText('Sign out'));
 
     expect(await screen.findByText("WE COULDN'T SAVE YOUR CHANGES.")).toBeTruthy();
-    expect(mockedStorage.clearAuthData).not.toHaveBeenCalled();
+    expect(mockedSignOut).not.toHaveBeenCalled();
     expect(screen.navigation.reset).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Indie').props.accessibilityState.checked).toBe(true);
   });
 
   it('ignores duplicate Sign Out activation while logout cleanup is running', async () => {
     let resolveClear: (() => void) | undefined;
-    mockedStorage.clearAuthData.mockImplementation(() => new Promise<void>((resolve) => {
+    mockedSignOut.mockImplementation(() => new Promise<void>((resolve) => {
       resolveClear = resolve;
     }));
     const screen = renderSession('artist');
 
     fireEvent.press(screen.getByLabelText('Sign out'));
-    await waitFor(() => expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
     fireEvent.press(screen.getByLabelText('Signing out'));
-    expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1);
+    expect(mockedSignOut).toHaveBeenCalledTimes(1);
 
     await act(async () => resolveClear?.());
-    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
   });
 });
