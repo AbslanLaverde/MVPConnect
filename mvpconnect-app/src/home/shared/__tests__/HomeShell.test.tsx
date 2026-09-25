@@ -48,7 +48,7 @@ describe('HomeShell', () => {
     expect(screen.getByRole('header').props.children).toBe('ARTIST HOME');
   });
 
-  it('uses the mobile layout path and incorporates safe-area insets', () => {
+  it('keeps page rhythm without duplicating the shell top inset and preserves the bottom inset', () => {
     const screen = renderShell(390, 44, 34);
     const contentStyle = StyleSheet.flatten(
       screen.getByTestId('home-scroll-view').props.contentContainerStyle,
@@ -56,7 +56,7 @@ describe('HomeShell', () => {
 
     expect(screen.getByTestId('home-layout-mobile')).toBeTruthy();
     expect(contentStyle.paddingHorizontal).toBe(20);
-    expect(contentStyle.paddingTop).toBe(60);
+    expect(contentStyle.paddingTop).toBe(20);
     expect(contentStyle.paddingBottom).toBe(50);
   });
 
@@ -64,8 +64,8 @@ describe('HomeShell', () => {
     expect(homeHorizontalPadding(390)).toBe(20);
     expect(homeHorizontalPadding(900)).toBe(32);
     expect(homeHorizontalPadding(1440)).toBe(48);
-    expect(homeTopPadding(true, 0)).toBe(20);
-    expect(homeTopPadding(false, 30)).toBe(46);
+    expect(homeTopPadding(true)).toBe(20);
+    expect(homeTopPadding(false)).toBe(32);
     expect(homeBottomPadding(0)).toBe(32);
     expect(homeBottomPadding(34)).toBe(50);
   });

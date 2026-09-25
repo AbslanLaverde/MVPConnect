@@ -41,6 +41,6 @@ it('honors a late session exit even if startup had already selected Home', () =>
   const ready = jest.spyOn(rootNavigation, 'isReady').mockReturnValue(false);
   const reset = jest.spyOn(rootNavigation, 'resetRoot').mockImplementation(() => {});
   navigateAfterSessionExit('SESSION_EXPIRED'); ready.mockReturnValue(true);
-  finishStartupNavigation({ name: 'ArtistHome' });
+  finishStartupNavigation({ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } });
   expect(reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login', params: { sessionNotice: 'SESSION_EXPIRED' } }] });
 });

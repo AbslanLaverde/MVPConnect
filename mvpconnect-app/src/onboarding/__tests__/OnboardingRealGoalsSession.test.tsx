@@ -8,6 +8,7 @@ import { onboardingApi } from '../onboardingApi';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingRealGoalsSession } from '../OnboardingRealGoalsSession';
 import type { OnboardingPersona, OnboardingState, OnboardingStep } from '../onboardingTypes';
+import { deferred } from '../../auth/__testUtils__/sessionTestSupport';
 
 jest.mock('../../auth/session', () => ({
   sessionController: { signOut: jest.fn(), getGeneration: jest.fn(() => 1), assertGeneration: jest.fn() },
@@ -80,6 +81,7 @@ describe('OnboardingRealGoalsSession', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockedSignOut.mockResolvedValue(undefined);
+    mockedApi.get.mockResolvedValue({ data: { id: 'artist-1', persona: 'MUSICIAN', displayName: 'Artist' } });
   });
 
   afterEach(() => {
@@ -210,6 +212,19 @@ describe('OnboardingRealGoalsSession', () => {
     }));
     expect(mockedApi.put).not.toHaveBeenCalled();
     expect(mockedApi.post).toHaveBeenCalledWith('/onboarding/complete');
+  });
+
+  it('waits for canonical self identity before resetting the completed Venue flow to Welcome', async () => {
+    const refreshed = deferred<{ data: object }>();
+    mockedApi.get.mockReturnValue(refreshed.promise);
+    mockedApi.post.mockResolvedValue({ data: { persona: 'VENUE', status: 'COMPLETED', onboardingVersion: 2 } });
+    const screen = renderSession('venue', 'COMPLETE');
+    fireEvent.press(screen.getByLabelText('Finish onboarding'));
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith('/me'));
+    expect(screen.navigation.reset).not.toHaveBeenCalled();
+    await act(async () => refreshed.resolve({ data: { id: 'venue-1', persona: 'VENUE', displayName: 'VENUEX',
+      profileImage: { mediaId: 'uploaded-image', url: 'https://example.test/venue.jpg', mimeType: 'image/jpeg' } } }));
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Welcome' }] }));
   });
 
   it('saves a dirty Goals draft before sign-out without finishing or reaching Welcome', async () => {

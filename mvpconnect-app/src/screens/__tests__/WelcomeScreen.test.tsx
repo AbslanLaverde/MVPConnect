@@ -35,6 +35,7 @@ describe('WelcomeScreen', () => {
     mockedSelfQuery.mockReturnValue({
       data: { id: 'artist-1', persona: 'MUSICIAN', displayName: 'Glass Houses', email: 'artist@example.com' },
       isLoading: false,
+      isFetching: false,
       isError: false,
       refetch: jest.fn(),
     });
@@ -59,7 +60,7 @@ describe('WelcomeScreen', () => {
   });
 
   const renderScreen = () => {
-    const navigation = { replace: jest.fn() } as any;
+    const navigation = { replace: jest.fn(), reset: jest.fn() } as any;
     const screen = render(
       <WelcomeScreen navigation={navigation} route={{ key: 'welcome', name: 'Welcome' }} />,
     );
@@ -96,6 +97,7 @@ describe('WelcomeScreen', () => {
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     expect(sequenceSpy).not.toHaveBeenCalled();
     expect(screen.navigation.replace).not.toHaveBeenCalled();
+    expect(screen.navigation.reset).not.toHaveBeenCalled();
     expect(screen.queryByText('YOUR GOALS')).toBeNull();
     expect(screen.queryByText('BACK')).toBeNull();
 
@@ -197,8 +199,18 @@ describe('WelcomeScreen', () => {
     const screen = renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
-    expect(screen.navigation.replace).toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
+  });
+
+  it.each(['isFetching', 'isError'])('blocks Enter with cached identity while self account %s is true', async (queryState) => {
+    mockedSelfQuery.mockReturnValue({ ...mockedSelfQuery(), [queryState]: true });
+    const screen = renderScreen();
+    await screen.findByText('ONBOARDING COMPLETE.');
+    expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
+    expect(screen.navigation.reset).not.toHaveBeenCalled();
+    if (queryState === 'isError') expect(screen.getByLabelText('Retry loading account')).toBeTruthy();
   });
 
   it('enters Venue Home only on activation for a completed Venue account', async () => {
@@ -220,8 +232,8 @@ describe('WelcomeScreen', () => {
     const screen = renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
-    expect(screen.navigation.replace).toHaveBeenCalledWith('VenueHome');
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'VenueHome' } }] });
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
   });
 
@@ -246,8 +258,8 @@ describe('WelcomeScreen', () => {
     const screen = renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Enter MVPConnect').props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByLabelText('Enter MVPConnect'));
-    expect(screen.navigation.replace).toHaveBeenCalledWith('PromoterHome');
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+    expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'PromoterHome' } }] });
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'VenueHome' } }] });
   });
 });

@@ -20,7 +20,7 @@ jest.mock('../../navigation/AppNavigator', () => ({ AppNavigator: jest.fn(({ ini
 beforeEach(() => jest.clearAllMocks());
 function setup() {
   const f = fixture('web');
-  const loadEntry = jest.fn(async () => ({ name: 'VenueHome' as const }));
+  const loadEntry = jest.fn(async () => ({ name: 'AuthenticatedApp' as const, params: { screen: 'VenueHome' as const } }));
   const bootstrap = new SessionBootstrap({ session: f.controller, captureLink: async () => null, loadEntry });
   return { ...f, bootstrap, loadEntry };
 }
@@ -30,11 +30,12 @@ it('renders only neutral startup UI while restoring, then mounts only the resolv
   const view = render(<SessionStartupBoundary fontsReady bootstrap={f.bootstrap} />);
   expect(view.getByText('MVPConnect')).toBeTruthy(); expect(view.getByText('Restoring your session…')).toBeTruthy();
   expect(view.getByLabelText('Restoring your session')).toBeTruthy();
-  expect(AppNavigator).not.toHaveBeenCalled(); expect(view.queryByText('Login')).toBeNull(); expect(view.queryByText('VenueHome')).toBeNull();
+  expect(AppNavigator).not.toHaveBeenCalled(); expect(view.queryByText('Login')).toBeNull(); expect(view.queryByText('AuthenticatedApp')).toBeNull();
   await act(async () => { response.resolve(f.wire()); });
-  await waitFor(() => expect(view.getByText('VenueHome')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('AuthenticatedApp')).toBeTruthy());
   expect(view.queryByText('Login')).toBeNull(); expect(view.queryByText('Restoring your session…')).toBeNull();
-  expect((AppNavigator as jest.Mock).mock.calls.every(([props]) => props.initialRoute.name === 'VenueHome')).toBe(true);
+  expect((AppNavigator as jest.Mock).mock.calls.every(([props]) => props.initialRoute.name === 'AuthenticatedApp'
+    && props.initialRoute.params.screen === 'VenueHome')).toBe(true);
 });
 
 it('loads fonts and session in parallel behind the same presentation', async () => {
@@ -43,7 +44,7 @@ it('loads fonts and session in parallel behind the same presentation', async () 
   expect(f.transport.refresh).toHaveBeenCalledTimes(1); expect(AppNavigator).not.toHaveBeenCalled();
   expect(view.getByText('Restoring your session…')).toBeTruthy();
   view.rerender(<SessionStartupBoundary fontsReady bootstrap={f.bootstrap} />);
-  expect(view.getByText('VenueHome')).toBeTruthy(); expect(view.queryByText('Login')).toBeNull();
+  expect(view.getByText('AuthenticatedApp')).toBeTruthy(); expect(view.queryByText('Login')).toBeNull();
 });
 
 it('shows retryable controls without expiry copy and Retry releases the restored screen', async () => {
@@ -52,7 +53,7 @@ it('shows retryable controls without expiry copy and Retry releases the restored
   await waitFor(() => expect(view.getByText("We couldn't restore your session. Check your connection and try again.")).toBeTruthy());
   expect(AppNavigator).not.toHaveBeenCalled(); expect(view.queryByText(/Your session expired/)).toBeNull();
   fireEvent.press(view.getByRole('button', { name: 'Retry' }));
-  await waitFor(() => expect(view.getByText('VenueHome')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('AuthenticatedApp')).toBeTruthy());
   expect(f.transport.refresh).toHaveBeenCalledTimes(2);
 });
 

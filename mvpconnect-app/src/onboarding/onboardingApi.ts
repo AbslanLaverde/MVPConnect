@@ -195,9 +195,23 @@ export const onboardingApi = createApi({
       },
     }),
     completeOnboarding: builder.mutation<OnboardingCompletionResponse, void>({
-      queryFn: async () => {
+      queryFn: async (_request, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           const response = await api.post<OnboardingCompletionResponse>('/onboarding/complete');
+          sessionController.assertGeneration(generation);
+          // Completion commits canonical media before returning. A /me request
+          // started before promotion must settle before we force a fresh one;
+          // RTK Query otherwise deduplicates against that stale in-flight read.
+          await dispatch(onboardingApi.util.getRunningQueryThunk('getSelfAccount', undefined));
+          sessionController.assertGeneration(generation);
+          await dispatch(onboardingApi.endpoints.getSelfAccount.initiate(undefined, {
+            subscribe: false,
+            forceRefetch: true,
+          }));
+          sessionController.assertGeneration(generation);
+          // A failed identity read does not undo completed onboarding. Welcome
+          // blocks entry on that query error and offers its existing retry.
           return { data: response.data };
         } catch (error) {
           return { error: toApiError(error) };

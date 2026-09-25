@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
+import { APP_CONTENT_MAX_WIDTH } from '../../appShell/appLayout';
 
 export const homeShellStyles = StyleSheet.create({
   page: {
@@ -15,7 +16,7 @@ export const homeShellStyles = StyleSheet.create({
   },
   frame: {
     width: '100%',
-    maxWidth: 1200,
+    maxWidth: APP_CONTENT_MAX_WIDTH,
     alignSelf: 'center',
   },
   sections: {

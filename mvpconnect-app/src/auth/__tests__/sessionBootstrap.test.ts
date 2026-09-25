@@ -7,7 +7,7 @@ import type { StartupLink } from '../../navigation/startupLink';
 const oauth: StartupLink = { oauth: { attemptId: 'safe-attempt', provider: 'YOUTUBE', status: 'SUCCEEDED' } };
 function setup(link: StartupLink = null) {
   const browser = browserFixture(); const coordination = browser.coordinator(); const f = fixture('web', coordination);
-  const loadEntry = jest.fn(async () => ({ name: 'ArtistHome' as const }));
+  const loadEntry = jest.fn(async () => ({ name: 'AuthenticatedApp' as const, params: { screen: 'ArtistHome' as const } }));
   const captureLink = jest.fn(async () => link);
   const bootstrap = new SessionBootstrap({ session: f.controller, captureLink, loadEntry });
   return { ...f, bootstrap, coordination, captureLink, loadEntry };
@@ -59,7 +59,7 @@ it('Sign Out from retryable startup uses shared exit and never shows expiry', as
 it('never releases stale entry after Sign Out during authoritative lookup', async () => {
   const f = setup(); const entry = deferred<any>(); f.loadEntry.mockReturnValueOnce(entry.promise);
   const loading = f.bootstrap.start(); await tick(); f.bootstrap.signOut();
-  entry.resolve({ name: 'ArtistHome' }); await loading;
+  entry.resolve({ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }); await loading;
   expect(f.bootstrap.getSnapshot()).toEqual({ status: 'READY_UNAUTHENTICATED', route: { name: 'Login' } }); f.bootstrap.release();
 });
 
@@ -75,7 +75,7 @@ it.each(['replacement', 'logout'])('checks delayed cross-tab %s after authoritat
   if (change === 'replacement') f.coordination.publish('SESSION_ESTABLISHED');
   else f.coordination.pendingLogout(true);
   // No event is delivered. The synchronous revision/intent check must still prevent old entry.
-  entry.resolve({ name: 'ArtistHome' }); await loading;
+  entry.resolve({ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }); await loading;
   expect(f.bootstrap.getSnapshot()).toEqual({ status: 'READY_UNAUTHENTICATED', route: { name: 'Login' } });
   expect(f.controller.getAccessToken()).toBeUndefined(); expect(f.transport.logout).not.toHaveBeenCalled();
   f.bootstrap.release();

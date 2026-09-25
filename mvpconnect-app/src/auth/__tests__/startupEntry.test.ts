@@ -46,7 +46,7 @@ it.each([
   await f.store.dispatch(onboardingApi.util.upsertQueryData('getOnboarding', undefined,
     { ...f.workflow, persona: 'MUSICIAN', status: 'IN_PROGRESS', currentStep: 'basics' }));
   await f.bootstrap.start();
-  expect(f.bootstrap.getSnapshot()).toEqual({ status: 'READY_AUTHENTICATED', route: { name: home } });
+  expect(f.bootstrap.getSnapshot()).toEqual({ status: 'READY_AUTHENTICATED', route: { name: 'AuthenticatedApp', params: { screen: home } } });
   expect(f.requests.sort()).toEqual(['/me', '/onboarding']);
   expect(f.controller.getSnapshot()).toMatchObject({ userId: 'restored-account', userType: persona, name: 'Restored Account' });
   expect(onboardingApi.endpoints.getSelfAccount.select()(f.store.getState()).data).toEqual(f.identity);
@@ -74,7 +74,7 @@ it('Native startup writes B before resolving authoritative state and enters Home
   const write = deferred<void>(); f.native.setRefreshCredential.mockReturnValueOnce(write.promise);
   const starting = f.bootstrap.start(); await tick(); expect(f.requests).toEqual([]);
   write.resolve(); await starting;
-  expect(f.bootstrap.getSnapshot()).toMatchObject({ route: { name: 'PromoterHome' } });
+  expect(f.bootstrap.getSnapshot()).toMatchObject({ route: { name: 'AuthenticatedApp', params: { screen: 'PromoterHome' } } });
   expect(f.requests.sort()).toEqual(['/me', '/onboarding']);
   f.bootstrap.release(); f.store.dispatch(onboardingApi.util.resetApiState());
 });
@@ -89,7 +89,7 @@ it.each(['/me', '/onboarding'])('retries temporary %s errors without rotating or
   await f.bootstrap.start(); expect(f.bootstrap.getSnapshot().status).toBe('ERROR_RETRYABLE');
   expect(f.controller.getAccessToken()).toBe('access-B'); expect(f.onExit).not.toHaveBeenCalled();
   fail = false; await f.bootstrap.start();
-  expect(f.bootstrap.getSnapshot()).toMatchObject({ route: { name: 'ArtistHome' } });
+  expect(f.bootstrap.getSnapshot()).toMatchObject({ route: { name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } } });
   expect(f.transport.refresh).toHaveBeenCalledTimes(1);
   f.bootstrap.release(); f.store.dispatch(onboardingApi.util.resetApiState());
 });

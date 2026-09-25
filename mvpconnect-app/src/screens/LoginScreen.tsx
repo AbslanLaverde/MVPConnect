@@ -26,7 +26,7 @@ import { theme } from '../theme/theme';
 import { fetchOnboardingState, onboardingApi } from '../onboarding/onboardingApi';
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { store } from '../store/store';
-import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
+import { authenticatedAppRoute, resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 
 const connectionGradientWebStyle = {
   backgroundImage: `linear-gradient(90deg, ${theme.colors.brandBlue}, ${theme.colors.brandViolet})`,
@@ -112,7 +112,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, route }) =
         displayName: response.name || email.trim(),
         persona: destination.persona,
       });
-      navigation.replace(home.name);
+      const app = authenticatedAppRoute(home);
+      navigation.reset({ index: 0, routes: [app] });
     } catch (error: any) {
       if (!mounted.current || error instanceof StaleSessionError
         || (response && !sessionController.isCurrent(response.generation))) return;

@@ -2,17 +2,13 @@ import React from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { homeShellStyles } from './HomeShell.styles';
+import { APP_COMPACT_BREAKPOINT, appHorizontalPadding } from '../../appShell/appLayout';
 
-export const HOME_MOBILE_BREAKPOINT = 768;
+export const HOME_MOBILE_BREAKPOINT = APP_COMPACT_BREAKPOINT;
 
-export const homeHorizontalPadding = (width: number): number => {
-  if (width < HOME_MOBILE_BREAKPOINT) return 20;
-  if (width < 1200) return 32;
-  return 48;
-};
+export const homeHorizontalPadding = appHorizontalPadding;
 
-export const homeTopPadding = (mobile: boolean, topInset: number): number =>
-  Math.max(mobile ? 20 : 32, topInset + 16);
+export const homeTopPadding = (mobile: boolean): number => mobile ? 20 : 32;
 
 export const homeBottomPadding = (bottomInset: number): number =>
   Math.max(32, bottomInset + 16);
@@ -35,7 +31,7 @@ export const HomeShell: React.FC<HomeShellProps> = ({ children }) => {
           homeShellStyles.scrollContent,
           {
             paddingHorizontal: homeHorizontalPadding(width),
-            paddingTop: homeTopPadding(mobile, insets.top),
+            paddingTop: homeTopPadding(mobile),
             paddingBottom: homeBottomPadding(insets.bottom),
           },
         ]}

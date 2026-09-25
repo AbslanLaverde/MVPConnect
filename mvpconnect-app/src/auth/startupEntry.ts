@@ -2,7 +2,7 @@ import { onboardingApi, type SelfAccountResponse } from '../onboarding/onboardin
 import type { OnboardingState } from '../onboarding/onboardingTypes';
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { configuredStepFor } from '../onboarding/onboardingConfig';
-import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
+import { authenticatedAppRoute, resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AppDispatch } from '../store/store';
 import type { SessionController } from './sessionController';
@@ -47,7 +47,7 @@ export async function loadStartupEntry(session: SessionController, dispatch: App
     session.acceptRestoredIdentity(generation, {
       userId: identity.id, userType: identity.persona, email: identity.email, name: identity.displayName,
     });
-    return entry.screen === 'home' ? resolveAuthenticatedHomeRoute(identity)
+    return entry.screen === 'home' ? authenticatedAppRoute(resolveAuthenticatedHomeRoute(identity))
       : { name: 'Onboarding', params: { persona: entry.persona, step: entry.step } };
   } finally {
     account.unsubscribe();
