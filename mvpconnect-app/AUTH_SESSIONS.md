@@ -1,8 +1,8 @@
-# Frontend application sessions — Phase 3
+# Frontend application sessions — Phases 3–4
 
-Phase 3 consumes the backend Phase 2 application-session contract. Startup restoration is **not
-implemented**: a fresh launch/reload still starts at Login. No authenticated shell/header or new
-product destination is introduced.
+The frontend consumes the backend Phase 2 application-session contract. Phase 3 owns active
+sessions; Phase 4 restores them before navigation mounts. No authenticated shell/header or new
+product destination is introduced. The existing flat navigator and persona pages remain intact.
 
 ## Boundaries
 
@@ -16,6 +16,9 @@ product destination is introduced.
 | `src/auth/sessionExit.ts` / `src/navigation/rootNavigation.ts` | Cache-reset integration and root Login reset with a typed optional notice |
 | `src/auth/webCoordination.ts` | Same-origin cookie-operation lock, session-change events and pending-logout marker |
 | `src/auth/session.ts` | Application singleton; creating it does not restore or refresh a session |
+| `src/auth/SessionStartupBoundary.tsx` / `src/auth/sessionBootstrap.ts` | Neutral startup UI, retry, initial intent and one-time navigation readiness |
+| `src/auth/startupEntry.ts` | Fresh shared `/me` + `/onboarding` cache and existing entry resolvers |
+| `src/navigation/startupLink.ts` | Capture and validate the initial OAuth/auth link before navigation |
 
 `services/api.ts` retains the existing caller-facing API methods. Auth methods now complete session
 establishment and return non-secret identity plus `generation`; screens never receive refresh
@@ -50,8 +53,8 @@ ends the local session without falsely calling it expiry. Logout clears local me
 remote request fails; credential deletion is attempted even when OS storage reports an error.
 
 SecureStore is not a backup mechanism. Android reinstall removes its keys; iOS Keychain entries can
-survive reinstall. Neither implies authenticated application state; future restoration must still
-validate the server session. No reinstall-based trust decision exists in Phase 3.
+survive reinstall. Neither implies authenticated application state; startup restoration must still
+validate the server session. No reinstall-based trust decision exists.
 
 ## Refresh, retry and generations
 
@@ -112,8 +115,9 @@ Web Sign Out writes `mvpconnect.pending-logout.v1`, containing only the target r
 waiting for remote cleanup. It is retained on failure and survives reload; successful remote logout
 clears it. Its revision binding prevents stale logout intent from targeting a newer cookie session.
 Before a new login/signup, matching pending logout is attempted; safe new session establishment
-clears the marker even if the preliminary cleanup failed. Phase 4 must honor this marker before
-attempting restoration and retry remote logout when appropriate.
+clears the marker even if the preliminary cleanup failed. Startup honors this marker before
+attempting restoration and retries remote logout under the same lock. It also rechecks the marker
+after a refresh response, because another tab can record logout while this tab owns the lock.
 
 No cross-origin lock is claimed. Deploy one canonical Web origin: Web Locks/BroadcastChannel/storage
 coordinate tabs of that origin, not separate frontend origins that happen to share an API cookie.
@@ -129,9 +133,11 @@ discard and prevents duplicate activation. Only after those checks does it call 
 
 Provider OAuth launch/status use the ordinary API's access/refresh machinery. Session-generation
 and unmount checks stop late polling results or timers from returning to onboarding after exit.
-Provider PKCE/state/tokens/encryption and backend behavior are untouched. An OAuth return in a
-fresh runtime without memory auth goes to Login; Phase 4 restoration will cover cold returns. The
-original live tab's existing polling continues using its own session.
+Provider PKCE/state/tokens/encryption and backend behavior are untouched. A cold OAuth return is
+captured and validated before navigation. A restored application session and fresh account state
+are required before mounting OAuthResult and starting its existing polling. No valid session goes
+to Login without polling. Retryable startup errors retain the validated intent. The original live
+tab's existing polling continues using its own session.
 
 Login's full Axios-error logging is removed. The legacy Profile screen also stops logging raw
 Axios errors, which can contain bearer headers; no Profile behavior or navigation is implemented.
@@ -144,21 +150,99 @@ the authenticated API client. That client rejects external URLs instead of sendi
 
 `saveAuthData` and `getAuthData` are removed. There are no active reads/writes of persisted bearer
 tokens, and no persisted `userType` dependency. Successful new auth and local exits delete both
-old AsyncStorage keys (`authToken`, `userType`) through `legacyStorage.ts`.
+old AsyncStorage keys (`authToken`, `userType`) through `legacyStorage.ts`. Startup also deletes
+them, including when no Native refresh credential exists. It never reads or exchanges the legacy
+bearer. Legacy-only installations must sign in once to establish the new session.
 
 Keep this deletion-only migration helper until supported installed clients have transitioned;
 Phase 5 can remove it and its tests. The backend still retains temporary headerless 24h issuance
 and legacy bearer validation; Phase 3 does not modify that backend compatibility. Public product
 documentation is unchanged.
 
-## Phase 4 integration points and limits
+## Startup restoration — Phase 4
 
-Add a neutral startup boundary around AppNavigator in Phase 4. It must inspect pending Web logout
-intent before restoration, then use the existing platform transport/credential stores and the same
-operation locks, native write-before-publish ordering, generations and cache reset. Extend the
-controller with an explicit restoration operation; do not put startup effects in Axios interceptors.
-After refresh, resolve authoritative `/me` and onboarding state through existing entry resolvers.
-Preserve first-completion Welcome behavior. Phase 3 intentionally exposes no automatic restore call.
+`App.tsx` loads fonts and mounts `SessionStartupBoundary` in parallel. The boundary presents one
+neutral, accessible restoring screen, using system text while fonts load. Login and authenticated
+pages are not mounted beneath it. Fonts ready (or a font-load error) plus a resolved bootstrap
+permit navigation to mount.
+
+```text
+RESTORING
+  -> SessionController.restore() under the existing platform auth-operation lock
+  -> fresh RTK Query /me + /onboarding, if authenticated
+  -> READY_UNAUTHENTICATED: Login (or an existing first-visit signup link)
+  -> READY_AUTHENTICATED: resolved onboarding step / persona Home / validated OAuthResult
+  -> ERROR_RETRYABLE: Retry or shared explicit Sign Out
+```
+
+The controller owns credentials; bootstrap only exposes a state and non-secret route. Refresh,
+Native B persistence, and memory access publication use the same helpers as active sessions.
+Concurrent startup callers share one restoration promise. No startup effect runs in Login, Home
+or an Axios interceptor.
+
+### Web outcomes
+
+Refresh uses the existing cookie transport, `X-MVP-Client: web`, `withCredentials` and Web Lock.
+No cookie inspection or JavaScript refresh-secret storage exists. The existing last session event
+is the expected-session hint: `SESSION_ESTABLISHED` with no matching pending logout means expected.
+This is UX only, never authentication. Explicit pending logout makes the hint false immediately;
+confirmed invalidity records `SESSION_ENDED`. No redundant hint key is added.
+
+A matching pending logout never refreshes. Best-effort logout clears the marker on success and
+retains it on failure, then enters Login without expiry copy. Unsupported locks also leave a
+known pending logout locally signed out. A logout recorded during refresh is honored before any
+access publication. Markers remain bound to the browser session revision.
+
+A successful restoration keeps the existing established revision, so a second restoring tab does
+not invalidate the first. If a valid cookie has no established event, restoration publishes one.
+Revision checks before and after refresh, at authoritative entry, and generation checks prevent
+replacement-session races, including delayed cross-tab event delivery during `/me` lookup.
+
+`401 SESSION_INVALID` shows the one-shot expired-session notice only if a prior session was
+expected. A first visitor goes to Login without expiry copy. Network/service/coordination failures
+retain potentially valid session state and show retryable startup UI.
+
+### Native outcomes
+
+No SecureStore credential means Login without expiry copy. With A present, refresh consumes A,
+then B must persist before memory access is published. Invalidity clears credentials/cache and
+shows expiry once. A temporary network failure or a SecureStore read error retains A for Retry.
+A failed B write uses the existing fail-closed cleanup/revocation behavior; it never retries A.
+A malformed rotation response also exits safely rather than retrying a possibly consumed token.
+
+### Authoritative entry and errors
+
+Restoration resets the shared API cache before obtaining fresh access. `loadStartupEntry` dispatches
+existing `getSelfAccount` and `getOnboarding` queries with `forceRefetch: true`, then releases their
+temporary subscriptions. Their results remain the shared cache entries used by pages. Identity
+metadata in the session comes from `/me`; there is no separate startup account cache or JWT decoding.
+
+`resolveAuthenticatedEntryRoute` preserves exact onboarding resume behavior, including READY.
+`resolveAuthenticatedHomeRoute` chooses ArtistHome, VenueHome or PromoterHome for completed accounts.
+Returning sessions skip Welcome. First completion still follows completion -> Welcome -> Enter ->
+Home: bootstrap stops observing when the navigator takes ownership and cannot reroute that flow.
+
+Temporary `/me` or onboarding failure retains the valid memory access token. Retry requests fresh
+server state without an unnecessary refresh; the normal Phase 3 interceptor handles natural access
+expiry. Auth invalidity during those requests uses the existing global session exit. A missing owner
+ID, unusable persona or disagreeing account/workflow personas exits without guessing a destination.
+Malformed workflow data, no resumable step or an unsupported step stays retryable: those indicate
+recoverable server/client data incompatibility, not proven session expiry.
+
+### Navigation and initial links
+
+The flat AppNavigator mounts with a single explicit initial route. Login and Welcome are not pushed
+beneath a restored Home/onboarding/OAuthResult route. React Navigation uses that initial state ahead
+of initial URL state; its existing warm-link config remains. Native initial URL consumption is
+disabled in the navigator because bootstrap already captured it. Web uses the current origin and
+the existing OAuth return validator; Native uses the existing scheme validator. Only validated
+attempt/provider/status data is retained across Retry, never raw provider credentials.
+
+Cold onboarding/Welcome URLs do not override fresh workflow routing. Existing cold auth/signup
+links remain available to unauthenticated first visitors. No Home/Profile URL mappings are added.
+Startup does not navigate imperatively before the container is ready. `finishStartupNavigation`
+acknowledges an exit already represented by initial Login, preventing a second reset/expiry notice;
+an exit arriving after Home was selected still resets to Login through the existing root helper.
 
 Browser/native transport behavior is covered with mocked platform APIs, real Axios interceptors,
 the real RTK Query reducer/middleware and rendered screen regressions. Physical-device secure
@@ -172,3 +256,7 @@ Run `npm test -- --ci`, `npm run typecheck`, and repository-root
 Tests cover Web/native transport, SecureStore ordering/failure, eight concurrent 401s, bounded retry,
 late responses, root exits/notices, cross-tab serialization/events/pending logout, real API-cache
 isolation, all persona entry routes, onboarding save/discard rules and OAuth lifecycle isolation.
+Startup coverage adds neutral rendering/font gating, retryable UI, cold OAuth intent, legacy cleanup,
+restored fresh cache, account/workflow integrity, cross-tab startup races and real NavigationContainer
+single-route/back behavior. Jest transforms the installed safe-area/gesture/screens modules for that
+navigation integration test; production dependencies are unchanged.

@@ -16,3 +16,11 @@ export const resetToLogin = (reason: ExitReason): void => {
   pendingExit = reason;
   flushSessionNavigation();
 };
+
+/** The initial Login already presents this exit; do not reset it and repeat its one-shot notice. */
+export const finishStartupNavigation = (route: { name: string; params?: unknown }): void => {
+  const notice = (route.params as RootStackParamList['Login'])?.sessionNotice;
+  if (route.name === 'Login' && pendingExit
+    && (pendingExit === 'SESSION_EXPIRED' ? notice === 'SESSION_EXPIRED' : !notice)) pendingExit = undefined;
+  flushSessionNavigation(); // An exit after the startup decision still wins over an authenticated entry.
+};

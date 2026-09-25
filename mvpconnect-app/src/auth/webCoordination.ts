@@ -37,6 +37,10 @@ export function createWebCoordination(host: BrowserCoordinationHost): SessionCoo
       });
     },
     revision: () => parseEvent(host.storage.getItem(SESSION_EVENT_KEY))?.revision ?? null,
+    sessionExpected: () => parseEvent(host.storage.getItem(SESSION_EVENT_KEY))?.type === 'SESSION_ESTABLISHED'
+      && host.storage.getItem(PENDING_LOGOUT_KEY) !== JSON.stringify({
+        revision: parseEvent(host.storage.getItem(SESSION_EVENT_KEY))?.revision ?? null,
+      }),
     publish: (type, reason) => {
       // This nonce is a non-secret cookie-change revision, never a session ID or credential.
       const revision = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -77,6 +81,7 @@ export function createWebCoordination(host: BrowserCoordinationHost): SessionCoo
 
 export const localCoordination: SessionCoordination = {
   exclusive: (operation) => operation(), revision: () => null, publish: () => null,
+  sessionExpected: () => false,
   subscribe: () => () => {}, hasPendingLogout: () => false, pendingLogout: () => {},
 };
 
@@ -100,6 +105,7 @@ export function runtimeCoordination(): SessionCoordination {
   };
   return {
     exclusive: (operation) => get().exclusive(operation), revision: () => get().revision(),
+    sessionExpected: () => get().sessionExpected(),
     publish: (type, reason) => get().publish(type, reason), subscribe: (listener) => get().subscribe(listener),
     hasPendingLogout: () => get().hasPendingLogout(), pendingLogout: (value, revision) => get().pendingLogout(value, revision),
   };

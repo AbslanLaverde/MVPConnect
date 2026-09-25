@@ -54,7 +54,7 @@
       "/dist/"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-svg|@reduxjs/toolkit|react-redux|redux|immer)/)"
+      "node_modules/(?!((jest-)?react-native|react-native-safe-area-context|react-native-gesture-handler|react-native-screens|@react-native(-community)?|expo(nent)?|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-svg|@reduxjs/toolkit|react-redux|redux|immer)/)"
     ],
     "setupFilesAfterEnv": [
       "<rootDir>/jest.setup.ts"

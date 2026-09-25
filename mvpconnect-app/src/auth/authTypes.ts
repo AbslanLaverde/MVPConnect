@@ -23,6 +23,7 @@ export interface SessionSnapshot extends Partial<Identity> {
   readonly generation: number;
   readonly sessionId?: string;
   readonly expiresAt?: number;
+  readonly exitReason?: ExitReason;
 }
 export interface NativeCredentialStore {
   readonly kind: 'native';
@@ -46,6 +47,7 @@ export interface SessionEvent {
 export interface SessionCoordination {
   exclusive<T>(operation: () => Promise<T>): Promise<T>;
   revision(): string | null;
+  sessionExpected(): boolean;
   publish(type: SessionEvent['type'], reason?: ExitReason): string | null;
   subscribe(listener: (event: SessionEvent) => void): () => void;
   hasPendingLogout(): boolean;

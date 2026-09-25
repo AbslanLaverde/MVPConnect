@@ -1,4 +1,4 @@
-import { rootNavigation, flushSessionNavigation } from '../../navigation/rootNavigation';
+import { rootNavigation, flushSessionNavigation, finishStartupNavigation } from '../../navigation/rootNavigation';
 import { registerSessionCacheReset, resetSessionCache, navigateAfterSessionExit } from '../sessionExit';
 import { SessionController } from '../sessionController';
 import { fixture } from '../__testUtils__/sessionTestSupport';
@@ -27,4 +27,20 @@ it('retains a pending root reset until the navigator is ready and then consumes 
   navigateAfterSessionExit('SESSION_EXPIRED'); expect(reset).not.toHaveBeenCalled();
   ready.mockReturnValue(true); flushSessionNavigation(); flushSessionNavigation();
   expect(reset).toHaveBeenCalledTimes(1);
+});
+
+it('acknowledges an expired initial Login without resetting it and replaying the notice', () => {
+  const ready = jest.spyOn(rootNavigation, 'isReady').mockReturnValue(false);
+  const reset = jest.spyOn(rootNavigation, 'resetRoot').mockImplementation(() => {});
+  navigateAfterSessionExit('SESSION_EXPIRED'); ready.mockReturnValue(true);
+  finishStartupNavigation({ name: 'Login', params: { sessionNotice: 'SESSION_EXPIRED' } });
+  flushSessionNavigation(); expect(reset).not.toHaveBeenCalled();
+});
+
+it('honors a late session exit even if startup had already selected Home', () => {
+  const ready = jest.spyOn(rootNavigation, 'isReady').mockReturnValue(false);
+  const reset = jest.spyOn(rootNavigation, 'resetRoot').mockImplementation(() => {});
+  navigateAfterSessionExit('SESSION_EXPIRED'); ready.mockReturnValue(true);
+  finishStartupNavigation({ name: 'ArtistHome' });
+  expect(reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login', params: { sessionNotice: 'SESSION_EXPIRED' } }] });
 });

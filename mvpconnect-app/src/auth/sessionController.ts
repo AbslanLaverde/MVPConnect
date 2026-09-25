@@ -1,7 +1,7 @@
 import { AuthRequestError, isTerminalRefreshError, StaleSessionError } from './authErrors';
 import type {
   AccessResponse, AuthTransport, CredentialStore, ExitReason, LoginInput, LoginResponse,
-  NativeResponse, SessionCoordination, SessionIdentity, SessionSnapshot, SignupPersona,
+  NativeResponse, SessionCoordination, SessionIdentity, SessionSnapshot, SignupPersona, Identity,
 } from './authTypes';
 
 interface Dependencies {
@@ -25,6 +25,7 @@ export class SessionController {
   private queue: Promise<unknown> = Promise.resolve();
   private refreshPromise?: Promise<string>;
   private exitPromise?: Promise<void>;
+  private restorePromise?: Promise<SessionSnapshot>;
   constructor(private readonly deps: Dependencies) {}
 
   getSnapshot = (): SessionSnapshot => this.snapshot;
@@ -62,7 +63,7 @@ export class SessionController {
     const generation = this.snapshot.generation + 1;
     this.accessToken = undefined;
     this.tokenVersion += 1;
-    this.emit({ status: 'anonymous', generation });
+    this.emit({ status: 'anonymous', generation, exitReason: reason });
     this.deps.resetCache();
     this.deps.onExit(reason);
     return generation;
@@ -90,6 +91,122 @@ export class SessionController {
       throw new AuthRequestError('SECURE_STORAGE_UNAVAILABLE', 'Secure session storage is unavailable. Sign in again.');
     }
   }
+
+  private async rotateCredential(credential?: string): Promise<AccessResponse | NativeResponse<AccessResponse>> {
+    const response = await this.deps.transport.refresh(credential);
+    await this.persistNative(response);
+    return response;
+  }
+
+  private publishAccess(response: AccessResponse, metadata: SessionSnapshot): void {
+    this.accessToken = response.accessToken;
+    this.tokenVersion += 1;
+    this.emit({ ...metadata, status: 'authenticated', sessionId: response.sessionId,
+      expiresAt: (this.deps.now?.() ?? Date.now()) + response.expiresIn * 1000 });
+  }
+
+  /** Startup only: refresh validates the persisted session; /me supplies identity afterward. */
+  restore = (): Promise<SessionSnapshot> => {
+    if (this.restorePromise) return this.restorePromise;
+    if (this.snapshot.status === 'authenticated') return Promise.resolve(this.snapshot);
+    const generation = this.snapshot.generation + 1;
+    this.emit({ status: 'authenticating', generation });
+    this.deps.resetCache();
+    const operation = this.serial(async () => {
+      // Capture ownership before any asynchronous work or waiting for another tab's lock.
+      try {
+        this.revision = this.deps.coordination.revision();
+        this.observeTabs();
+      } finally { await this.deps.clearLegacy(); }
+      const pendingLogout = this.deps.credentials.kind === 'web' && this.deps.coordination.hasPendingLogout();
+      const finishPendingLogout = async () => {
+        if (await this.revoke()) this.deps.coordination.pendingLogout(false);
+        this.revision = this.deps.coordination.publish('SESSION_ENDED', 'EXPLICIT_SIGN_OUT');
+        this.assertGeneration(generation);
+        this.invalidate('EXPLICIT_SIGN_OUT');
+        return this.snapshot;
+      };
+      try { return await this.deps.coordination.exclusive(async () => {
+        this.assertGeneration(generation);
+        if (!this.ownsCookie()) { this.invalidate('SESSION_REPLACED'); throw new StaleSessionError(); }
+        const web = this.deps.credentials.kind === 'web';
+        if (web && this.deps.coordination.hasPendingLogout()) {
+          // Offline explicit Sign Out must never turn into a cookie refresh on reload.
+          return finishPendingLogout();
+        }
+        const expected = web && this.deps.coordination.sessionExpected();
+        // Storage read failures are retryable at startup: A has not been consumed.
+        const credential = this.deps.credentials.kind === 'native'
+          ? await this.deps.credentials.getRefreshCredential() : undefined;
+        this.assertGeneration(generation);
+        if (credential === null) {
+          this.emit({ status: 'anonymous', generation });
+          return this.snapshot;
+        }
+        try {
+          const response = await this.rotateCredential(credential);
+          this.assertGeneration(generation); // B is persisted even if Sign Out cancelled startup.
+          if (!this.ownsCookie()) { this.invalidate('SESSION_REPLACED'); throw new StaleSessionError(); }
+          // Another tab can record explicit logout while this tab holds the network lock.
+          // Never turn that marker into a new established revision and orphan its intent.
+          if (web && this.deps.coordination.hasPendingLogout()) return finishPendingLogout();
+          // Reuse the browser revision for the same cookie session. Restoring another tab is
+          // not an account replacement and must not invalidate already authenticated tabs.
+          if (web && !this.deps.coordination.sessionExpected()) {
+            this.revision = this.deps.coordination.publish('SESSION_ESTABLISHED');
+          }
+          this.publishAccess(response, { status: 'authenticated', generation });
+          return this.snapshot;
+        } catch (error) {
+          if (this.snapshot.generation === generation && error instanceof AuthRequestError
+            && error.response.data.code === 'AUTH_CONTRACT_INVALID') {
+            // The response may have consumed A. Do not retry an untrusted rotation contract.
+            const revoked = await this.revoke(credential);
+            if (web && !revoked) this.deps.coordination.pendingLogout(true);
+            this.invalidate('SESSION_REPLACED');
+            await this.clearCredentials();
+            this.revision = this.deps.coordination.publish('SESSION_ENDED', 'SESSION_REPLACED');
+            return this.snapshot;
+          }
+          if (this.snapshot.generation === generation && (isTerminalRefreshError(error)
+            || error instanceof AuthRequestError && error.response.data.code === 'SECURE_STORAGE_UNAVAILABLE')) {
+            const reason = isTerminalRefreshError(error) && (expected || !web) ? 'SESSION_EXPIRED' : 'SESSION_REPLACED';
+            if (isTerminalRefreshError(error) && web && !expected) this.emit({ status: 'anonymous', generation });
+            else this.invalidate(reason);
+            await this.clearCredentials();
+            this.revision = this.deps.coordination.publish('SESSION_ENDED', reason);
+            return this.snapshot;
+          }
+          throw error; // Network/service failure retains the credential and expected-session hint.
+        }
+      }); } catch (error) {
+        if (pendingLogout && this.snapshot.generation === generation) {
+          // Even unavailable Web Locks must leave an explicitly signed-out browser logged out.
+          this.invalidate('EXPLICIT_SIGN_OUT');
+          return this.snapshot;
+        }
+        throw error;
+      }
+    });
+    this.restorePromise = operation;
+    void operation.then(() => { if (this.restorePromise === operation) this.restorePromise = undefined; },
+      () => { if (this.restorePromise === operation) this.restorePromise = undefined; });
+    return operation;
+  };
+
+  acceptRestoredIdentity = (generation: number, identity: Identity): void => {
+    this.assertRestoredSession(generation);
+    this.emit({ ...this.snapshot, ...identity });
+  };
+  assertRestoredSession = (generation: number): void => {
+    if (!this.isCurrent(generation)) throw new StaleSessionError();
+    if (!this.ownsCookie()) { this.invalidate('SESSION_REPLACED'); throw new StaleSessionError(); }
+    if (this.deps.credentials.kind === 'web' && this.deps.coordination.hasPendingLogout()) {
+      this.invalidate('EXPLICIT_SIGN_OUT');
+      throw new StaleSessionError();
+    }
+  };
+  rejectRestoredIdentity = (): Promise<void> => this.exit('SESSION_REPLACED');
 
   login = (input: LoginInput): Promise<SessionIdentity> => this.establish(() => this.deps.transport.login(input));
   signup = (persona: SignupPersona, input: object): Promise<SessionIdentity> =>
@@ -124,9 +241,7 @@ export class SessionController {
           email: response.email, name: response.name, generation: generation + 1,
         };
         this.deps.resetCache();
-        this.accessToken = response.accessToken;
-        this.tokenVersion += 1;
-        this.emit({ ...identity, status: 'authenticated', expiresAt: (this.deps.now?.() ?? Date.now()) + response.expiresIn * 1000 });
+        this.publishAccess(response, { ...identity, status: 'authenticated' });
         return identity;
       });
     }).catch((error) => {
@@ -155,8 +270,7 @@ export class SessionController {
         try { credential = this.deps.credentials.kind === 'native' ? await this.deps.credentials.getRefreshCredential() : undefined; }
         catch { throw new AuthRequestError('SECURE_STORAGE_UNAVAILABLE', 'Secure session storage is unavailable. Sign in again.'); }
         if (credential === null) throw new AuthRequestError('SESSION_INVALID', 'Session credential is missing.', 401);
-        const response = await this.deps.transport.refresh(credential);
-        await this.persistNative(response);
+        const response = await this.rotateCredential(credential);
         // Save B before checking cancellation: an already queued logout must revoke B, not retry A.
         if (!this.isCurrent(generation)) throw new StaleSessionError();
         if (response.sessionId !== this.snapshot.sessionId) {
@@ -167,9 +281,7 @@ export class SessionController {
           this.invalidate('SESSION_REPLACED');
           throw new StaleSessionError();
         }
-        this.accessToken = response.accessToken;
-        this.tokenVersion += 1;
-        this.emit({ ...this.snapshot, expiresAt: (this.deps.now?.() ?? Date.now()) + response.expiresIn * 1000 });
+        this.publishAccess(response, this.snapshot);
         return response.accessToken;
       } catch (error) {
         if (this.isCurrent(generation) && (isTerminalRefreshError(error)

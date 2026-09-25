@@ -12,8 +12,9 @@ import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
 import { VenueHomeScreen } from '../home/venue/VenueHomeScreen';
 import { PromoterHomeScreen } from '../home/promoter/PromoterHomeScreen';
-import { rootNavigation, flushSessionNavigation } from './rootNavigation';
+import { rootNavigation, finishStartupNavigation } from './rootNavigation';
 import type { SessionNotice } from '../auth/authTypes';
+import type { StartupRoute } from '../auth/startupEntry';
 
 export type RootStackParamList = {
   Login: { sessionNotice?: SessionNotice } | undefined;
@@ -34,6 +35,8 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['mvpconnect://'],
+  // Bootstrap has already captured and validated the cold link. Warm linking stays unchanged.
+  getInitialURL: async () => null,
   config: {
     screens: {
       Login: 'login',
@@ -48,9 +51,11 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-export const AppNavigator: React.FC = () => {
+export const AppNavigator: React.FC<{ initialRoute: StartupRoute; onReady?: () => void }> = ({ initialRoute, onReady }) => {
   return (
-    <NavigationContainer linking={linking} ref={rootNavigation} onReady={flushSessionNavigation}>
+    <NavigationContainer linking={linking} ref={rootNavigation}
+      initialState={{ index: 0, routes: [initialRoute] }}
+      onReady={() => { onReady?.(); finishStartupNavigation(initialRoute); }}>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{

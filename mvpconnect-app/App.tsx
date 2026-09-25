@@ -14,7 +14,7 @@ import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
-import { AppNavigator } from './src/navigation/AppNavigator';
+import { SessionStartupBoundary } from './src/auth/SessionStartupBoundary';
 import { store } from './src/store/store';
 import { WebInputTheme } from './src/theme/WebInputTheme';
 
@@ -29,16 +29,12 @@ export default function App() {
     SpaceGrotesk_700Bold,
   });
 
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
   return (
     <Provider store={store}>
       <SafeAreaProvider>
         <WebInputTheme />
         <StatusBar style="light" />
-        <AppNavigator />
+        <SessionStartupBoundary fontsReady={fontsLoaded || Boolean(fontError)} />
       </SafeAreaProvider>
     </Provider>
   );
