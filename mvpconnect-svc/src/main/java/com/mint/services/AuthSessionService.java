@@ -57,6 +57,11 @@ public class AuthSessionService {
     }
 
     public SessionResult rotateRefreshCredential(String rawCredential) {
+        return rotateRefreshCredential(rawCredential, null);
+    }
+
+    /** HTTP callers must supply the resolved transport. Check it under the SAME rotation lock. */
+    public SessionResult rotateRefreshCredential(String rawCredential, SessionTransport expectedTransport) {
         final String hash;
         try {
             hash = credentials.hash(rawCredential);
@@ -71,6 +76,9 @@ public class AuthSessionService {
             var stored = tx.find(id.get());
             if (stored.isEmpty()) return SessionResult.failed(AuthFailure.INVALID_CREDENTIAL);
             AuthSession session = stored.get().session();
+            if (expectedTransport != null && session.transport() != expectedTransport) {
+                return SessionResult.failed(AuthFailure.TRANSPORT_MISMATCH);
+            }
             AuthFailure failure = SessionValidity.failure(session, now);
             if (failure != null) return SessionResult.failed(failure);
             if (!stored.get().ownerValid()) return SessionResult.failed(AuthFailure.INVALID_OWNER);
@@ -101,7 +109,24 @@ public class AuthSessionService {
         return stored.session();
     }
 
-    /** Internal primitive. Phase 2 must resolve sid from the authenticated/current refresh session. */
+    /** Revocation only: known consumed credentials may revoke, never rotate or issue access. */
+    public AuthFailure revokeRefreshSession(String rawCredential, SessionTransport expectedTransport) {
+        Objects.requireNonNull(expectedTransport);
+        final String hash;
+        try { hash = credentials.hash(rawCredential); }
+        catch (SessionAuthException invalid) { return AuthFailure.INVALID_CREDENTIAL; }
+        return repository.write(tx -> {
+            var id = tx.sessionIdForCredential(hash);
+            if (id.isEmpty() || !tx.lock(id.get())) return AuthFailure.INVALID_CREDENTIAL;
+            var stored = tx.find(id.get());
+            if (stored.isEmpty() || tx.credential(id.get(), hash).isEmpty()) return AuthFailure.INVALID_CREDENTIAL;
+            if (stored.get().session().transport() != expectedTransport) return AuthFailure.TRANSPORT_MISMATCH;
+            tx.revoke(id.get(), clock.instant(), RevocationReason.EXPLICIT_LOGOUT);
+            return null;
+        });
+    }
+
+    /** Internal primitive; HTTP logout resolves the family from its refresh credential instead. */
     public boolean revokeSession(String id, RevocationReason reason) {
         Objects.requireNonNull(reason);
         if (id == null || id.isBlank()) return false;

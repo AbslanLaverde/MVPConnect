@@ -3,6 +3,7 @@ package com.mint.security;
 import com.mint.authsession.AuthFailure;
 import com.mint.authsession.SessionAuthException;
 import com.mint.services.AuthSessionService;
+import com.mint.dto.response.SessionAccessResponse;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,6 +21,13 @@ public class SessionAccessTokenService {
 
     public String issueAccessToken(String sessionId) {
         return tokens.issue(sessions.requireActiveSession(sessionId));
+    }
+
+    public SessionAccessResponse issueAccessResponse(String sessionId) {
+        String token = issueAccessToken(sessionId);
+        var claims = tokens.parse(token);
+        long expiresIn = java.time.Duration.between(claims.issuedAt(), claims.expiresAt()).getSeconds();
+        return new SessionAccessResponse(token, "Bearer", expiresIn, sessionId);
     }
 
     public CustomUserDetails authenticate(SessionJwtTokenProvider.AccessClaims claims) {

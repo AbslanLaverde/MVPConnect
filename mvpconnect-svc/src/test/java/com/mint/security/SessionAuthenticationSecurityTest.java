@@ -33,6 +33,7 @@ class SessionAuthenticationSecurityTest {
     @Autowired SessionJwtTokenProvider tokens;
     @MockitoBean AuthSessionService sessions;
     @MockitoBean CustomUserDetailsService principals;
+    @MockitoBean com.mint.authsession.http.AuthClientTransportResolver authClientTransportResolver;
 
     @BeforeEach void setup() {
         when(sessions.requireActiveSession("session-1")).thenReturn(session());

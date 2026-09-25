@@ -1,6 +1,10 @@
 package com.mint.security;
 
 import com.mint.config.CorsProperties;
+import com.mint.authsession.http.AuthClientTransportResolver;
+import com.mint.authsession.http.AuthSessionTransportFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.filter.CorsFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,6 +49,12 @@ public class SecurityConfig {
     @Autowired
     private CorsProperties corsProperties;
 
+    @Autowired
+    private AuthClientTransportResolver authClientTransportResolver;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * Password encoder using BCrypt
      */
@@ -86,6 +96,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/auth/refresh", "/auth/logout").permitAll()
                 // Public endpoints - no authentication required
                 .requestMatchers(
                     "/auth/signup/**",          // All signup endpoints
@@ -113,6 +124,7 @@ public class SecurityConfig {
         // Add JWT authentication filter
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new AuthSessionTransportFilter(authClientTransportResolver, objectMapper, corsConfigurationSource()), CorsFilter.class);
 
         return http.build();
     }

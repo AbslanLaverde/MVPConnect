@@ -115,6 +115,9 @@ class SecurityConfigTest {
     @MockitoBean
     private SessionAccessTokenService sessionAccessTokenService;
 
+    @MockitoBean
+    private com.mint.authsession.http.AuthClientTransportResolver authClientTransportResolver;
+
     @Test
     void unauthenticatedOnboardingRequestIsRejected() throws Exception {
         mockMvc.perform(get("/onboarding"))
