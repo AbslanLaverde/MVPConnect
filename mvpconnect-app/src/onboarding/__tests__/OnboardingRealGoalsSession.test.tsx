@@ -1,21 +1,26 @@
+import { sessionController } from '../../auth/session';
 import React from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
-import api, { storageHelpers } from '../../services/api';
+import api from '../../services/api';
 import { onboardingApi } from '../onboardingApi';
 import { ONBOARDING_CONFIG } from '../onboardingConfig';
 import { OnboardingRealGoalsSession } from '../OnboardingRealGoalsSession';
 import type { OnboardingPersona, OnboardingState, OnboardingStep } from '../onboardingTypes';
+import { deferred } from '../../auth/__testUtils__/sessionTestSupport';
+
+jest.mock('../../auth/session', () => ({
+  sessionController: { signOut: jest.fn(), getGeneration: jest.fn(() => 1), assertGeneration: jest.fn() },
+}));
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
-  storageHelpers: { clearAuthData: jest.fn() },
   default: { get: jest.fn(), put: jest.fn(), post: jest.fn(), delete: jest.fn() },
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
-const mockedStorage = storageHelpers as jest.Mocked<typeof storageHelpers>;
+const mockedSignOut = sessionController.signOut as jest.Mock;
 const stores: ReturnType<typeof configureStore>[] = [];
 const PERSONA = {
   artist: { backend: 'MUSICIAN' as const, total: 5, previous: 'media', goals: ['BOOK_SHOWS'] },
@@ -75,7 +80,8 @@ describe('OnboardingRealGoalsSession', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    mockedStorage.clearAuthData.mockResolvedValue();
+    mockedSignOut.mockResolvedValue(undefined);
+    mockedApi.get.mockResolvedValue({ data: { id: 'artist-1', persona: 'MUSICIAN', displayName: 'Artist' } });
   });
 
   afterEach(() => {
@@ -208,6 +214,19 @@ describe('OnboardingRealGoalsSession', () => {
     expect(mockedApi.post).toHaveBeenCalledWith('/onboarding/complete');
   });
 
+  it('waits for canonical self identity before resetting the completed Venue flow to Welcome', async () => {
+    const refreshed = deferred<{ data: object }>();
+    mockedApi.get.mockReturnValue(refreshed.promise);
+    mockedApi.post.mockResolvedValue({ data: { persona: 'VENUE', status: 'COMPLETED', onboardingVersion: 2 } });
+    const screen = renderSession('venue', 'COMPLETE');
+    fireEvent.press(screen.getByLabelText('Finish onboarding'));
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith('/me'));
+    expect(screen.navigation.reset).not.toHaveBeenCalled();
+    await act(async () => refreshed.resolve({ data: { id: 'venue-1', persona: 'VENUE', displayName: 'VENUEX',
+      profileImage: { mediaId: 'uploaded-image', url: 'https://example.test/venue.jpg', mimeType: 'image/jpeg' } } }));
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Welcome' }] }));
+  });
+
   it('saves a dirty Goals draft before sign-out without finishing or reaching Welcome', async () => {
     mockedApi.put.mockResolvedValue({ data: makeStep('artist') } as any);
     const screen = renderSession('artist');
@@ -218,11 +237,7 @@ describe('OnboardingRealGoalsSession', () => {
     await waitFor(() => expect(mockedApi.put).toHaveBeenCalledWith('/onboarding/steps/goals', {
       data: { connectionGoals: ['BOOK_SHOWS', 'FIND_PROMOTERS'] },
     }));
-    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    }));
-    expect(mockedStorage.clearAuthData).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockedSignOut).toHaveBeenCalledTimes(1));
     expect(mockedApi.post).not.toHaveBeenCalled();
     expect(screen.navigation.reset).not.toHaveBeenCalledWith({
       index: 0,

@@ -1,5 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import api from './api';
+import { sessionController } from '../auth/session';
+import { StaleSessionError } from '../auth/authErrors';
 
 export type ExternalProvider =
   | 'SPOTIFY'
@@ -115,8 +117,11 @@ export const startExternalOAuth = async (
   provider: 'YOUTUBE' | 'SOUNDCLOUD',
   returnTarget = oauthReturnTarget(),
 ): Promise<OAuthConnectionStart> => {
+  const generation = sessionController.getGeneration();
   const attempt = await externalConnectionService.startOAuth(provider, returnTarget);
+  if (!sessionController.isCurrent(generation)) throw new StaleSessionError();
   await Linking.openURL(attempt.authorizationUrl);
+  if (!sessionController.isCurrent(generation)) throw new StaleSessionError();
   return attempt;
 };
 

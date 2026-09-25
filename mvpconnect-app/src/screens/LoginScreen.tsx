@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,12 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { MatchShowcase } from '../components/MatchShowcase';
 import { BrandLogo } from '../components/BrandLogo';
-import { authAPI, storageHelpers } from '../services/api';
+import { authAPI } from '../services/api';
+import { sessionController } from '../auth/session';
+import { StaleSessionError } from '../auth/authErrors';
+import type { SessionNotice } from '../auth/authTypes';
+import type { StackScreenProps } from '@react-navigation/stack';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { styles } from './LoginScreen.styles';
@@ -21,7 +26,7 @@ import { theme } from '../theme/theme';
 import { fetchOnboardingState, onboardingApi } from '../onboarding/onboardingApi';
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { store } from '../store/store';
-import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
+import { authenticatedAppRoute, resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 
 const connectionGradientWebStyle = {
   backgroundImage: `linear-gradient(90deg, ${theme.colors.brandBlue}, ${theme.colors.brandViolet})`,
@@ -30,11 +35,9 @@ const connectionGradientWebStyle = {
   color: 'transparent',
 } as any;
 
-interface LoginScreenProps {
-  navigation: any;
-}
+type LoginScreenProps = StackScreenProps<RootStackParamList, 'Login'>;
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, route }) => {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isDesktop = width >= 1024;
@@ -43,6 +46,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [sessionNotice, setSessionNotice] = useState<SessionNotice>();
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+  useEffect(() => {
+    if (route?.params?.sessionNotice === 'SESSION_EXPIRED') {
+      setSessionNotice('SESSION_EXPIRED');
+      navigation.setParams({ sessionNotice: undefined });
+    }
+  }, [route?.params?.sessionNotice, navigation]);
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -64,11 +76,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    if (!validateForm()) {
+    if (loading || !validateForm()) {
       return;
     }
 
     setLoading(true);
+    setSessionNotice(undefined);
     let authenticated = false;
     let response: Awaited<ReturnType<typeof authAPI.login>> | undefined;
     try {
@@ -78,14 +91,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       });
       authenticated = true;
 
-      // Save auth data
-      await storageHelpers.saveAuthData(response.accessToken, response.userType);
-      store.dispatch(onboardingApi.util.resetApiState());
-
       const onboardingState = await fetchOnboardingState();
+      if (!mounted.current || !sessionController.isCurrent(response.generation)) return;
       await store.dispatch(
         onboardingApi.util.upsertQueryData('getOnboarding', undefined, onboardingState),
       );
+      if (!mounted.current || !sessionController.isCurrent(response.generation)) return;
       const destination = resolveAuthenticatedEntryRoute(onboardingState);
 
       if (destination.screen === 'onboarding') {
@@ -101,9 +112,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         displayName: response.name || email.trim(),
         persona: destination.persona,
       });
-      navigation.replace(home.name);
+      const app = authenticatedAppRoute(home);
+      navigation.reset({ index: 0, routes: [app] });
     } catch (error: any) {
-      console.error(authenticated ? 'Post-login routing error:' : 'Login error:', error);
+      if (!mounted.current || error instanceof StaleSessionError
+        || (response && !sessionController.isCurrent(response.generation))) return;
 
       if (authenticated && response) {
         // Login succeeded — token is valid. Don't clear it. The onboarding
@@ -132,7 +145,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         Alert.alert('Error', 'Failed to login. Please try again.');
       }
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
   };
 
@@ -242,6 +255,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         </View>
         <Text style={styles.title}>WELCOME BACK.</Text>
         <Text style={styles.subtitle}>Sign in to continue building your network.</Text>
+        {sessionNotice === 'SESSION_EXPIRED' ? (
+          <Text accessibilityRole="alert" style={styles.subtitle}>
+            Your session expired. Sign in again to continue.
+          </Text>
+        ) : null}
         <View style={styles.formHeaderRule} />
 
         <Input

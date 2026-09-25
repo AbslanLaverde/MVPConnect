@@ -1,3 +1,7 @@
+import { sessionController } from '../../auth/session';
+jest.mock('../../auth/session', () => ({
+  sessionController: { getGeneration: jest.fn(() => 1), isCurrent: jest.fn(() => true), subscribe: jest.fn(() => () => {}), signOut: jest.fn(), assertGeneration: jest.fn() },
+}));
 import React from 'react';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import api from '../../services/api';

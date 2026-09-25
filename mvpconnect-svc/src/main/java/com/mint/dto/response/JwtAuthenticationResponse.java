@@ -3,6 +3,7 @@ package com.mint.dto.response;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * JWT Authentication Response DTO
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class JwtAuthenticationResponse {
 
+    @ToString.Exclude
     private String accessToken;
     private String tokenType;
     private String userId;

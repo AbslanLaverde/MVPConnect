@@ -1,6 +1,6 @@
 import React from 'react';
 import type { StackScreenProps } from '@react-navigation/stack';
-import type { RootStackParamList } from '../../navigation/AppNavigator';
+import type { AuthenticatedStackParamList } from '../../navigation/authenticatedRoutes';
 import { useGetSelfAccountQuery } from '../../onboarding/onboardingApi';
 import { theme } from '../../theme/theme';
 import { AttentionSection } from '../shared/AttentionSection';
@@ -8,7 +8,7 @@ import { HomeHeader, getGreetingForHour } from '../shared/HomeHeader';
 import { HomeIdentityError } from '../shared/HomeIdentityError';
 import { HomeShell } from '../shared/HomeShell';
 
-type Props = StackScreenProps<RootStackParamList, 'VenueHome'>;
+type Props = StackScreenProps<AuthenticatedStackParamList, 'VenueHome'>;
 
 export const VenueHomeScreen: React.FC<Props> = () => {
   const selfQuery = useGetSelfAccountQuery();

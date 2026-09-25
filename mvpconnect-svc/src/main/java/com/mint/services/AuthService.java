@@ -5,6 +5,11 @@ import com.mint.dto.request.PromoterSignupRequest;
 import com.mint.dto.request.VenueSignupRequest;
 import com.mint.dto.request.LoginRequest;
 import com.mint.dto.response.JwtAuthenticationResponse;
+import com.mint.authsession.AuthIdentity;
+import com.mint.authsession.AuthFailure;
+import com.mint.authsession.SessionAuthException;
+import com.mint.onboarding.PersonaType;
+import com.mint.security.CustomUserDetails;
 import com.mint.exceptions.DuplicateEmailException;
 import com.mint.nodes.Musician;
 import com.mint.nodes.Promoter;
@@ -24,6 +29,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 
@@ -58,6 +65,13 @@ public class AuthService {
      * Register a new musician
      */
     public JwtAuthenticationResponse signupMusician(MusicianSignupRequest request) {
+        return legacySignupResponse(createMusician(request));
+    }
+
+    // No outer transaction: SDN repository.save commits the persona before this returns.
+    // NOT_SUPPORTED also protects session-aware callers from accidentally joining an outer TX.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthIdentity createMusician(MusicianSignupRequest request) {
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (emailExists(normalizedEmail)) {
             throw new DuplicateEmailException();
@@ -86,26 +100,18 @@ public class AuthService {
 
         LOGGER.info("account.created accountId={} persona=MUSICIAN", musician.getId());
 
-        String token = jwtTokenProvider.generateTokenFromEmail(
-            musician.getEmail(),
-            musician.getId(),
-            "MUSICIAN"
-        );
-
-        return new JwtAuthenticationResponse(
-            token,
-            "Bearer",
-            musician.getId(),
-            musician.getEmail(),
-            "MUSICIAN",
-            musician.getName()
-        );
+        return new AuthIdentity(musician.getId(), PersonaType.MUSICIAN, musician.getEmail(), musician.getName());
     }
 
     /**
      * Register a new venue
      */
     public JwtAuthenticationResponse signupVenue(VenueSignupRequest request) {
+        return legacySignupResponse(createVenue(request));
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthIdentity createVenue(VenueSignupRequest request) {
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (emailExists(normalizedEmail)) {
             throw new DuplicateEmailException();
@@ -135,26 +141,18 @@ public class AuthService {
 
         LOGGER.info("account.created accountId={} persona=VENUE", venue.getId());
 
-        String token = jwtTokenProvider.generateTokenFromEmail(
-            venue.getEmail(),
-            venue.getId(),
-            "VENUE"
-        );
-
-        return new JwtAuthenticationResponse(
-            token,
-            "Bearer",
-            venue.getId(),
-            venue.getEmail(),
-            "VENUE",
-            venue.getVenueName()
-        );
+        return new AuthIdentity(venue.getId(), PersonaType.VENUE, venue.getEmail(), venue.getVenueName());
     }
 
     /**
      * Register a new promoter
      */
     public JwtAuthenticationResponse signupPromoter(PromoterSignupRequest request) {
+        return legacySignupResponse(createPromoter(request));
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthIdentity createPromoter(PromoterSignupRequest request) {
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (emailExists(normalizedEmail)) {
             throw new DuplicateEmailException();
@@ -183,20 +181,28 @@ public class AuthService {
 
         LOGGER.info("account.created accountId={} persona=PROMOTER", promoter.getId());
 
-        String token = jwtTokenProvider.generateTokenFromEmail(
-            promoter.getEmail(),
-            promoter.getId(),
-            "PROMOTER"
-        );
+        return new AuthIdentity(promoter.getId(), PersonaType.PROMOTER, promoter.getEmail(), promoter.getBusinessName());
+    }
 
-        return new JwtAuthenticationResponse(
-            token,
-            "Bearer",
-            promoter.getId(),
-            promoter.getEmail(),
-            "PROMOTER",
-            promoter.getBusinessName()
-        );
+    private JwtAuthenticationResponse legacySignupResponse(AuthIdentity identity) {
+        String token = jwtTokenProvider.generateTokenFromEmail(identity.email(), identity.userId(), identity.persona().name());
+        return new JwtAuthenticationResponse(token, "Bearer", identity.userId(), identity.email(), identity.persona().name(), identity.name());
+    }
+
+    /** Session-aware credential authentication deliberately does not issue a legacy JWT. */
+    public AuthIdentity authenticateIdentity(LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                normalizeEmail(request.getEmail()), request.getPassword()));
+        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        return (switch (PersonaType.valueOf(principal.getUserType())) {
+            case MUSICIAN -> musicianRepository.findById(principal.getId())
+                    .map(m -> new AuthIdentity(m.getId(), PersonaType.MUSICIAN, m.getEmail(), m.getName()));
+            case VENUE -> venueRepository.findById(principal.getId())
+                    .map(v -> new AuthIdentity(v.getId(), PersonaType.VENUE, v.getEmail(), v.getVenueName()));
+            case PROMOTER -> promoterRepository.findById(principal.getId())
+                    .map(p -> new AuthIdentity(p.getId(), PersonaType.PROMOTER, p.getEmail(), p.getBusinessName()));
+        }).orElseThrow(() -> new SessionAuthException(AuthFailure.INVALID_OWNER));
     }
 
     /**

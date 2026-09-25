@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { useDispatch } from 'react-redux';
 import type { RootStackParamList } from '../navigation/AppNavigator';
-import { storageHelpers } from '../services/api';
-import type { AppDispatch } from '../store/store';
-import { onboardingApi } from './onboardingApi';
+import { sessionController } from '../auth/session';
 
 export interface OnboardingSignOutController {
   signingOut: boolean;
@@ -28,13 +25,11 @@ const waitForNextPersistenceCheck = () =>
   new Promise<void>((resolve) => setTimeout(resolve, 25));
 
 export const useOnboardingSignOut = ({
-  navigation,
   dirty,
   valid,
   persistenceBusy,
   flushValidDraft,
 }: UseOnboardingSignOutOptions): OnboardingSignOutController => {
-  const dispatch = useDispatch<AppDispatch>();
   const [signingOut, setSigningOut] = useState(false);
   const [discardConfirmationVisible, setDiscardConfirmationVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -72,9 +67,8 @@ export const useOnboardingSignOut = ({
         if (!(await latest.current.flushValidDraft())) return;
       }
 
-      await storageHelpers.clearAuthData();
-      dispatch(onboardingApi.util.resetApiState());
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      if (!mounted.current) return;
+      await sessionController.signOut();
     } catch {
       if (mounted.current) {
         setErrorMessage("WE COULDN'T SIGN YOU OUT. PLEASE TRY AGAIN.");
@@ -83,7 +77,7 @@ export const useOnboardingSignOut = ({
       operationActive.current = false;
       if (mounted.current) setSigningOut(false);
     }
-  }, [dispatch, navigation, waitForPersistence]);
+  }, [waitForPersistence]);
 
   const requestSignOut = useCallback(() => {
     if (operationActive.current || discardConfirmationVisible) return;

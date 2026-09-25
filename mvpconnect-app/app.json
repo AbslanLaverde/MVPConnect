@@ -13,7 +13,8 @@
         {
           "photosPermission": "Allow MVPConnect to choose a profile image for your live-music profile."
         }
-      ]
+      ],
+      ["expo-secure-store", { "faceIDPermission": false }]
     ],
     "splash": {
       "image": "./assets/splash.png",
@@ -25,6 +26,7 @@
       "bundleIdentifier": "com.mvpconnect.app"
     },
     "android": {
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "monochromeImage": "./assets/adaptive-icon-monochrome.png",

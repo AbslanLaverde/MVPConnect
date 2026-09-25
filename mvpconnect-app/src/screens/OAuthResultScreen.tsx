@@ -8,6 +8,8 @@ import {
   type ParsedOAuthReturn,
 } from '../services/externalConnectionService';
 import { theme } from '../theme/theme';
+import { sessionController } from '../auth/session';
+import { resetToLogin } from '../navigation/rootNavigation';
 
 type Props = StackScreenProps<RootStackParamList, 'OAuthResult'>;
 type ResultState = 'LOADING' | 'SUCCEEDED' | 'FAILED' | 'INVALID';
@@ -18,25 +20,40 @@ export const OAuthResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const parsed = parseOAuthReturnParameters((route.params ?? {}) as Record<string, unknown>);
   const [resultState, setResultState] = useState<ResultState>(parsed ? 'LOADING' : 'INVALID');
   const [provider, setProvider] = useState<ParsedOAuthReturn['provider'] | undefined>(parsed?.provider);
+  const [generation] = useState(() => sessionController.getGeneration());
 
-  const returnToMedia = () => navigation.replace('Onboarding', { persona: 'artist', step: 'media' });
+  const returnToMedia = () => {
+    if (sessionController.isCurrent(generation)) navigation.replace('Onboarding', { persona: 'artist', step: 'media' });
+  };
 
   useEffect(() => {
+    if (!sessionController.isCurrent(generation)) {
+      resetToLogin('SESSION_REPLACED'); // Cold OAuth return needs Phase 4 restoration; never assume a session.
+      return undefined;
+    }
     if (!parsed) return undefined;
     let active = true;
     let autoReturnTimer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = sessionController.subscribe(() => {
+      if (!sessionController.isCurrent(generation)) {
+        active = false;
+        if (autoReturnTimer) clearTimeout(autoReturnTimer);
+      }
+    });
     void (async () => {
       let resolvedState: ResultState = parsed.status;
       try {
         for (let attempt = 0; attempt < 5; attempt += 1) {
+          if (!active || !sessionController.isCurrent(generation)) return;
           const current = await externalConnectionService.status(parsed.attemptId);
+          if (!active || !sessionController.isCurrent(generation)) return;
           if (current.status !== 'PENDING') {
             resolvedState = current.status;
             break;
           }
           await wait(500);
         }
-        await externalConnectionService.list();
+        if (active && sessionController.isCurrent(generation)) await externalConnectionService.list();
       } catch {
         resolvedState = 'FAILED';
       }
@@ -49,9 +66,10 @@ export const OAuthResultScreen: React.FC<Props> = ({ navigation, route }) => {
     })();
     return () => {
       active = false;
+      unsubscribe();
       if (autoReturnTimer) clearTimeout(autoReturnTimer);
     };
-  }, [parsed?.attemptId, parsed?.provider, parsed?.status]);
+  }, [parsed?.attemptId, parsed?.provider, parsed?.status, generation]);
 
   const heading = resultState === 'LOADING'
     ? 'FINISHING CONNECTION…'

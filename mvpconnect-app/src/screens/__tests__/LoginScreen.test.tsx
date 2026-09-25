@@ -1,14 +1,17 @@
+import { sessionController } from '../../auth/session';
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { authAPI, storageHelpers } from '../../services/api';
+import { authAPI } from '../../services/api';
 import { fetchOnboardingState, onboardingApi } from '../../onboarding/onboardingApi';
 import { store } from '../../store/store';
 import { LoginScreen } from '../LoginScreen';
 
+jest.mock('../../auth/session', () => ({ sessionController: { isCurrent: jest.fn(() => true) } }));
+
 jest.mock('../../services/api', () => ({
   authAPI: { login: jest.fn() },
-  storageHelpers: { saveAuthData: jest.fn() },
+
 }));
 
 jest.mock('../../onboarding/onboardingApi', () => ({
@@ -51,7 +54,7 @@ jest.mock('../../../assets/branding/mvpconnect-logo-native.png', () => ({
 }));
 
 const mockedLogin = authAPI.login as jest.Mock;
-const mockedSaveAuth = storageHelpers.saveAuthData as jest.Mock;
+
 const mockedFetchOnboarding = fetchOnboardingState as jest.Mock;
 const mockedDispatch = store.dispatch as jest.Mock;
 
@@ -72,8 +75,8 @@ const onboardingState = (
   }],
 });
 
-const renderScreen = () => {
-  const navigation = { replace: jest.fn(), navigate: jest.fn() } as any;
+const renderScreen = (notice?: 'SESSION_EXPIRED') => {
+  const navigation = { replace: jest.fn(), reset: jest.fn(), navigate: jest.fn(), setParams: jest.fn() } as any;
   const screen = render(
     <SafeAreaProvider
       initialMetrics={{
@@ -81,7 +84,7 @@ const renderScreen = () => {
         insets: { top: 24, right: 0, bottom: 16, left: 0 },
       }}
     >
-      <LoginScreen navigation={navigation} />
+      <LoginScreen navigation={navigation} route={{ key: 'login', name: 'Login', params: { sessionNotice: notice } }} />
     </SafeAreaProvider>,
   );
   fireEvent.changeText(screen.getByLabelText('EMAIL, required'), 'artist@example.com');
@@ -100,8 +103,33 @@ describe('LoginScreen authenticated entry routing', () => {
       email: 'artist@example.com',
       name: 'Glass Houses',
     });
-    mockedSaveAuth.mockResolvedValue(undefined);
+
     mockedDispatch.mockResolvedValue(undefined);
+  });
+
+  it('consumes the typed expiry notice once and clears it when signing in', async () => {
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('MUSICIAN', 'COMPLETED'));
+    const screen = renderScreen('SESSION_EXPIRED');
+    expect(screen.getByText('Your session expired. Sign in again to continue.')).toBeTruthy();
+    expect(screen.navigation.setParams).toHaveBeenCalledWith({ sessionNotice: undefined });
+    fireEvent.press(screen.getByLabelText('Sign in to your account'));
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] }));
+    expect(screen.queryByText('Your session expired. Sign in again to continue.')).toBeNull();
+  });
+
+  it('shows no expired-session notice after explicit Sign Out', () => {
+    expect(renderScreen().queryByText('Your session expired. Sign in again to continue.')).toBeNull();
+  });
+
+  it('does not resurrect onboarding or populate cache after session exit during entry lookup', async () => {
+    (sessionController.isCurrent as jest.Mock).mockReturnValueOnce(false);
+    mockedFetchOnboarding.mockResolvedValue(onboardingState('MUSICIAN', 'COMPLETED'));
+    const screen = renderScreen();
+    fireEvent.press(screen.getByLabelText('Sign in to your account'));
+    await waitFor(() => expect(mockedFetchOnboarding).toHaveBeenCalled());
+    expect(screen.navigation.replace).not.toHaveBeenCalled();
+    expect(screen.navigation.reset).not.toHaveBeenCalled();
+    expect(onboardingApi.util.upsertQueryData).not.toHaveBeenCalled();
   });
 
   it('routes a completed Artist directly to Artist Home and not Welcome or MusicianHome', async () => {
@@ -109,11 +137,11 @@ describe('LoginScreen authenticated entry routing', () => {
     const screen = renderScreen();
     fireEvent.press(screen.getByLabelText('Sign in to your account'));
 
-    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('ArtistHome'));
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] }));
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('Welcome');
-    expect(mockedSaveAuth).toHaveBeenCalledWith('token', 'MUSICIAN');
-    expect(onboardingApi.util.resetApiState).toHaveBeenCalledTimes(1);
+
+
     expect(onboardingApi.util.upsertQueryData).toHaveBeenCalledTimes(1);
   });
 
@@ -126,7 +154,7 @@ describe('LoginScreen authenticated entry routing', () => {
       persona: 'artist',
       step: 'sound',
     }));
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
   });
 
   it('routes a completed Venue directly to Venue Home', async () => {
@@ -138,8 +166,8 @@ describe('LoginScreen authenticated entry routing', () => {
     const screen = renderScreen();
     fireEvent.press(screen.getByLabelText('Sign in to your account'));
 
-    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('VenueHome'));
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'VenueHome' } }] }));
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('MusicianHome', expect.anything());
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('Welcome');
   });
@@ -157,7 +185,7 @@ describe('LoginScreen authenticated entry routing', () => {
       persona: 'venue',
       step: 'music',
     }));
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'VenueHome' } }] });
   });
 
   it('routes a completed Promoter directly to Promoter Home', async () => {
@@ -169,9 +197,9 @@ describe('LoginScreen authenticated entry routing', () => {
     const screen = renderScreen();
     fireEvent.press(screen.getByLabelText('Sign in to your account'));
 
-    await waitFor(() => expect(screen.navigation.replace).toHaveBeenCalledWith('PromoterHome'));
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('ArtistHome');
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('VenueHome');
+    await waitFor(() => expect(screen.navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'PromoterHome' } }] }));
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'ArtistHome' } }] });
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'VenueHome' } }] });
     expect(screen.navigation.replace).not.toHaveBeenCalledWith('Welcome');
   });
 
@@ -188,6 +216,6 @@ describe('LoginScreen authenticated entry routing', () => {
       persona: 'promoter',
       step: 'specialties',
     }));
-    expect(screen.navigation.replace).not.toHaveBeenCalledWith('PromoterHome');
+    expect(screen.navigation.reset).not.toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AuthenticatedApp', params: { screen: 'PromoterHome' } }] });
   });
 });

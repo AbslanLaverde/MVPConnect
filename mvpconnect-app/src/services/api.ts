@@ -1,51 +1,12 @@
-import axios from 'axios';
 import type { ExternalArtistResult } from './externalArtistService';
 import type { PublicExternalConnection } from './externalConnectionService';
-// @ts-ignore: ignore missing type declarations for async-storage in this environment
-const AsyncStorage: any = require('@react-native-async-storage/async-storage').default;
+import { createAuthenticatedApi } from '../auth/authenticatedApi';
+import { sessionController } from '../auth/session';
+import type { SessionIdentity } from '../auth/authTypes';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const api = createAuthenticatedApi(sessionController);
 
-// Create axios instance
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Only clear the token if one actually exists — prevents a race condition
-      // where a request fires before AsyncStorage loads from clearing a valid token.
-      const existing = await AsyncStorage.getItem('authToken');
-      if (existing) {
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('userType');
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Auth API calls
+// Auth API calls establish a complete session before returning non-secret identity to screens.
 export interface SignupMusicianData {
   name: string;
   email: string;
@@ -93,56 +54,13 @@ export interface LoginData {
   password: string;
 }
 
-export interface AuthResponse {
-  accessToken: string;
-  tokenType: string;
-  userType: 'MUSICIAN' | 'VENUE' | 'PROMOTER';
-  userId: string;
-  email: string;
-  name?: string;
-}
+export type AuthResponse = SessionIdentity;
 
 export const authAPI = {
-  // Signup endpoints
-  signupMusician: async (data: SignupMusicianData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/signup/musician', data);
-    return response.data;
-  },
-
-  signupVenue: async (data: SignupVenueData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/signup/venue', data);
-    return response.data;
-  },
-
-  signupPromoter: async (data: SignupPromoterData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/signup/promoter', data);
-    return response.data;
-  },
-
-  // Login endpoint
-  login: async (data: LoginData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/login', data);
-    return response.data;
-  },
-};
-
-// Storage helpers
-export const storageHelpers = {
-  saveAuthData: async (token: string, userType: string) => {
-    await AsyncStorage.setItem('authToken', token);
-    await AsyncStorage.setItem('userType', userType);
-  },
-
-  getAuthData: async () => {
-    const token = await AsyncStorage.getItem('authToken');
-    const userType = await AsyncStorage.getItem('userType');
-    return { token, userType };
-  },
-
-  clearAuthData: async () => {
-    await AsyncStorage.removeItem('authToken');
-    await AsyncStorage.removeItem('userType');
-  },
+  signupMusician: (data: SignupMusicianData): Promise<AuthResponse> => sessionController.signup('musician', data),
+  signupVenue: (data: SignupVenueData): Promise<AuthResponse> => sessionController.signup('venue', data),
+  signupPromoter: (data: SignupPromoterData): Promise<AuthResponse> => sessionController.signup('promoter', data),
+  login: (data: LoginData): Promise<AuthResponse> => sessionController.login(data),
 };
 
 export default api;

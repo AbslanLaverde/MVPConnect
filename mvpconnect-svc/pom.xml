@@ -123,6 +123,14 @@
         </dependency>
         
         <!-- Spring Security Test -->
+        <!-- Real embedded Neo4j + Bolt for auth rotation/locking integration tests; no Docker required. -->
+        <dependency>
+            <groupId>org.neo4j.test</groupId>
+            <artifactId>neo4j-harness</artifactId>
+            <version>5.26.23</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>

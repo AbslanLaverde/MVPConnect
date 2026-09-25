@@ -2,6 +2,7 @@ import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryApi } from '@reduxjs/toolkit/query';
 import axios from 'axios';
 import api from '../services/api';
+import { sessionController } from '../auth/session';
 import type {
   OnboardingApiError,
   OnboardingState,
@@ -115,8 +116,10 @@ export const onboardingApi = createApi({
     }),
     deleteOwnedMedia: builder.mutation<string, string>({
       queryFn: async (mediaId, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           await api.delete(`/media/${mediaId}`);
+          sessionController.assertGeneration(generation);
           await cacheDeletedOwnedMedia(dispatch, mediaId);
           return { data: mediaId };
         } catch (error) {
@@ -134,8 +137,10 @@ export const onboardingApi = createApi({
         }
       },
       async onQueryStarted(_request, { dispatch, queryFulfilled }) {
+        const generation = sessionController.getGeneration();
         try {
           const { data: savedStep } = await queryFulfilled;
+          sessionController.assertGeneration(generation);
           dispatch(
             onboardingApi.util.updateQueryData('getOnboarding', undefined, (draft) => {
               const index = draft.steps.findIndex((step) => step.key === savedStep.key);
@@ -149,11 +154,13 @@ export const onboardingApi = createApi({
     }),
     completeOnboardingStep: builder.mutation<OnboardingState, SaveOnboardingStepRequest>({
       queryFn: async ({ stepKey, data }, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           const response = await api.post<OnboardingState>(
             `/onboarding/steps/${stepKey}/complete`,
             { data },
           );
+          sessionController.assertGeneration(generation);
           await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
@@ -163,8 +170,10 @@ export const onboardingApi = createApi({
     }),
     skipOnboardingStep: builder.mutation<OnboardingState, string>({
       queryFn: async (stepKey, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           const response = await api.post<OnboardingState>(`/onboarding/steps/${stepKey}/skip`);
+          sessionController.assertGeneration(generation);
           await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
@@ -174,8 +183,10 @@ export const onboardingApi = createApi({
     }),
     reopenOnboardingStep: builder.mutation<OnboardingState, string>({
       queryFn: async (stepKey, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           const response = await api.post<OnboardingState>(`/onboarding/steps/${stepKey}/reopen`);
+          sessionController.assertGeneration(generation);
           await synchronizeOnboardingState(dispatch, response.data);
           return { data: response.data };
         } catch (error) {
@@ -184,17 +195,33 @@ export const onboardingApi = createApi({
       },
     }),
     completeOnboarding: builder.mutation<OnboardingCompletionResponse, void>({
-      queryFn: async () => {
+      queryFn: async (_request, { dispatch }) => {
+        const generation = sessionController.getGeneration();
         try {
           const response = await api.post<OnboardingCompletionResponse>('/onboarding/complete');
+          sessionController.assertGeneration(generation);
+          // Completion commits canonical media before returning. A /me request
+          // started before promotion must settle before we force a fresh one;
+          // RTK Query otherwise deduplicates against that stale in-flight read.
+          await dispatch(onboardingApi.util.getRunningQueryThunk('getSelfAccount', undefined));
+          sessionController.assertGeneration(generation);
+          await dispatch(onboardingApi.endpoints.getSelfAccount.initiate(undefined, {
+            subscribe: false,
+            forceRefetch: true,
+          }));
+          sessionController.assertGeneration(generation);
+          // A failed identity read does not undo completed onboarding. Welcome
+          // blocks entry on that query error and offers its existing retry.
           return { data: response.data };
         } catch (error) {
           return { error: toApiError(error) };
         }
       },
       async onQueryStarted(_request, { dispatch, queryFulfilled }) {
+        const generation = sessionController.getGeneration();
         try {
           const { data } = await queryFulfilled;
+          sessionController.assertGeneration(generation);
           dispatch(
             onboardingApi.util.updateQueryData('getOnboarding', undefined, (draft) => {
               draft.status = data.status;

@@ -1,3 +1,7 @@
+import { sessionController } from '../../auth/session';
+jest.mock('../../auth/session', () => ({
+  sessionController: { getGeneration: jest.fn(() => 1), isCurrent: jest.fn(() => true), subscribe: jest.fn(() => () => {}), signOut: jest.fn(), assertGeneration: jest.fn() },
+}));
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { OAuthResultScreen } from '../OAuthResultScreen';
@@ -26,6 +30,25 @@ describe('OAuthResultScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    (sessionController.isCurrent as jest.Mock).mockReturnValue(true);
+  });
+
+  it('ignores a delayed OAuth result after session exit and cannot navigate back into onboarding', async () => {
+    let finish!: (value: unknown) => void;
+    service.status.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }) as any);
+    const navigation = { replace: jest.fn() } as any;
+    const screen = render(<OAuthResultScreen navigation={navigation} route={{ key: 'oauth', name: 'OAuthResult', params: {
+      attemptId: 'delayed', provider: 'YOUTUBE', status: 'SUCCEEDED',
+    } } as any} />);
+    await waitFor(() => expect(service.status).toHaveBeenCalled());
+    (sessionController.isCurrent as jest.Mock).mockReturnValue(false);
+    await act(async () => {
+      finish({ status: 'SUCCEEDED' });
+      await Promise.resolve();
+      jest.advanceTimersByTime(3000);
+    });
+    expect(service.list).not.toHaveBeenCalled(); expect(navigation.replace).not.toHaveBeenCalled();
+    screen.unmount();
   });
 
   afterEach(() => {

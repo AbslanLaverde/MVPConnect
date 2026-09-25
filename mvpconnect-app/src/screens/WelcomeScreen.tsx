@@ -16,7 +16,7 @@ import { useGetOnboardingQuery, useGetSelfAccountQuery } from '../onboarding/onb
 import { resolveAuthenticatedEntryRoute } from '../onboarding/onboardingRoutes';
 import { theme } from '../theme/theme';
 import { welcomeStyles } from './WelcomeScreen.styles';
-import { resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
+import { authenticatedAppRoute, resolveAuthenticatedHomeRoute } from '../navigation/authenticatedRoutes';
 
 type Props = StackScreenProps<RootStackParamList, 'Welcome'>;
 
@@ -162,8 +162,11 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
   const onboardingComplete = onboardingQuery.data?.status === 'COMPLETED';
   const enterDisabled = !finalReady
     || selfQuery.isLoading
+    || selfQuery.isFetching
+    || selfQuery.isError
     || onboardingQuery.isLoading
     || onboardingQuery.isFetching
+    || onboardingQuery.isError
     || !selfQuery.data
     || !onboardingComplete;
   const enter = () => {
@@ -173,7 +176,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       displayName: selfQuery.data.displayName,
       persona: selfQuery.data.persona,
     });
-    navigation.replace(home.name);
+    navigation.reset({ index: 0, routes: [authenticatedAppRoute(home)] });
   };
 
   return (
@@ -227,7 +230,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
             disabled={enterDisabled}
             accessibilityRole="button"
             accessibilityLabel="Enter MVPConnect"
-            accessibilityState={{ disabled: enterDisabled, busy: selfQuery.isLoading }}
+            accessibilityState={{ disabled: enterDisabled, busy: selfQuery.isFetching }}
           >
             <BrandGradient />
             <View style={welcomeStyles.enterButtonSurface} pointerEvents="none" />

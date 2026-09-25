@@ -1,6 +1,8 @@
 package com.mint.config;
 
 import com.mint.dto.response.ErrorResponse;
+import com.mint.authsession.SessionAuthException;
+import com.mint.authsession.SessionStoreException;
 import com.mint.exceptions.DuplicateEmailException;
 import com.mint.exceptions.ExternalArtistException;
 import com.mint.exceptions.ExternalConnectionException;
@@ -34,6 +36,20 @@ import java.util.List;
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(SessionAuthException.class)
+    public ResponseEntity<ErrorResponse> handleSessionAuthentication(
+            SessionAuthException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(
+                401, "Unauthorized", "Authentication failed", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(SessionStoreException.class)
+    public ResponseEntity<ErrorResponse> handleSessionStorage(
+            SessionStoreException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(
+                503, "Service Unavailable", "Authentication service unavailable", request.getRequestURI()));
+    }
 
     @ExceptionHandler(VenueIdentityException.class)
     public ResponseEntity<ErrorResponse> handleVenueIdentityException(

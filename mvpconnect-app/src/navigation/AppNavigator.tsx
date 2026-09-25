@@ -1,5 +1,5 @@
 import React from 'react';
-import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
@@ -9,12 +9,15 @@ import type { OnboardingPersona } from '../onboarding/onboardingTypes';
 import { theme } from '../theme/theme';
 import { OAuthResultScreen } from '../screens/OAuthResultScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
-import { ArtistHomeScreen } from '../home/artist/ArtistHomeScreen';
-import { VenueHomeScreen } from '../home/venue/VenueHomeScreen';
-import { PromoterHomeScreen } from '../home/promoter/PromoterHomeScreen';
+import { AuthenticatedAppShell } from '../appShell/AuthenticatedAppShell';
+import type { AuthenticatedStackParamList } from './authenticatedRoutes';
+import { rootNavigation, finishStartupNavigation } from './rootNavigation';
+import type { SessionNotice } from '../auth/authTypes';
+import type { StartupRoute } from '../auth/startupEntry';
+import { appLinking } from './appLinking';
 
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { sessionNotice?: SessionNotice } | undefined;
   Signup: undefined;
   SignupArtist: undefined;
   SignupVenue: undefined;
@@ -22,33 +25,17 @@ export type RootStackParamList = {
   Onboarding: { persona: OnboardingPersona; step: string };
   OAuthResult: { attemptId?: string; provider?: string; status?: string } | undefined;
   Welcome: undefined;
-  ArtistHome: undefined;
-  VenueHome: undefined;
-  PromoterHome: undefined;
+  AuthenticatedApp: NavigatorScreenParams<AuthenticatedStackParamList>;
   Profile: { userId: string; userName?: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['mvpconnect://'],
-  config: {
-    screens: {
-      Login: 'login',
-      Signup: 'signup',
-      SignupArtist: 'signup/artist',
-      SignupVenue: 'signup/venue',
-      SignupPromoter: 'signup/promoter',
-      Onboarding: 'onboarding/:persona/:step',
-      OAuthResult: 'oauth/result',
-      Welcome: 'welcome',
-    },
-  },
-};
-
-export const AppNavigator: React.FC = () => {
+export const AppNavigator: React.FC<{ initialRoute: StartupRoute; onReady?: () => void }> = ({ initialRoute, onReady }) => {
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={appLinking} ref={rootNavigation}
+      initialState={{ index: 0, routes: [initialRoute] }}
+      onReady={() => { onReady?.(); finishStartupNavigation(initialRoute); }}>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
@@ -107,18 +94,8 @@ export const AppNavigator: React.FC = () => {
           options={{ headerShown: false, animationEnabled: false }}
         />
         <Stack.Screen
-          name="ArtistHome"
-          component={ArtistHomeScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="VenueHome"
-          component={VenueHomeScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="PromoterHome"
-          component={PromoterHomeScreen}
+          name="AuthenticatedApp"
+          component={AuthenticatedAppShell}
           options={{ headerShown: false }}
         />
         <Stack.Screen

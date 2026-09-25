@@ -1,5 +1,11 @@
 export type AuthenticatedPersona = 'MUSICIAN' | 'VENUE' | 'PROMOTER';
 
+export type AuthenticatedStackParamList = {
+  ArtistHome: undefined;
+  VenueHome: undefined;
+  PromoterHome: undefined;
+};
+
 export interface AuthenticatedHomeIdentity {
   id: string;
   displayName: string;
@@ -15,8 +21,8 @@ export type AuthenticatedHomeRoute =
  * Resolves the completed-account destination without coupling callers to a
  * persona-specific caller logic.
  */
-export const resolveAuthenticatedHomeRoute = (
-  identity: AuthenticatedHomeIdentity,
+export const resolveAuthenticatedHomeRoute = <Identity extends Pick<AuthenticatedHomeIdentity, 'persona'>>(
+  identity: Identity,
 ): AuthenticatedHomeRoute => {
   if (identity.persona === 'MUSICIAN') {
     return { name: 'ArtistHome' };
@@ -28,3 +34,9 @@ export const resolveAuthenticatedHomeRoute = (
 
   return { name: 'PromoterHome' };
 };
+
+/** All completed-account entry points use this one root/child boundary. */
+export const authenticatedAppRoute = (home: AuthenticatedHomeRoute) => ({
+  name: 'AuthenticatedApp' as const,
+  params: { screen: home.name },
+});
